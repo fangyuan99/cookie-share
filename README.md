@@ -123,6 +123,10 @@ Cookie-share是一个 Chrome 扩展，允许用户在不同设备或浏览器之
 
 欢迎贡献！请随时提交 Pull Request。
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=fangyuan99/cookie-share&type=Date)](https://star-history.com/#fangyuan99/cookie-share&Date)
+
 ## 许可证
 
 MIT

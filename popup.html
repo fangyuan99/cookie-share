@@ -1,17 +1,23 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Cookie-share</title>
-    <link rel="stylesheet" type="text/css" href="./style.css" />
-  </head>
-  <body>
+<head>
+  <title>Cookie-share</title>
+  <link rel="stylesheet" type="text/css" href="./style.css" />
+</head>
+<body>
+  <div class="container">
     <h1>Cookie-share</h1>
     <input type="text" id="cookieId" placeholder="Enter unique cookie ID" />
-    <button id="generateIdButton">Generate Random ID</button>
-    <button id="sendButton">Send Cookies</button>
-    <button id="receiveButton">Receive Cookies</button>
+    <input type="text" id="customUrl" placeholder="Enter custom URL" />
+    <div class="button-group">
+      <button id="generateIdButton">Generate Random ID</button>
+      <button id="saveUrlButton">Save URL</button>
+      <button id="sendButton">Send Cookies</button>
+      <button id="receiveButton">Receive Cookies</button>
+    </div>
     <div id="message"></div>
     <div id="errorMessage"></div>
-    <script src="popup.js"></script>
-  </body>
+  </div>
+  <script src="popup.js"></script>
+</body>
 </html>

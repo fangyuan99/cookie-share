@@ -1,15 +1,24 @@
 document.addEventListener("DOMContentLoaded", function () {
-  const host = "https://yourdomain.com"; // Change this to your domain
   const sendButton = document.getElementById("sendButton");
   const receiveButton = document.getElementById("receiveButton");
   const generateIdButton = document.getElementById("generateIdButton");
+  const saveUrlButton = document.getElementById("saveUrlButton");
   const messageDiv = document.getElementById("message");
   const errorMessageDiv = document.getElementById("errorMessage");
   const cookieIdInput = document.getElementById("cookieId");
+  const customUrlInput = document.getElementById("customUrl");
 
   sendButton.addEventListener("click", handleSendCookies);
   receiveButton.addEventListener("click", handleReceiveCookies);
   generateIdButton.addEventListener("click", handleGenerateId);
+  saveUrlButton.addEventListener("click", handleSaveUrl);
+
+  // Load the saved URL from storage
+  chrome.storage.sync.get(["customUrl"], (result) => {
+    if (result.customUrl) {
+      customUrlInput.value = result.customUrl;
+    }
+  });
 
   function isValidId(id) {
     return /^[a-zA-Z0-9]+$/.test(id);
@@ -37,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function handleSendCookies() {
     const cookieId = cookieIdInput.value.trim();
+    const customUrl = customUrlInput.value.trim();
     if (!cookieId) {
       showError("Please enter a cookie ID");
       return;
@@ -45,11 +55,16 @@ document.addEventListener("DOMContentLoaded", function () {
       showError("Invalid ID. Only letters and numbers are allowed.");
       return;
     }
-    sendCookies(cookieId);
+    if (!customUrl) {
+      showError("Please enter a custom URL");
+      return;
+    }
+    sendCookies(cookieId, customUrl);
   }
 
   function handleReceiveCookies() {
     const cookieId = cookieIdInput.value.trim();
+    const customUrl = customUrlInput.value.trim();
     if (!cookieId) {
       showError("Please enter a cookie ID");
       return;
@@ -58,7 +73,11 @@ document.addEventListener("DOMContentLoaded", function () {
       showError("Invalid ID. Only letters and numbers are allowed.");
       return;
     }
-    receiveCookies(cookieId);
+    if (!customUrl) {
+      showError("Please enter a custom URL");
+      return;
+    }
+    receiveCookies(cookieId, customUrl);
   }
 
   function handleGenerateId() {
@@ -67,7 +86,18 @@ document.addEventListener("DOMContentLoaded", function () {
     showMessage("Random ID generated: " + randomId);
   }
 
-  function sendCookies(cookieId) {
+  function handleSaveUrl() {
+    const customUrl = customUrlInput.value.trim();
+    if (!customUrl) {
+      showError("Please enter a URL");
+      return;
+    }
+    chrome.storage.sync.set({ customUrl: customUrl }, () => {
+      showMessage("Custom URL saved!");
+    });
+  }
+
+  function sendCookies(cookieId, customUrl) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       const currentTab = tabs[0];
       const url = new URL(currentTab.url);
@@ -85,7 +115,7 @@ document.addEventListener("DOMContentLoaded", function () {
           };
         });
 
-        fetch(`${host}/send-cookies`, {
+        fetch(`${customUrl}/send-cookies`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -111,12 +141,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  function receiveCookies(cookieId) {
+  function receiveCookies(cookieId, customUrl) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       const currentTab = tabs[0];
       const url = new URL(currentTab.url);
 
-      fetch(`${host}/receive-cookies/${cookieId}`)
+      fetch(`${customUrl}/receive-cookies/${cookieId}`)
         .then((response) => response.json())
         .then((data) => {
           if (data.success && data.cookies) {

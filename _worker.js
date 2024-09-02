@@ -1,19 +1,37 @@
 addEventListener("fetch", (event) => {
   event.respondWith(
-    handleRequest(event.request).catch(
-      (error) =>
-        new Response(JSON.stringify({ success: false, error: error.message }), {
+    handleRequest(event.request).catch((error) => {
+      const response = new Response(
+        JSON.stringify({ success: false, error: error.message }),
+        {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        })
-    )
+        }
+      );
+      setCorsHeaders(response);
+      return response;
+    })
   );
 });
+
+function setCorsHeaders(response) {
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  response.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, X-Admin-Password"
+  );
+}
 
 function verifyAdminPassword(request) {
   const adminPassword = request.headers.get("X-Admin-Password");
   if (adminPassword !== ADMIN_PASSWORD) {
-    return new Response("Unauthorized", { status: 401 });
+    const response = new Response("Unauthorized", { status: 401 });
+    setCorsHeaders(response);
+    return response;
   }
   return null; // Continue if password is correct
 }
@@ -25,6 +43,11 @@ function isValidId(id) {
 async function handleRequest(request) {
   const url = new URL(request.url);
   const path = url.pathname;
+
+  // Handle CORS preflight requests
+  if (request.method === "OPTIONS") {
+    return handleCorsPreflightRequest();
+  }
 
   // Admin password verification for new endpoints
   if (path.startsWith("/admin/")) {
@@ -51,15 +74,25 @@ async function handleRequest(request) {
   } else if (request.method === "GET" && path === "/admin/list") {
     return listAllData();
   } else {
-    return new Response("Not Found", { status: 404 });
+    const response = new Response("Not Found", { status: 404 });
+    setCorsHeaders(response);
+    return response;
   }
+}
+
+function handleCorsPreflightRequest() {
+  const response = new Response(null, {
+    status: 204,
+  });
+  setCorsHeaders(response);
+  return response;
 }
 
 async function handleSendCookies(request) {
   const { id, url, cookies } = await request.json();
 
   if (!isValidId(id)) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({
         success: false,
         message: "Invalid ID. Only letters and numbers are allowed.",
@@ -69,12 +102,14 @@ async function handleSendCookies(request) {
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
 
   // Check if the ID already exists
   const existing = await COOKIE_STORE.get(id);
   if (existing !== null) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({
         success: false,
         message: "Cookie ID already exists. Please use a unique ID.",
@@ -84,12 +119,14 @@ async function handleSendCookies(request) {
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
 
   // Store the new cookies
   await COOKIE_STORE.put(id, JSON.stringify({ id, url, cookies }));
 
-  return new Response(
+  const response = new Response(
     JSON.stringify({
       success: true,
       message: "Cookies received and stored successfully",
@@ -99,13 +136,15 @@ async function handleSendCookies(request) {
       headers: { "Content-Type": "application/json" },
     }
   );
+  setCorsHeaders(response);
+  return response;
 }
 
 async function handleReceiveCookies(request, path) {
   const id = path.split("/").pop();
 
   if (!isValidId(id)) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({
         success: false,
         message: "Invalid ID. Only letters and numbers are allowed.",
@@ -115,11 +154,13 @@ async function handleReceiveCookies(request, path) {
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
 
   const storedData = await COOKIE_STORE.get(id);
   if (storedData === null) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({
         success: false,
         message: "No cookies found for the given ID: " + id,
@@ -129,11 +170,13 @@ async function handleReceiveCookies(request, path) {
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
 
   const { cookies } = JSON.parse(storedData);
 
-  return new Response(
+  const response = new Response(
     JSON.stringify({
       success: true,
       id,
@@ -144,6 +187,8 @@ async function handleReceiveCookies(request, path) {
       headers: { "Content-Type": "application/json" },
     }
   );
+  setCorsHeaders(response);
+  return response;
 }
 
 async function handleListCookies() {
@@ -156,7 +201,7 @@ async function handleListCookies() {
     cookies.push({ id, url });
   }
 
-  return new Response(
+  const response = new Response(
     JSON.stringify({
       success: true,
       cookies: cookies,
@@ -166,13 +211,15 @@ async function handleListCookies() {
       headers: { "Content-Type": "application/json" },
     }
   );
+  setCorsHeaders(response);
+  return response;
 }
 
 async function createData(request) {
   const { key, value } = await request.json();
 
   if (!isValidId(key)) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({
         success: false,
         message: "Invalid key. Only letters and numbers are allowed.",
@@ -182,16 +229,20 @@ async function createData(request) {
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
 
   await COOKIE_STORE.put(key, JSON.stringify(value));
-  return new Response(
+  const response = new Response(
     JSON.stringify({ success: true, message: "Data created successfully" }),
     {
       status: 201,
       headers: { "Content-Type": "application/json" },
     }
   );
+  setCorsHeaders(response);
+  return response;
 }
 
 async function readData(request) {
@@ -199,7 +250,7 @@ async function readData(request) {
   const key = url.searchParams.get("key");
 
   if (!isValidId(key)) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({
         success: false,
         message: "Invalid key. Only letters and numbers are allowed.",
@@ -209,32 +260,38 @@ async function readData(request) {
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
 
   const value = await COOKIE_STORE.get(key);
   if (value === null) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({ success: false, message: "Data not found" }),
       {
         status: 404,
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
-  return new Response(
+  const response = new Response(
     JSON.stringify({ success: true, data: JSON.parse(value) }),
     {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }
   );
+  setCorsHeaders(response);
+  return response;
 }
 
 async function updateData(request) {
   const { key, value } = await request.json();
 
   if (!isValidId(key)) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({
         success: false,
         message: "Invalid key. Only letters and numbers are allowed.",
@@ -244,26 +301,32 @@ async function updateData(request) {
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
 
   const existingValue = await COOKIE_STORE.get(key);
   if (existingValue === null) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({ success: false, message: "Data not found" }),
       {
         status: 404,
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
   await COOKIE_STORE.put(key, JSON.stringify(value));
-  return new Response(
+  const response = new Response(
     JSON.stringify({ success: true, message: "Data updated successfully" }),
     {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }
   );
+  setCorsHeaders(response);
+  return response;
 }
 
 async function deleteData(request) {
@@ -271,7 +334,7 @@ async function deleteData(request) {
   const key = url.searchParams.get("key");
 
   if (!isValidId(key)) {
-    return new Response(
+    const response = new Response(
       JSON.stringify({
         success: false,
         message: "Invalid key. Only letters and numbers are allowed.",
@@ -281,28 +344,34 @@ async function deleteData(request) {
         headers: { "Content-Type": "application/json" },
       }
     );
+    setCorsHeaders(response);
+    return response;
   }
 
   await COOKIE_STORE.delete(key);
-  return new Response(
+  const response = new Response(
     JSON.stringify({ success: true, message: "Data deleted successfully" }),
     {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }
   );
+  setCorsHeaders(response);
+  return response;
 }
 
 async function deleteAllData() {
   const keys = await COOKIE_STORE.list();
   await Promise.all(keys.keys.map((key) => COOKIE_STORE.delete(key.name)));
-  return new Response(
+  const response = new Response(
     JSON.stringify({ success: true, message: "All data deleted successfully" }),
     {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }
   );
+  setCorsHeaders(response);
+  return response;
 }
 
 async function listAllData() {
@@ -314,7 +383,7 @@ async function listAllData() {
     data.push({ key: key.name, value: JSON.parse(value) });
   }
 
-  return new Response(
+  const response = new Response(
     JSON.stringify({
       success: true,
       data: data,
@@ -324,4 +393,6 @@ async function listAllData() {
       headers: { "Content-Type": "application/json" },
     }
   );
+  setCorsHeaders(response);
+  return response;
 }

@@ -65,14 +65,6 @@ Cookie-share是一个 Chrome 扩展，允许用户在不同设备或浏览器之
 
 6. 记下 Worker 的 URL，格式类似：`https://your-worker-name.your-subdomain.workers.dev` (被墙请自定义域名)
 
-7. 修改`cookie-share.zip`中的`popup.js`的`host`变量为自己部署的后端域名。
-
-## 环境变量定义
-
-在 Cloudflare Worker 中使用的环境变量：
-
-- `ADMIN_PASSWORD`: 字符串类型。用于验证管理员请求的密码。
-- `COOKIE_STORE`: KV 命名空间。用于存储和检索 cookie 数据。
 
 ## 安全注意事项
 

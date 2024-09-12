@@ -6,6 +6,8 @@
 
 Cookie-share是一个 Chrome 扩展，允许用户在不同设备或浏览器之间发送和接收 cookies。它使用 Cloudflare Worker 作为后端来存储和检索 cookie 数据。
 
+[下载地址](https://github.com/fangyuan99/cookie-share/releases)
+
 ### 效果与应用场景
 **很多网站不支持多账号切换，不想退出重登？**
 

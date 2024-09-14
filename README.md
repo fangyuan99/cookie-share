@@ -49,8 +49,11 @@ Cookie-share是一个 Chrome 扩展，允许用户在不同设备或浏览器之
 3. 点击 Chrome 工具栏中的 Cookie-share图标。
 4. 在已登录的浏览器页面发送 Cookie
 5. 在未登陆的浏览器页面接受 Cookie
+6. 注意地址后面不要加`/`, 示例: `https://your-worker-name.your-subdomain.workers.dev`
    
 ### 后端部署教程
+
+部署可以参考 https://linux.do/t/topic/115004 大同小异
 
 1. [注册](https://dash.cloudflare.com/sign-up) Cloudflare 账户并创建一个 Worker。
 
@@ -79,6 +82,13 @@ Cookie-share是一个 Chrome 扩展，允许用户在不同设备或浏览器之
 ## 后端（Cloudflare Worker）
 
 后端实现为 Cloudflare Worker，提供以下端点：
+
+注意添加`X-Admin-Password: yourpassword`
+
+```sh
+curl --location --request GET 'https://your-worker-name.your-subdomain.workers.dev/admin/list-cookies' \
+--header 'X-Admin-Password: yourpassword'
+```
 
 - `POST /send-cookies`: 存储与唯一 ID 关联的 cookies
 - `GET /receive-cookies/:id`: 检索给定 ID 的 cookies

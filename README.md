@@ -85,10 +85,17 @@ Cookie-share是一个 Chrome 扩展，允许用户在不同设备或浏览器之
 
 注意添加`X-Admin-Password: yourpassword`
 
+示例:
+
+`/admin/list-cookies`
+
 ```sh
 curl --location --request GET 'https://your-worker-name.your-subdomain.workers.dev/admin/list-cookies' \
 --header 'X-Admin-Password: yourpassword'
 ```
+
+`/admin/delete`
+
 ```sh
 curl --location --request DELETE 'https://your-worker-name.your-subdomain.workers.dev/admin/delete?key={yourid}' \
 --header 'X-Admin-Password: yourpassword'

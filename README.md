@@ -89,9 +89,13 @@ Cookie-share是一个 Chrome 扩展，允许用户在不同设备或浏览器之
 curl --location --request GET 'https://your-worker-name.your-subdomain.workers.dev/admin/list-cookies' \
 --header 'X-Admin-Password: yourpassword'
 ```
+```sh
+curl --location --request DELETE 'https://your-worker-name.your-subdomain.workers.dev/admin/delete?key={yourid}' \
+--header 'X-Admin-Password: yourpassword'
+```
 
 - `POST /send-cookies`: 存储与唯一 ID 关联的 cookies
-- `GET /receive-cookies/:id`: 检索给定 ID 的 cookies
+- `GET /receive-cookies`: 检索给定 ID 的 cookies
 - `GET /admin/list-cookies`: 列出所有存储的 cookie ID 和 URL
 - `POST /admin/create`: 创建新的数据条目
 - `GET /admin/read`: 读取给定键的数据

@@ -1,91 +1,87 @@
-# Cookie-share Chrome/Edge 扩展
+# Cookie-share Chrome/Edge Extension
 
-# 注：仅供学习交流，严禁用于商业用途，请于24小时内删除，禁止在社交平台传播。如果本项目对你有用麻烦点个 star 这对我很有帮助，谢谢！
+*Note: For learning and communication purposes only. Strictly prohibited for commercial use. Please delete within 24 hours and do not share on social platforms. If this project is useful to you, please give it a star. It really helps me a lot, thank you!*
 
-## 概述
+[English](./README.md) | [简体中文](./README_CN.md)
 
-Cookie-share是一个 Chrome 扩展，允许用户在不同设备或浏览器之间发送和接收 cookies。它使用 Cloudflare Worker 作为后端来存储和检索 cookie 数据。
+## Overview
 
-[下载地址](https://github.com/fangyuan99/cookie-share/releases)
+Cookie-share is a Chrome extension that allows users to send and receive cookies between different devices or browsers. It can be used for multi-account switching, sharing video memberships, co-renting planets, and other scenarios. A self-hosted Cloudflare Worker ensures data security.
 
-### 效果与应用场景
-**很多网站不支持多账号切换，不想退出重登？**
+[Download Link](https://github.com/fangyuan99/cookie-share/releases)
 
-**开了视频会员，好兄弟老是让你扫码嫌麻烦？**
+### Features and Use Cases
+**Many websites do not support multi-account switching and you don't want to log out and log in again?**
 
-**开了某星球，和同学合租回回血？**
+**You have a video membership but your friends always find it cumbersome to scan a code?**
 
-**单纯懒得掏出手机或者输密码换设备登录？**
+**You share a certain planet with classmates and want to recover health points?**
 
-1. 进入已登录网站的主页 (任何含有 Cookie 的地址都可以)
-2. 点击插件图标，自定义一个 id（仅支持字母和数字），发送 Cookie
-3. 没有登录的设备访问登录页，用刚刚的 id 获取 Cookie，等待插件显示 Cookie 获取并设置成功后刷新网页即可
+**Just too lazy to take out your phone or enter the password to switch device logins?**
 
-已测试的网站:
-1. 某星球
-2. 某艺
-3. 某L站
+1. Go to the homepage of a logged-in website (any URL that contains cookies)
+2. Click the extension icon, customize an ID (only letters and numbers are supported), and send the cookie
+3. On a device that is not logged in, visit the login page, use the previously set ID to retrieve the cookie, wait for the plugin to display that the cookie has been retrieved and set successfully, then refresh the page
 
-## 功能
+Tested websites:
+1. A certain planet
+2. A certain art platform
+3. A certain L site
 
-- 为 cookie 共享生成随机唯一 ID
-- 将当前标签页的 cookies 发送到服务器
-- 从服务器接收并设置 cookies 到当前标签页
-- 管理员功能，用于管理存储的 cookies
-- 由于插件的权限更大，可以支持 JS 无法访问的 `HTTpOnly` Cookie
+## Features
 
-## 安装
+- Generates random unique IDs for cookie sharing
+- Sends cookies from the current tab to the server
+- Receives and sets cookies to the current tab from the server
+- Admin functionality for managing stored cookies
+- Supports `HTTPOnly` cookies that JS cannot access due to higher plugin permissions
 
-1. 克隆此仓库或下载源代码。
-2. 打开 Chrome 并导航至 `chrome://extensions/`。
-3. 在右上角启用"开发者模式"。
-4. 点击"加载已解压的扩展程序"并选择包含扩展文件的目录。
+## Installation
 
-## 使用方法
+1. Clone this repository or download the source code.
+2. Open Chrome and navigate to `chrome://extensions/`.
+3. Enable "Developer mode" in the top right corner.
+4. Click "Load unpacked" and select the directory containing the extension files.
 
-### 插件使用方法
-1. 开启 Chrome/Edge 浏览器的开发者模式（[拓展程序地址](chrome://extensions/)）
-2. 将修改好的压缩包`cookie-share.zip`直接拖动到浏览器中
-3. 点击 Chrome 工具栏中的 Cookie-share图标。
-4. 在已登录的浏览器页面发送 Cookie
-5. 在未登陆的浏览器页面接受 Cookie
-6. 注意地址后面不要加`/`, 示例: `https://your-worker-name.your-subdomain.workers.dev`
-   
-### 后端部署教程
+## Usage
 
-部署可以参考 https://linux.do/t/topic/115004 大同小异
+### Plugin Usage
+1. Enable Developer mode in Chrome/Edge browser ([Extensions page](chrome://extensions/))
+2. Drag and drop the modified `cookie-share.zip` directly into the browser
+3. Click the Cookie-share icon in the Chrome toolbar.
+4. Send cookies from a logged-in browser page
+5. Accept cookies on an unlogged browser page
+6. Make sure not to add `/` at the end of the address, for example: `https://your-worker-name.your-subdomain.workers.dev`
 
-1. [注册](https://dash.cloudflare.com/sign-up) Cloudflare 账户并创建一个 Worker。
+### Backend Deployment Guide
 
-2. 复制 `_worker.js` 文件的内容到新创建的 Worker 中。
+Deployment can be similar to https://linux.do/t/topic/115004
 
-3. 在 Cloudflare Worker 的设置中，添加以下环境变量：
-   - `ADMIN_PASSWORD`: 设置一个强密码，用于访问管理员端点
-   - `COOKIE_STORE`: 创建一个 KV 命名空间，用于存储 cookie 数据
+1. [Register](https://dash.cloudflare.com/sign-up) a Cloudflare account and create a Worker.
+2. Copy the content of `_worker.js` to the newly created Worker.
+3. In the Cloudflare Worker settings, add the following environment variables:
+   - `ADMIN_PASSWORD`: Set a strong password for accessing admin endpoints
+   - `COOKIE_STORE`: Create a KV namespace for storing cookie data
+4. Bind the KV namespace in the Worker settings:
+   - Variable name: `COOKIE_STORE`
+   - KV namespace: Select the KV namespace you created
+5. Save and deploy the Worker.
+6. Note the Worker URL, which is similar to: `https://your-worker-name.your-subdomain.workers.dev` (if blocked, please customize the domain)
 
-4. 在 Worker 的设置中，绑定 KV 命名空间：
-   - 变量名称：`COOKIE_STORE`
-   - KV 命名空间：选择你创建的 KV 命名空间
+## Security Considerations
 
-5. 保存并部署 Worker。
+- Ensure that `ADMIN_PASSWORD` is set to a strong password and change it regularly.
+- Do not hard-code `ADMIN_PASSWORD` in the code, always use environment variables.
+- Regularly review stored data and delete cookies that are no longer needed.
+- Consider setting expiration times for cookie data to reduce the risk of storing sensitive information long-term.
 
-6. 记下 Worker 的 URL，格式类似：`https://your-worker-name.your-subdomain.workers.dev` (被墙请自定义域名)
+## Backend (Cloudflare Worker)
 
+The backend is implemented as a Cloudflare Worker, providing the following endpoints:
 
-## 安全注意事项
+Remember to add `X-Admin-Password: yourpassword`
 
-- 确保将 `ADMIN_PASSWORD` 设置为一个强密码，并定期更改。
-- 不要在代码中硬编码 `ADMIN_PASSWORD`，始终使用环境变量。
-- 定期审查存储的数据，删除不再需要的 cookie 数据。
-- 考虑为 cookie 数据设置过期时间，以减少长期存储敏感信息的风险。
-
-## 后端（Cloudflare Worker）
-
-后端实现为 Cloudflare Worker，提供以下端点：
-
-注意添加`X-Admin-Password: yourpassword`
-
-示例:
+Example:
 
 `/admin/list-cookies`
 
@@ -101,56 +97,57 @@ curl --location --request DELETE 'https://your-worker-name.your-subdomain.worker
 --header 'X-Admin-Password: yourpassword'
 ```
 
-- `POST /send-cookies`: 存储与唯一 ID 关联的 cookies
-- `GET /receive-cookies`: 检索给定 ID 的 cookies
-- `GET /admin/list-cookies`: 列出所有存储的 cookie ID 和 URL
-- `POST /admin/create`: 创建新的数据条目
-- `GET /admin/read`: 读取给定键的数据
-- `PUT /admin/update`: 更新给定键的数据
-- `DELETE /admin/delete`: 删除给定键的数据
-- `DELETE /admin/delete-all`: 删除所有存储的数据
-- `GET /admin/list`: 列出所有存储的数据
+- `POST /send-cookies`: Store cookies associated with a unique ID
+- `GET /receive-cookies`: Retrieve cookies for a given ID
+- `GET /admin/list-cookies`: List all stored cookie IDs and URLs
+- `POST /admin/create`: Create new data entries
+- `GET /admin/read`: Read data for a given key
+- `PUT /admin/update`: Update data for a given key
+- `DELETE /admin/delete`: Delete data for a given key
+- `DELETE /admin/delete-all`: Delete all stored data
+- `GET /admin/list`: List all stored data
 
-管理员端点需要使用管理员密码进行身份验证。
+Admin endpoints require authentication with the admin password.
 
-## 文件结构
+## File Structure
 
-- `manifest.json`: 扩展配置文件
-- `popup.html`: 扩展弹出窗口的 HTML 结构
-- `popup.js`: 处理用户交互和 cookie 操作的 JavaScript
-- `style.css`: 弹出窗口的 CSS 样式
-- `_worker.js`: 后端操作的 Cloudflare Worker 脚本
+- `manifest.json`: Extension configuration file
+- `popup.html`: HTML structure of the extension popup
+- `popup.js`: JavaScript for handling user interactions and cookie operations
+- `style.css`: CSS styles for the popup
+- `_worker.js`: Cloudflare Worker script for backend operations
 
-## 开发
+## Development
 
-修改扩展：
+Modifying the extension:
 
-1. 编辑相关文件（`popup.html`、`popup.js`、`style.css`）。
-2. 在 Chrome 中重新加载扩展以查看更改。
+1. Edit relevant files (`popup.html`, `popup.js`, `style.css`).
+2. Reload the extension in Chrome to view changes.
 
-修改后端：
+Modifying the backend:
 
-1. 编辑 `_worker.js` 文件。
-2. 将更新后的 worker 部署到 Cloudflare。
+1. Edit the `_worker.js` file.
+2. Deploy the updated Worker to Cloudflare.
 
-## 安全考虑（初版暂未完善）
+## Security Considerations (Initial version not yet complete)
 
-- 扩展使用 HTTPS 与后端进行所有通信。
-- 管理员端点受密码保护。
-- 实施输入验证以防止注入攻击。
-- Cookies 安全存储在服务器上，没有唯一 ID 无法访问。
+- The extension uses HTTPS for all communications with the backend.
+- Admin endpoints are password-protected.
+- Implement input validation to prevent injection attacks.
+- Cookies are securely stored on the server and cannot be accessed without a unique ID.
 
-## 后续开发计划
-- 只提供管理接口，没有管理页面（不知道何时更新）
- 
-## 贡献
+## Future Development Plans
 
-欢迎贡献！请随时提交 Pull Request。
+- Only admin interfaces are provided, no admin pages (unknown update time)
+
+## Contributions
+
+Welcome contributions! Feel free to submit Pull Requests.
 
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=fangyuan99/cookie-share&type=Date)](https://star-history.com/#fangyuan99/cookie-share&Date)
 
-## 许可证
+## License
 
 MIT

@@ -108,8 +108,13 @@ curl --location --request DELETE 'https://your-worker-name.your-subdomain.worker
 - `DELETE /admin/delete`: 删除给定键的数据
 - `DELETE /admin/delete-all`: 删除所有存储的数据
 - `GET /admin/list`: 列出所有存储的数据
+- `GET /admin`: 访问管理员管理页面
 
-管理员端点需要使用管理员密码进行身份验证。
+管理员管理页面提供了一个用户友好的界面，用于管理 Worker 中存储的 cookies 和其他数据。它包括查看所有存储的 cookies、创建新的 cookie 条目、更新现有的 cookies 以及删除单个 cookies 或所有存储的数据等功能。
+
+要访问管理员页面，请在浏览器中导航至 `https://your-worker-name.your-subdomain.workers.dev/admin`。在访问管理界面之前，您将需要输入管理员密码。
+
+**管理员端点需要使用管理员密码进行身份验证。**
 
 ## 文件结构
 

@@ -106,8 +106,13 @@ curl --location --request DELETE 'https://your-worker-name.your-subdomain.worker
 - `DELETE /admin/delete`: Delete data for a given key
 - `DELETE /admin/delete-all`: Delete all stored data
 - `GET /admin/list`: List all stored data
+- `GET /admin`: Access the admin management page
 
-Admin endpoints require authentication with the admin password.
+The admin management page provides a user-friendly interface for managing cookies and other data stored in the Worker. It includes features such as viewing all stored cookies, creating new cookie entries, updating existing cookies, and deleting individual cookies or all stored data.
+
+To access the admin page, navigate to `https://your-worker-name.your-subdomain.workers.dev/admin` in your browser. You will be prompted to enter the admin password before accessing the management interface.
+
+**Admin endpoints require authentication with the admin password.**
 
 ## File Structure
 

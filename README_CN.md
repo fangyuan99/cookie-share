@@ -1,4 +1,4 @@
-# Cookie-share Chrome/Edge 扩展
+# Cookie-share Chrome/Edge/Firefox 扩展
 
 *注：仅供学习交流，严禁用于商业用途，请于24小时内删除，禁止在社交平台传播。如果本项目对你有用麻烦点个 star 这对我很有帮助，谢谢！*
 
@@ -8,7 +8,7 @@
 
 ## 概述
 
-Cookie-share 是一个 Chrome 扩展，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于多账号切换、视频会员共享、星球合租等场景。自建 Cloudflare Worker 保障数据安全。
+Cookie-share 是一个 Chrome/Edge/Firefox 扩展，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于多账号切换、视频会员共享、星球合租等场景。自建 Cloudflare Worker 保障数据安全。
 
 <img src="https://github.com/user-attachments/assets/a5c22aec-0532-449f-820a-409d62a48008" width="21.6%" height="21.6%" alt=""  style="margin-right: 10px;">
 <img src="https://github.com/user-attachments/assets/309a4e2f-63f2-4ff1-a5c4-d8c9982c1840" width="50%" height="50%" alt="" >
@@ -45,9 +45,13 @@ Cookie-share 是一个 Chrome 扩展，允许用户在不同设备或浏览器�
 ## 使用方法
 
 ### 插件使用方法
-1. 开启 Chrome/Edge 浏览器的开发者模式（[拓展程序地址](chrome://extensions/)）
-2. 将修改好的压缩包 `cookie-share.zip` 直接拖动到浏览器中
-3. 点击 Chrome 工具栏中的 Cookie-share 图标。
+1. 开启浏览器的开发者模式：
+   - Chrome/Edge：访问 [拓展程序地址](chrome://extensions/)
+   - Firefox：访问 [about:debugging](about:debugging#/runtime/this-firefox)
+2. 加载扩展：
+   - Chrome/Edge：将 `cookie-share.zip` 直接拖动到浏览器中
+   - Firefox：临时加载 `cookie-share.xpi` 文件或从 Firefox 附加组件安装
+3. 点击浏览器工具栏中的 Cookie-share 图标
 4. 在已登录的浏览器页面发送 Cookie
 5. 在未登录的浏览器页面接受 Cookie
 6. 注意地址后面不要加 `/`，示例: `https://your-worker-name.your-subdomain.workers.dev`
@@ -164,7 +168,7 @@ MIT
   - 重新布局版本信息位置
   - 添加手动更新检查功能
 - v0.1.3: 
-  - 所有提示信息改为英文
+  - 所有���示信息改为英文
   - 移除"保存 URL"按钮，改为自动保存
   - 添加带版本控制的构建脚本
   - 改进用户体验，URL 自动保存

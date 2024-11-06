@@ -4,6 +4,8 @@
 
 [English](./README.md) | [简体中文](./README_CN.md)
 
+---
+
 ## Overview
 
 Cookie-share is a Chrome extension that allows users to send and receive cookies between different devices or browsers. It can be used for multi-account switching, sharing video memberships, co-renting planets, and other scenarios. A self-hosted Cloudflare Worker ensures data security.
@@ -11,73 +13,71 @@ Cookie-share is a Chrome extension that allows users to send and receive cookies
 <img src="https://github.com/user-attachments/assets/a5c22aec-0532-449f-820a-409d62a48008" width="21.6%" height="21.6%" alt=""  style="margin-right: 10px;">
 <img src="https://github.com/user-attachments/assets/309a4e2f-63f2-4ff1-a5c4-d8c9982c1840" width="50%" height="50%" alt="" >
 
-
-
 [Download Link](https://github.com/fangyuan99/cookie-share/releases)
 
-### Features and Use Cases
-**Many websites do not support multi-account switching and you don't want to log out and log in again?**
+### Effects and Use Cases
+**Many websites don't support multi-account switching, and you don't want to log out and log in again?**
 
 **You have a video membership but your friends always find it cumbersome to scan a code?**
 
-**You share a certain planet with classmates and want to recover health points?**
+**You joined a certain planet and want to share the rent with classmates?**
 
-**Just too lazy to take out your phone or enter the password to switch device logins?**
+**Simply too lazy to take out your phone or enter passwords to log in on different devices?**
 
-1. Go to the homepage of a logged-in website (any URL that contains cookies)
-2. Click the extension icon, customize an ID (only letters and numbers are supported), and send the cookie
-3. On a device that is not logged in, visit the login page, use the previously set ID to retrieve the cookie, wait for the plugin to display that the cookie has been retrieved and set successfully, then refresh the page
+1. Go to the homepage of the logged-in website (any address with cookies works)
+2. Click the plugin icon, customize an ID (only letters and numbers supported), send cookies
+3. On devices without login, visit the login page, use the same ID to receive cookies, wait for the plugin to show successful cookie reception and setting, then refresh the webpage
 
 Tested websites:
-1. A certain planet
-2. A certain art platform
-3. A certain L site
+1. Certain Planet
+2. Certain Yi
+3. Certain L site
 
 ## Features
 
-- Generates random unique IDs for cookie sharing
-- Sends cookies from the current tab to the server
-- Receives and sets cookies to the current tab from the server
-- Admin functionality for managing stored cookies
-- Supports `HTTPOnly` cookies that JS cannot access due to higher plugin permissions
+- Generate random unique ID for cookie sharing
+- Send cookies from current tab to server
+- Receive and set cookies from server to current tab
+- Admin features for managing stored cookies
+- Due to higher plugin permissions, supports `HTTPOnly` Cookies that JS cannot access
 
 ## Usage
 
 ### Plugin Usage
 1. Enable Developer mode in Chrome/Edge browser ([Extensions page](chrome://extensions/))
-2. Drag and drop the modified `cookie-share.zip` directly into the browser
-3. Click the Cookie-share icon in the Chrome toolbar.
-4. Send cookies from a logged-in browser page
-5. Accept cookies on an unlogged browser page
-6. Make sure not to add `/` at the end of the address, for example: `https://your-worker-name.your-subdomain.workers.dev`
+2. Drag the modified `cookie-share.zip` directly into the browser
+3. Click the Cookie-share icon in the Chrome toolbar
+4. Send cookies from logged-in browser page
+5. Receive cookies on non-logged-in browser page
+6. Note: Don't add `/` at the end of the address, example: `https://your-worker-name.your-subdomain.workers.dev`
 
-### Backend Deployment Guide
+### Backend Deployment Tutorial
 
-Deployment can be similar to https://linux.do/t/topic/115004
+For deployment, refer to [https://linux.do/t/topic/115004](https://linux.do/t/topic/115004), the process is similar.
 
-1. [Register](https://dash.cloudflare.com/sign-up) a Cloudflare account and create a Worker.
-2. Copy the content of `_worker.js` to the newly created Worker.
-3. In the Cloudflare Worker settings, add the following environment variables:
+1. [Register](https://dash.cloudflare.com/sign-up) a Cloudflare account and create a Worker
+2. Copy the contents of `_worker.js` to your newly created Worker
+3. In Cloudflare Worker settings, add the following environment variables:
    - `ADMIN_PASSWORD`: Set a strong password for accessing admin endpoints
    - `COOKIE_STORE`: Create a KV namespace for storing cookie data
-4. Bind the KV namespace in the Worker settings:
+4. In Worker settings, bind the KV namespace:
    - Variable name: `COOKIE_STORE`
-   - KV namespace: Select the KV namespace you created
-5. Save and deploy the Worker.
-6. Note the Worker URL, which is similar to: `https://your-worker-name.your-subdomain.workers.dev` (if blocked, please customize the domain)
+   - KV namespace: Select your created KV namespace
+5. Save and deploy the Worker
+6. Note down the Worker URL, format like: `https://your-worker-name.your-subdomain.workers.dev` (if blocked, please use custom domain)
 
 ## Security Considerations
 
-- Ensure that `ADMIN_PASSWORD` is set to a strong password and change it regularly.
-- Do not hard-code `ADMIN_PASSWORD` in the code, always use environment variables.
-- Regularly review stored data and delete cookies that are no longer needed.
-- Consider setting expiration times for cookie data to reduce the risk of storing sensitive information long-term.
+- Ensure `ADMIN_PASSWORD` is set to a strong password and changed regularly
+- Don't hardcode `ADMIN_PASSWORD` in code, always use environment variables
+- Regularly review stored data, delete unnecessary cookie data
+- Consider setting expiration times for cookie data to reduce the risk of storing sensitive information long-term
 
 ## Backend (Cloudflare Worker)
 
-The backend is implemented as a Cloudflare Worker, providing the following endpoints:
+Backend is implemented as a Cloudflare Worker, providing the following endpoints:
 
-Remember to add `X-Admin-Password: yourpassword`
+Note: Add `X-Admin-Password: yourpassword`
 
 Example:
 
@@ -95,57 +95,57 @@ curl --location --request DELETE 'https://your-worker-name.your-subdomain.worker
 --header 'X-Admin-Password: yourpassword'
 ```
 
-- `POST /send-cookies`: Store cookies associated with a unique ID
-- `GET /receive-cookies`: Retrieve cookies for a given ID
+- `POST /send-cookies`: Store cookies associated with unique ID
+- `GET /receive-cookies`: Retrieve cookies for given ID
 - `GET /admin/list-cookies`: List all stored cookie IDs and URLs
-- `POST /admin/create`: Create new data entries
-- `GET /admin/read`: Read data for a given key
-- `PUT /admin/update`: Update data for a given key
-- `DELETE /admin/delete`: Delete data for a given key
+- `POST /admin/create`: Create new data entry
+- `GET /admin/read`: Read data for given key
+- `PUT /admin/update`: Update data for given key
+- `DELETE /admin/delete`: Delete data for given key
 - `DELETE /admin/delete-all`: Delete all stored data
 - `GET /admin/list`: List all stored data
-- `GET /admin`: Access the admin management page
+- `GET /admin`: Access admin management page
 
-The admin management page provides a user-friendly interface for managing cookies and other data stored in the Worker. It includes features such as viewing all stored cookies, creating new cookie entries, updating existing cookies, and deleting individual cookies or all stored data.
+The admin management page provides a user-friendly interface for managing cookies and other data stored in the Worker. It includes features for viewing all stored cookies, creating new cookie entries, updating existing cookies, and deleting individual cookies or all stored data.
 
-To access the admin page, navigate to `https://your-worker-name.your-subdomain.workers.dev/admin` in your browser. You will be prompted to enter the admin password before accessing the management interface.
+To access the admin page, navigate to `https://your-worker-name.your-subdomain.workers.dev/admin` in your browser. You will need to enter the admin password before accessing the management interface.
 
-**Admin endpoints require authentication with the admin password.**
+**Admin endpoints require authentication using the admin password.**
 
 ## File Structure
 
 - `manifest.json`: Extension configuration file
-- `popup.html`: HTML structure of the extension popup
+- `popup.html`: HTML structure for extension popup
 - `popup.js`: JavaScript for handling user interactions and cookie operations
-- `style.css`: CSS styles for the popup
+- `style.css`: CSS styles for popup
 - `_worker.js`: Cloudflare Worker script for backend operations
 
 ## Development
 
 Modifying the extension:
 
-1. Edit relevant files (`popup.html`, `popup.js`, `style.css`).
-2. Reload the extension in Chrome to view changes.
+1. Edit relevant files (`popup.html`, `popup.js`, `style.css`)
+2. Reload the extension in Chrome to see changes
 
 Modifying the backend:
 
-1. Edit the `_worker.js` file.
-2. Deploy the updated Worker to Cloudflare.
+1. Edit the `_worker.js` file
+2. Deploy updated Worker to Cloudflare
 
-## Security Considerations (Initial version not yet complete)
+## Security Considerations (Not yet perfected in initial version)
 
-- The extension uses HTTPS for all communications with the backend.
-- Admin endpoints are password-protected.
-- Implement input validation to prevent injection attacks.
-- Cookies are securely stored on the server and cannot be accessed without a unique ID.
+- Extension uses HTTPS for all communication with backend
+- Admin endpoints are password protected
+- Input validation implemented to prevent injection attacks
+- Cookies are securely stored on server, inaccessible without unique ID
 
 ## Future Development Plans
 
-- Only admin interfaces are provided, no admin pages (unknown update time)
+- Only provide admin API, no management page (update time unknown)
 
-## Contributions
+## Contributing
 
-Welcome contributions! Feel free to submit Pull Requests.
+Contributions welcome! Feel free to submit Pull Requests.
 
 ## Star History
 
@@ -156,6 +156,12 @@ Welcome contributions! Feel free to submit Pull Requests.
 MIT
 
 ## Version History
+- v0.1.4: 
+  - Improved UI layout and design
+  - Added GitHub repository link
+  - Added version display and update checker
+  - Relocated version info for better visibility
+  - Added manual update checking feature
 - v0.1.3: 
   - Changed all prompts to English
   - Removed "Save URL" button, URL now saves automatically
@@ -166,13 +172,7 @@ MIT
 - v0.1.0: Initial release
 
 ## Recent Updates
-- Auto-save URL when typing
-- Improved build process with Python script
-- Added version number to build outputs
-- All user prompts now in English for better internationalization
-
-## Usage
-1. Enter your custom URL (it will be saved automatically)
-2. Generate a random ID or enter your own
-3. Click "Send Cookies" to share your cookies
-4. On another device, enter the same ID and click "Receive Cookies"
+- Added version display in popup
+- Added manual update checking feature
+- One-click access to latest version
+- Improved update checking UI

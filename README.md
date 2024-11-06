@@ -1,4 +1,4 @@
-# Cookie-share Chrome/Edge Extension
+# Cookie-share Chrome/Edge/Firefox Extension
 
 *Note: For learning and communication purposes only. Strictly prohibited for commercial use. Please delete within 24 hours and do not share on social platforms. If this project is useful to you, please give it a star. It really helps me a lot, thank you!*
 
@@ -8,7 +8,7 @@
 
 ## Overview
 
-Cookie-share is a Chrome extension that allows users to send and receive cookies between different devices or browsers. It can be used for multi-account switching, sharing video memberships, co-renting planets, and other scenarios. A self-hosted Cloudflare Worker ensures data security.
+Cookie-share is a Chrome/Edge/Firefox extension that allows users to send and receive cookies between different devices or browsers. It can be used for multi-account switching, sharing video memberships, co-renting planets, and other scenarios. A self-hosted Cloudflare Worker ensures data security.
 
 <img src="https://github.com/user-attachments/assets/a5c22aec-0532-449f-820a-409d62a48008" width="21.6%" height="21.6%" alt=""  style="margin-right: 10px;">
 <img src="https://github.com/user-attachments/assets/309a4e2f-63f2-4ff1-a5c4-d8c9982c1840" width="50%" height="50%" alt="" >
@@ -44,9 +44,13 @@ Tested websites:
 ## Usage
 
 ### Plugin Usage
-1. Enable Developer mode in Chrome/Edge browser ([Extensions page](chrome://extensions/))
-2. Drag the modified `cookie-share.zip` directly into the browser
-3. Click the Cookie-share icon in the Chrome toolbar
+1. Enable Developer mode in your browser:
+   - Chrome/Edge: Visit [Extensions page](chrome://extensions/)
+   - Firefox: Visit [about:debugging](about:debugging#/runtime/this-firefox)
+2. Load the extension:
+   - Chrome/Edge: Drag the `cookie-share.zip` directly into the browser
+   - Firefox: Load the `cookie-share.xpi` file temporarily or install from Firefox Add-ons
+3. Click the Cookie-share icon in the browser toolbar
 4. Send cookies from logged-in browser page
 5. Receive cookies on non-logged-in browser page
 6. Note: Don't add `/` at the end of the address, example: `https://your-worker-name.your-subdomain.workers.dev`

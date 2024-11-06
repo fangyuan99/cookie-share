@@ -1,8 +1,8 @@
 # Build outputs
 *.zip
 *.xpi
-build.py
-build.js
+*.py
+build/
 
 # Node modules
 node_modules/

@@ -46,8 +46,8 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展，允许用户在不同设备�
 
 ### 插件使用方法
 1. 开启浏览器的开发者模式：
-   - Chrome/Edge：访问 [拓展程序地址](chrome://extensions/)
-   - Firefox：访问 [about:debugging](about:debugging#/runtime/this-firefox)
+   - Chrome/Edge：访问 `chrome://extensions/`
+   - Firefox：访问 `about:debugging#/runtime/this-firefox`
 2. 加载扩展：
    - Chrome/Edge：将 `cookie-share.zip` 直接拖动到浏览器中
    - Firefox：临时加载 `cookie-share.xpi` 文件或从 Firefox 附加组件安装

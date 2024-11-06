@@ -1,5 +1,6 @@
 # Build outputs
 *.zip
+*.xpi
 build.py
 build.js
 

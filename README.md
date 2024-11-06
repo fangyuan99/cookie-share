@@ -2,6 +2,10 @@
 
 ## All users before v0.1.5 please urgently update and modify your CF worker code and password. The old version accidentally deleted the authentication code, cookies can be accessed through the `/admin/list-cookies` API
 
+**Security Measures:**
+- **Choose a complex project name**
+- **Disable the built-in workers.dev domain and use a custom domain**
+
 *Note: For learning and communication purposes only. Strictly prohibited for commercial use. Please delete within 24 hours and do not share on social platforms. If this project is useful to you, please give it a star. It really helps me a lot, thank you!*
 
 [English](./README.md) | [简体中文](./README_CN.md)

@@ -51,7 +51,7 @@ async function handleRequest(request) {
   }
 
   // 对所有 /admin 开头的路径进行密码校验
-  if (path.startsWith('/admin')) {
+  if (path.startsWith("/admin/")) {
     const authResponse = verifyAdminPassword(request);
     if (authResponse) {
       return authResponse;

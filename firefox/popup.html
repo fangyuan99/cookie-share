@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cookie-share</title>
+  <link rel="stylesheet" type="text/css" href="./style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Cookie-share</h1>
+    </div>
+    <div class="version-info">
+      <span id="currentVersion"></span>
+      <span id="updateCheck" class="update-link">Check for updates</span>
+    </div>
+    <input type="text" id="cookieId" placeholder="Enter unique cookie ID" />
+    <input type="text" id="customUrl" placeholder="Enter custom URL" />
+    <div class="button-group">
+      <button id="generateIdButton">Generate Random ID</button>
+      <button id="sendButton">Send Cookies</button>
+      <button id="receiveButton">Receive Cookies</button>
+    </div>
+    <div id="message"></div>
+    <div id="errorMessage"></div>
+    <div class="github-link">
+      <a href="https://github.com/fangyuan99/cookie-share" target="_blank">
+        <img src="https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/github.svg" alt="GitHub" />
+        <span>GitHub Repository</span>
+      </a>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

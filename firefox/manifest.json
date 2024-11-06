@@ -1,0 +1,25 @@
+{
+  "manifest_version": 2,
+  "name": "Cookie Share",
+  "version": "0.1.5",
+  "description": "Sends and receives cookies with your friends",
+  "permissions": [
+    "cookies",
+    "activeTab",
+    "tabs",
+    "storage",
+    "notifications",
+    "<all_urls>"
+  ],
+  "browser_action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "cookie-share@example.com"
+    }
+  }
+} 

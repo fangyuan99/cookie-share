@@ -1,0 +1,147 @@
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #f0f4f8;
+  margin: 0;
+  padding: 15px;
+  width: 300px;
+  box-sizing: border-box;
+}
+
+.container {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  color: #2c3e50;
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 20px;
+  text-align: center;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-size: 14px;
+  margin: 5px;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+#generateIdButton {
+  background-color: #2ecc71;
+}
+
+#generateIdButton:hover {
+  background-color: #27ae60;
+}
+
+#message, #errorMessage {
+  margin-top: 12px;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: center;
+}
+
+#message {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+}
+
+#errorMessage {
+  background-color: #ffebee;
+  color: #b71c1c;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.header h1 {
+  margin: 0;
+  padding: 0;
+}
+
+.version-info {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.update-link {
+  color: #3498db;
+  cursor: pointer;
+  margin-left: 8px;
+  text-decoration: underline;
+}
+
+.update-link:hover {
+  color: #2980b9;
+}
+
+.update-available {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.github-link {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+
+.github-link a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  gap: 8px;
+  transition: color 0.3s ease;
+}
+
+.github-link a:hover {
+  color: #3498db;
+}
+
+.github-link img {
+  width: 16px;
+  height: 16px;
+}
+
+.github-link span {
+  vertical-align: middle;
+}

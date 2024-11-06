@@ -1,6 +1,6 @@
 # Cookie-share Chrome/Edge/Firefox 扩展
 
-## 请所有v0.1.5之前的用户紧急更新并修改worker代码以及密码，旧版本不小心删除了鉴权的代码，可以通过 `/admin/list-cookies` 接口访问到cookie
+## 请所有v0.1.5之前的用户紧急更新并修改CF worker代码以及密码，旧版本不小心删除了鉴权的代码，可以通过 `/admin/list-cookies` 接口访问到cookie
 
 *注：仅供学习交流，严禁用于商业用途，请于24小时内删除，禁止在社交平台传播。如果本项目对你有用麻烦点个 star 这对我很有帮助，谢谢！*
 

@@ -1,9 +1,16 @@
 {
   "manifest_version": 2,
   "name": "Cookie Share",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Sends and receives cookies with your friends",
-  "permissions": ["cookies", "activeTab", "tabs", "storage", "<all_urls>"],
+  "permissions": [
+    "cookies",
+    "activeTab",
+    "tabs",
+    "storage",
+    "notifications",
+    "<all_urls>"
+  ],
   "browser_action": {
     "default_popup": "popup.html"
   },

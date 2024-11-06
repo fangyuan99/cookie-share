@@ -45,8 +45,8 @@ Tested websites:
 
 ### Plugin Usage
 1. Enable Developer mode in your browser:
-   - Chrome/Edge: Visit [Extensions page](chrome://extensions/)
-   - Firefox: Visit [about:debugging](about:debugging#/runtime/this-firefox)
+   - Chrome/Edge: Visit `chrome://extensions/`
+   - Firefox: Visit `about:debugging#/runtime/this-firefox`
 2. Load the extension:
    - Chrome/Edge: Drag the `cookie-share.zip` directly into the browser
    - Firefox: Load the `cookie-share.xpi` file temporarily or install from Firefox Add-ons

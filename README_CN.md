@@ -41,13 +41,6 @@ Cookie-share 是一个 Chrome 扩展，允许用户在不同设备或浏览器�
 - 管理员功能，用于管理存储的 cookies
 - 由于插件的权限更大，可以支持 JS 无法访问的 `HTTPOnly` Cookie
 
-## 安装
-
-1. 克隆此仓库或下载源代码。
-2. 打开 Chrome 并导航至 `chrome://extensions/`。
-3. 在右上角启用“开发者模式”。
-4. 点击“加载已解压的扩展程序”并选择包含扩展文件的目录。
-
 ## 使用方法
 
 ### 插件使用方法
@@ -161,3 +154,21 @@ curl --location --request DELETE 'https://your-worker-name.your-subdomain.worker
 ## 许可证
 
 MIT
+
+## 版本历史
+- v0.1.3: 所有提示信息改为英文
+- v0.1.2: 添加清除 cookie 确认提示
+- v0.1.1: 添加自定义 URL 保存功能
+- v0.1.0: 初始版本
+
+## 最近更新
+- URL 输入时自动保存
+- 使用 Python 脚本改进构建过程
+- 构建输出文件添加版本号
+- 所有用户提示改为英文以提供更好的国际化支持
+
+## 使用方法
+1. 输入你的自定义 URL（会自动保存）
+2. 生成随机 ID 或输入自定义 ID
+3. 点击"发送 Cookies"分享你的 cookies
+4. 在另一个设备上，输入相同的 ID 并点击"接收 Cookies"

@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const errorMessageDiv = document.getElementById("errorMessage");
   const cookieIdInput = document.getElementById("cookieId");
   const customUrlInput = document.getElementById("customUrl");
+  const currentVersionSpan = document.getElementById("currentVersion");
+  const updateCheckSpan = document.getElementById("updateCheck");
 
   sendButton.addEventListener("click", handleSendCookies);
   receiveButton.addEventListener("click", handleReceiveCookies);
@@ -211,4 +213,38 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
   }
+
+  // 显示当前版本
+  const manifest = chrome.runtime.getManifest();
+  currentVersionSpan.textContent = `v${manifest.version}`;
+
+  // 检查更新函数
+  function checkForUpdates() {
+    updateCheckSpan.textContent = "Checking...";
+    chrome.runtime.sendMessage({ action: "checkUpdate" }, (response) => {
+      if (response.error) {
+        updateCheckSpan.textContent = "Check for updates";
+        showError("Failed to check for updates: " + response.error);
+        return;
+      }
+
+      if (response.hasUpdate) {
+        updateCheckSpan.classList.add("update-available");
+        updateCheckSpan.textContent = `Update available: v${response.latestVersion}`;
+        updateCheckSpan.onclick = () => {
+          chrome.tabs.create({ url: response.releaseUrl });
+        };
+        showMessage(`New version ${response.latestVersion} is available!`);
+      } else {
+        updateCheckSpan.textContent = "Check for updates";
+        showMessage("You have the latest version!");
+      }
+    });
+  }
+
+  // 添加更新检查点击事件
+  updateCheckSpan.addEventListener("click", checkForUpdates);
+
+  // 初始检查更新
+  checkForUpdates();
 });

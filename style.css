@@ -79,3 +79,69 @@ button:hover {
   background-color: #ffebee;
   color: #b71c1c;
 }
+
+.header {
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.header h1 {
+  margin: 0;
+  padding: 0;
+}
+
+.version-info {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.update-link {
+  color: #3498db;
+  cursor: pointer;
+  margin-left: 8px;
+  text-decoration: underline;
+}
+
+.update-link:hover {
+  color: #2980b9;
+}
+
+.update-available {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.github-link {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+
+.github-link a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  gap: 8px;
+  transition: color 0.3s ease;
+}
+
+.github-link a:hover {
+  color: #3498db;
+}
+
+.github-link img {
+  width: 16px;
+  height: 16px;
+}
+
+.github-link span {
+  vertical-align: middle;
+}

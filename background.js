@@ -7,7 +7,7 @@ async function checkForUpdates() {
     const response = await fetch('https://api.github.com/repos/fangyuan99/cookie-share/releases/latest');
     const data = await response.json();
 
-    const currentVersion = chrome.runtime.getManifest().version;
+    const currentVersion = browser.runtime.getManifest().version;
     const latestVersion = data.tag_name.replace("v", "");
 
     return {
@@ -20,17 +20,16 @@ async function checkForUpdates() {
     console.error("Error checking for updates:", error);
     return {
       hasUpdate: false,
-      currentVersion: chrome.runtime.getManifest().version,
+      currentVersion: browser.runtime.getManifest().version,
       error: error.message,
     };
   }
 }
 
 // 导出函数供popup使用
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "checkUpdate") {
-    checkForUpdates().then(sendResponse);
-    return true; // 保持消息通道开启
+    return checkForUpdates(); // Firefox支持直接返回Promise
   }
 });
 

@@ -11,6 +11,12 @@
     "notifications",
     "<all_urls>"
   ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "cookie-share@firefox.addon",
+      "strict_min_version": "57.0"
+    }
+  },
   "browser_action": {
     "default_popup": "popup.html"
   },

@@ -44,12 +44,11 @@ Tested websites:
 ## Usage
 
 ### Plugin Usage
-1. Enable Developer mode in Chrome/Edge browser ([Extensions page](chrome://extensions/))
-2. Drag the modified `cookie-share.zip` directly into the browser
-3. Click the Cookie-share icon in the Chrome toolbar
-4. Send cookies from logged-in browser page
-5. Receive cookies on non-logged-in browser page
-6. Note: Don't add `/` at the end of the address, example: `https://your-worker-name.your-subdomain.workers.dev`
+1. For Firefox, visit `about:debugging#/runtime/this-firefox` to load the add-on temporarily.
+2. Click the Cookie-share icon in the toolbar.
+3. Send cookies from logged-in browser page
+4. Receive cookies on non-logged-in browser page
+5. Note: Don't add `/` at the end of the address, example: `https://your-worker-name.your-subdomain.workers.dev`
 
 ### Backend Deployment Tutorial
 

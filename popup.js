@@ -2,7 +2,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const sendButton = document.getElementById("sendButton");
   const receiveButton = document.getElementById("receiveButton");
   const generateIdButton = document.getElementById("generateIdButton");
-  const saveUrlButton = document.getElementById("saveUrlButton");
   const messageDiv = document.getElementById("message");
   const errorMessageDiv = document.getElementById("errorMessage");
   const cookieIdInput = document.getElementById("cookieId");
@@ -11,7 +10,14 @@ document.addEventListener("DOMContentLoaded", function () {
   sendButton.addEventListener("click", handleSendCookies);
   receiveButton.addEventListener("click", handleReceiveCookies);
   generateIdButton.addEventListener("click", handleGenerateId);
-  saveUrlButton.addEventListener("click", handleSaveUrl);
+  
+  // 添加 URL 输入框的变化监听器
+  customUrlInput.addEventListener("input", function() {
+    const customUrl = customUrlInput.value.trim();
+    if (customUrl) {
+      chrome.storage.sync.set({ customUrl: customUrl });
+    }
+  });
 
   // Load the saved URL from storage
   chrome.storage.sync.get(["customUrl"], (result) => {
@@ -86,17 +92,6 @@ document.addEventListener("DOMContentLoaded", function () {
     showMessage("Random ID generated: " + randomId);
   }
 
-  function handleSaveUrl() {
-    const customUrl = customUrlInput.value.trim();
-    if (!customUrl) {
-      showError("Please enter a URL");
-      return;
-    }
-    chrome.storage.sync.set({ customUrl: customUrl }, () => {
-      showMessage("Custom URL saved!");
-    });
-  }
-
   function sendCookies(cookieId, customUrl) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       const currentTab = tabs[0];
@@ -141,12 +136,36 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  function clearAllCookies(url) {
+    return new Promise((resolve) => {
+      chrome.cookies.getAll({ url: url }, function(cookies) {
+        const clearPromises = cookies.map(cookie => {
+          return new Promise((resolveDelete) => {
+            chrome.cookies.remove({
+              url: url,
+              name: cookie.name,
+            }, () => resolveDelete());
+          });
+        });
+        Promise.all(clearPromises).then(resolve);
+      });
+    });
+  }
+
   function receiveCookies(cookieId, customUrl) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       const currentTab = tabs[0];
       const url = new URL(currentTab.url);
 
-      fetch(`${customUrl}/receive-cookies/${cookieId}`)
+      if (!confirm("Do you want to clear all cookies on the current page? This will delete your login status.")) {
+        showMessage("Operation cancelled");
+        return;
+      }
+
+      clearAllCookies(url.origin)
+        .then(() => {
+          return fetch(`${customUrl}/receive-cookies/${cookieId}`);
+        })
         .then((response) => response.json())
         .then((data) => {
           if (data.success && data.cookies) {
@@ -180,7 +199,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             Promise.all(promises).then(() => {
-              showMessage("Cookies received and set successfully!");
+              showMessage("Cookies cleared and new cookies set successfully!");
               chrome.tabs.reload(currentTab.id);
             });
           } else {

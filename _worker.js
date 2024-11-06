@@ -45,6 +45,19 @@ async function handleRequest(request) {
   const path = url.pathname;
   const method = request.method;
 
+  // 处理 OPTIONS 请求
+  if (method === "OPTIONS") {
+    return handleCorsPreflightRequest();
+  }
+
+  // 对所有 /admin 开头的路径进行密码校验
+  if (path.startsWith('/admin')) {
+    const authResponse = verifyAdminPassword(request);
+    if (authResponse) {
+      return authResponse;
+    }
+  }
+
   // 定义路由表
   const routes = {
     "POST:/send-cookies": handleSendCookies,
@@ -55,7 +68,7 @@ async function handleRequest(request) {
     "DELETE:/admin/delete": deleteData,
     "DELETE:/admin/delete-all": deleteAllData,
     "GET:/admin/list": listAllData,
-    "GET:/admin": handleAdminPage, // 新增的路由
+    "GET:/admin": handleAdminPage,
   };
 
   // 处理动态路由

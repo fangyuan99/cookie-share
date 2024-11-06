@@ -39,13 +39,6 @@ Tested websites:
 - Admin functionality for managing stored cookies
 - Supports `HTTPOnly` cookies that JS cannot access due to higher plugin permissions
 
-## Installation
-
-1. Clone this repository or download the source code.
-2. Open Chrome and navigate to `chrome://extensions/`.
-3. Enable "Developer mode" in the top right corner.
-4. Click "Load unpacked" and select the directory containing the extension files.
-
 ## Usage
 
 ### Plugin Usage
@@ -159,3 +152,25 @@ Welcome contributions! Feel free to submit Pull Requests.
 ## License
 
 MIT
+
+## Version History
+- v0.1.3: 
+  - Changed all prompts to English
+  - Removed "Save URL" button, URL now saves automatically
+  - Added build script with version control
+  - Improved user experience with automatic URL saving
+- v0.1.2: Added cookie clearing confirmation
+- v0.1.1: Added custom URL saving feature
+- v0.1.0: Initial release
+
+## Recent Updates
+- Auto-save URL when typing
+- Improved build process with Python script
+- Added version number to build outputs
+- All user prompts now in English for better internationalization
+
+## Usage
+1. Enter your custom URL (it will be saved automatically)
+2. Generate a random ID or enter your own
+3. Click "Send Cookies" to share your cookies
+4. On another device, enter the same ID and click "Receive Cookies"

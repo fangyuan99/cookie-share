@@ -8,7 +8,7 @@
 
 *Note: For learning and communication purposes only. Strictly prohibited for commercial use. Please delete within 24 hours and do not share on social platforms. If this project is useful to you, please give it a star. It really helps me a lot, thank you!*
 
-[English](./README.md) | [简体中文](./README_CN.md)
+[English](./README.md) | [简体中文](./README_CN.md) | [Update Log](./update.md)
 
 ---
 
@@ -63,7 +63,6 @@ Tested websites:
 
 ### Backend Deployment Tutorial
 
-For deployment, refer to [https://linux.do/t/topic/115004](https://linux.do/t/topic/115004), the process is similar.
 
 1. [Register](https://dash.cloudflare.com/sign-up) a Cloudflare account and create a Worker
 2. Copy the contents of `_worker.js` to your newly created Worker
@@ -164,30 +163,3 @@ Contributions welcome! Feel free to submit Pull Requests.
 ## License
 
 MIT
-
-## Version History
-
-### v0.1.5
-- Modified worker code structure
-- Adjusted cookie expiration time
-
-- v0.1.4: 
-  - Improved UI layout and design
-  - Added GitHub repository link
-  - Added version display and update checker
-  - Relocated version info for better visibility
-  - Added manual update checking feature
-- v0.1.3: 
-  - Changed all prompts to English
-  - Removed "Save URL" button, URL now saves automatically
-  - Added build script with version control
-  - Improved user experience with automatic URL saving
-- v0.1.2: Added cookie clearing confirmation
-- v0.1.1: Added custom URL saving feature
-- v0.1.0: Initial release
-
-## Recent Updates
-- Added version display in popup
-- Added manual update checking feature
-- One-click access to latest version
-- Improved update checking UI

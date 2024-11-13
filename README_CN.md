@@ -8,7 +8,7 @@
 
 *注：仅供学习交流，严禁用于商业用途，请于24小时内删除，禁止在社交平台传播。如果本项目对你有用麻烦点个 star 这对我很有帮助，谢谢！*
 
-[English](./README.md) | [简体中文](./README_CN.md)
+[English](./README.md) | [简体中文](./README_CN.md) | [Update Log](./update.md)
 
 ---
 
@@ -64,7 +64,6 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展，允许用户在不同设备�
 
 ### 后端部署教程
 
-部署可以参考 [https://linux.do/t/topic/115004](https://linux.do/t/topic/115004)，大同小异。
 
 1. [注册](https://dash.cloudflare.com/sign-up) Cloudflare 账户并创建一个 Worker。
 2. 复制 `_worker.js` 文件的内容到新创建的 Worker 中。
@@ -166,25 +165,3 @@ curl --location --request DELETE 'https://your-worker-name.your-subdomain.worker
 
 MIT
 
-## 版本历史
-- v0.1.4: 
-  - 改进界面布局和设计
-  - 添加 GitHub 仓库链接
-  - 添加版本显示和更新检查
-  - 重新布局版本信息位置
-  - 添加手动更新检查功能
-- v0.1.3: 
-  - 所有信息改为英文
-  - 移除"保存 URL"按钮，改为自动保存
-  - 添加带版本控制的构建脚本
-  - 改进用户体验，URL 自动保存
-- v0.1.2: 添加清除 cookie 确认提示
-- v0.1.1: 添加自定义 URL 保存功能
-- v0.1.0: 初始版本
-- v0.1.5: 修改worker代码/admin鉴权，修改了 worker 代码结构，调整了 cookie 过期时间，
-
-## 最近更新
-- 添加弹窗版本号显示
-- 添加手动更新检查功能
-- 一键访问最新版本
-- 改进更新检查界面

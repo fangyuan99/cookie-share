@@ -16,7 +16,8 @@
 
 Cookie-share is a Chrome/Edge/Firefox extension that allows users to send and receive cookies between different devices or browsers. It can be used for multi-account switching, sharing video memberships, co-renting planets, and other scenarios. A self-hosted Cloudflare Worker ensures data security.
 
-<img src="https://github.com/user-attachments/assets/a5c22aec-0532-449f-820a-409d62a48008" width="21.6%" height="21.6%" alt=""  style="margin-right: 10px;">
+
+<img src="https://github.com/user-attachments/assets/b422d993-46cf-4de0-aa08-fc3a7d07fb77" width="45%" height="45%" alt=""  style="margin-right: 20px;">
 <img src="https://github.com/user-attachments/assets/309a4e2f-63f2-4ff1-a5c4-d8c9982c1840" width="50%" height="50%" alt="" >
 
 [Download Link](https://github.com/fangyuan99/cookie-share/releases)

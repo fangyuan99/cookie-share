@@ -1,34 +1,85 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Cookie-share</title>
-  <link rel="stylesheet" type="text/css" href="./style.css" />
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Cookie-share</h1>
+  <head>
+    <title>Cookie-share</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+  </head>
+  <body class="bg-surface">
+    <div class="container p-6 space-y-6">
+      <div class="text-center space-y-2">
+        <h1 class="text-3xl font-semibold text-secondary">cookie-share</h1>
+        <div class="flex items-center justify-center space-x-4 text-sm">
+          <span id="currentVersion" class="text-gray-600"></span>
+          <span id="updateCheck" class="win11-link">check for updates</span>
+          <span id="adminLink" class="win11-link">admin</span>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="flex items-center space-x-3">
+          <input type="text" id="cookieId" placeholder="Enter unique cookie ID" 
+                 class="win11-input flex-1" />
+          <button id="generateIdButton" class="win11-button-small">
+            Generate
+          </button>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <input type="text" id="customUrl" placeholder="Enter custom URL" 
+                 class="win11-input flex-1" />
+          <button id="listCookiesBtn" class="win11-button-small">
+            List Cookies
+          </button>
+        </div>
+
+        <div class="flex space-x-4 mt-2">
+          <button id="sendButton" class="win11-button flex-1">Send Cookies</button>
+          <button id="receiveButton" class="win11-button flex-1">Receive Cookies</button>
+        </div>
+      </div>
+
+      <div id="message" class="text-green-600 text-sm text-center"></div>
+      <div id="errorMessage" class="text-red-600 text-sm text-center"></div>
+
+      <div class="flex justify-center mt-4">
+        <a href="https://github.com/fangyuan99/cookie-share" target="_blank"
+           class="flex items-center space-x-2 text-gray-600 hover:text-primary transition-colors">
+          <img src="https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/github.svg"
+               alt="GitHub" class="w-6 h-6" />
+          <span class="text-sm">GitHub Repository</span>
+        </a>
+      </div>
+
+      <!-- 确认弹窗 -->
+      <div id="confirmModal" class="modal hidden">
+        <div class="modal-content">
+          <p id="confirmMessage" class="text-secondary mb-6 text-lg"></p>
+          <div class="flex space-x-4">
+            <button id="confirmYes" class="win11-button flex-1">Confirm</button>
+            <button id="confirmNo" class="win11-button bg-gray-500 flex-1">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- List Cookies弹窗 -->
+      <div id="listCookiesModal" class="modal hidden">
+        <div class="modal-content-large">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-secondary">Cookies List</h3>
+            <span class="close cursor-pointer text-gray-500 hover:text-gray-700">&times;</span>
+          </div>
+          <div class="space-y-4">
+            <input type="password" id="adminPassword" placeholder="Enter admin password" 
+                   class="win11-input w-full" />
+            <input type="text" id="searchInput" placeholder="Search by ID or URL" 
+                   class="win11-input w-full" />
+            <button id="fetchCookiesBtn" class="win11-button w-full">Get Cookies</button>
+          </div>
+          <div id="loading" class="hidden my-6 text-center"></div>
+          <div id="cookiesList" class="mt-6 space-y-3"></div>
+        </div>
+      </div>
     </div>
-    <div class="version-info">
-      <span id="currentVersion"></span>
-      <span id="updateCheck" class="update-link">Check for updates</span>
-    </div>
-    <input type="text" id="cookieId" placeholder="Enter unique cookie ID" />
-    <input type="text" id="customUrl" placeholder="Enter custom URL" />
-    <div class="button-group">
-      <button id="generateIdButton">Generate Random ID</button>
-      <button id="sendButton">Send Cookies</button>
-      <button id="receiveButton">Receive Cookies</button>
-    </div>
-    <div id="message"></div>
-    <div id="errorMessage"></div>
-    <div class="github-link">
-      <a href="https://github.com/fangyuan99/cookie-share" target="_blank">
-        <img src="https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/github.svg" alt="GitHub" />
-        <span>GitHub Repository</span>
-      </a>
-    </div>
-  </div>
-  <script src="popup.js"></script>
-</body>
+    <script src="popup.js"></script>
+  </body>
 </html>

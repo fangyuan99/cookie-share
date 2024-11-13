@@ -9,7 +9,7 @@ async function checkForUpdates() {
     );
     const data = await response.json();
 
-    const currentVersion = browser.runtime.getManifest().version;
+    const currentVersion = chrome.runtime.getManifest().version;
     const latestVersion = data.tag_name.replace("v", "");
 
     return {
@@ -22,7 +22,7 @@ async function checkForUpdates() {
     console.error("Error checking for updates:", error);
     return {
       hasUpdate: false,
-      currentVersion: browser.runtime.getManifest().version,
+      currentVersion: chrome.runtime.getManifest().version,
       error: error.message,
     };
   }
@@ -31,21 +31,22 @@ async function checkForUpdates() {
 // 自动检查更新（每天一次）
 async function autoCheckUpdate() {
   // 获取上次检查时间
-  const { lastCheckTime = 0 } = await browser.storage.local.get("lastCheckTime");
+  const { lastCheckTime = 0 } = await chrome.storage.local.get("lastCheckTime");
   const now = Date.now();
 
   // 如果距离上次检查超过24小时，则进行检查
   if (now - lastCheckTime >= ONE_DAY) {
     await checkForUpdates();
     // 更新检查时间
-    await browser.storage.local.set({ lastCheckTime: now });
+    await chrome.storage.local.set({ lastCheckTime: now });
   }
 }
 
 // 导出函数供popup使用
-browser.runtime.onMessage.addListener((request, sender) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "checkUpdate") {
-    return checkForUpdates(); // Firefox 支持直接返回 Promise
+    checkForUpdates().then(sendResponse);
+    return true; // 保持消息通道开启
   }
 });
 
@@ -53,6 +54,6 @@ browser.runtime.onMessage.addListener((request, sender) => {
 autoCheckUpdate();
 
 // 监听浏览器启动
-browser.runtime.onStartup.addListener(() => {
+chrome.runtime.onStartup.addListener(() => {
   autoCheckUpdate();
-}); 
+});

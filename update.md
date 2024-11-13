@@ -1,0 +1,42 @@
+- v0.2.0: 
+  - Significantly refactored the page
+  - 大幅重构了页面
+  - Added admin redirect link
+  - 增加 admin 跳转链接
+  - Added list-cookies popup
+  - 增加 list-cookies 弹窗
+  - Attempted to fix Firefox browser compatibility issues
+  - 尝试修复火狐浏览器兼容问题
+- v0.1.5: 
+  - Modified worker code/admin authentication, changed worker code structure, adjusted cookie expiration time
+  - 修改worker代码/admin鉴权，修改了 worker 代码结构，调整了 cookie 过期时间
+- v0.1.4: 
+  - Improved interface layout and design
+  - 改进界面布局和设计
+  - Added GitHub repository link
+  - 添加 GitHub 仓库链接
+  - Added version display and update check
+  - 添加版本显示和更新检查
+  - Rearranged version information layout
+  - 重新布局版本信息位置
+  - Added manual update check feature
+  - 添加手动更新检查功能
+- v0.1.3: 
+  - Changed all information to English
+  - 所有信息改为英文
+  - Removed "Save URL" button, changed to auto-save
+  - 移除"保存 URL"按钮，改为自动保存
+  - Added build script with version control
+  - 添加带版本控制的构建脚本
+  - Improved user experience, URL auto-save
+  - 改进用户体验，URL 自动保存
+- v0.1.2: 
+  - Added clear cookie confirmation prompt
+  - 添加清除 cookie 确认提示
+- v0.1.1: 
+  - Added custom URL save feature
+  - 添加自定义 URL 保存功能
+- v0.1.0: 
+  - Initial version
+  - 初始版本
+

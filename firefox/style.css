@@ -1,147 +1,390 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Windows 11 style variables */
+:root {
+  --color-primary: #0078d4;
+  --color-secondary: #2b2b2b;
+  --color-accent: #4cc2ff;
+  --color-surface: #fafafa;
+  --color-surface-hover: #f0f0f0;
+  --shadow-win11: 0 2px 5px rgba(0,0,0,0.1);
+  --shadow-win11-hover: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* Base styles */
 body {
-  font-family: 'Arial', sans-serif;
-  background-color: #f0f4f8;
-  margin: 0;
-  padding: 15px;
-  width: 300px;
-  box-sizing: border-box;
+  background-color: var(--color-surface);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-.container {
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-h1 {
-  color: #2c3e50;
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-size: 20px;
-  text-align: center;
-}
-
-input[type="text"] {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 12px;
-  border: 1px solid #bdc3c7;
-  border-radius: 4px;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.button-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-button {
-  background-color: #3498db;
+/* Components */
+.win11-button {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-primary);
   color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-win11);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.win11-button:hover {
+  background-color: rgba(0, 120, 212, 0.9);
+  box-shadow: var(--shadow-win11-hover);
+}
+
+.win11-input {
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.win11-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+}
+
+.win11-link {
+  color: var(--color-primary);
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  font-size: 14px;
-  margin: 5px;
+  font-size: 0.875rem;
+  transition: color 0.2s;
 }
 
-button:hover {
-  background-color: #2980b9;
+.win11-link:hover {
+  color: var(--color-accent);
 }
 
-#generateIdButton {
-  background-color: #2ecc71;
+/* Layout */
+.container {
+  max-width: 32rem;
+  min-width: 28rem;
+  margin: 0 auto;
+  padding: 1rem;
 }
 
-#generateIdButton:hover {
-  background-color: #27ae60;
+.space-y-6 > * + * {
+  margin-top: 1.5rem;
 }
 
-#message, #errorMessage {
-  margin-top: 12px;
-  padding: 8px;
-  border-radius: 4px;
-  font-size: 12px;
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.space-x-4 > * + * {
+  margin-left: 1rem;
+}
+
+.space-x-3 > * + * {
+  margin-left: 0.75rem;
+}
+
+/* Flex utilities */
+.flex {
+  display: flex;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-between: space-between;
+}
+
+/* Text utilities */
+.text-center {
   text-align: center;
 }
 
-#message {
-  background-color: #e8f5e9;
-  color: #1b5e20;
+.text-sm {
+  font-size: 0.875rem;
 }
 
-#errorMessage {
-  background-color: #ffebee;
-  color: #b71c1c;
+.text-lg {
+  font-size: 1.125rem;
 }
 
-.header {
-  text-align: center;
-  margin-bottom: 5px;
+.text-2xl {
+  font-size: 1.5rem;
 }
 
-.header h1 {
-  margin: 0;
-  padding: 0;
+.text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
 }
 
-.version-info {
-  text-align: center;
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
 }
 
-.update-link {
-  color: #3498db;
-  cursor: pointer;
-  margin-left: 8px;
-  text-decoration: underline;
+.font-semibold {
+  font-weight: 600;
 }
 
-.update-link:hover {
-  color: #2980b9;
+/* Colors */
+.text-secondary {
+  color: var(--color-secondary);
 }
 
-.update-available {
-  color: #e74c3c;
-  font-weight: bold;
+.text-gray-500 {
+  color: #6b7280;
 }
 
-.github-link {
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
-  text-align: center;
+.text-gray-600 {
+  color: #4b5563;
 }
 
-.github-link a {
+.text-green-600 {
+  color: #059669;
+}
+
+.text-red-600 {
+  color: #dc2626;
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 50;
+}
+
+.modal.show {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #333;
-  text-decoration: none;
-  font-size: 14px;
-  gap: 8px;
-  transition: color 0.3s ease;
 }
 
-.github-link a:hover {
-  color: #3498db;
+.modal-content {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-win11);
+  padding: 2rem;
+  max-width: 32rem;
+  width: 100%;
+  margin: 0 1rem;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
-.github-link img {
-  width: 16px;
-  height: 16px;
+.modal-content-large {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-win11);
+  padding: 2rem;
+  width: 90%;
+  max-width: 40rem;
+  margin: 0 1.5rem;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
-.github-link span {
-  vertical-align: middle;
-} 
+/* Loading animation */
+.loading {
+  display: none;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.loading::after {
+  content: '';
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--color-primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Utilities */
+.hidden {
+  display: none;
+}
+
+.whitespace-nowrap {
+  white-space: nowrap;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Cookies列表项样式优化 */
+#cookiesList div {
+  padding: 1rem;
+  background-color: var(--color-surface-hover);
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+#cookiesList div:hover {
+  box-shadow: var(--shadow-win11-hover);
+}
+
+/* GitHub图标大小调整 */
+.w-6 {
+  width: 1.5rem;
+}
+
+.h-6 {
+  height: 1.5rem;
+}
+
+/* 小按钮样式 */
+.win11-button-small {
+  padding: 0.5rem 1rem;
+  background-color: #f3f4f6;
+  color: var(--color-secondary);
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  min-width: 5rem;
+  cursor: pointer;
+}
+
+.win11-button-small:hover {
+  background-color: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+/* Modal样式修复 */
+.modal {
+  display: none; /* 初始状态隐藏 */
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 50;
+}
+
+.modal.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content,
+.modal-content-large {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-win11);
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 32rem;
+  margin: 1rem;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-content-large {
+  max-width: 40rem;
+}
+
+/* Cookies列表样式优化 */
+#cookiesList div {
+  padding: 1rem;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s;
+}
+
+#cookiesList div:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+  box-shadow: var(--shadow-win11);
+}
+
+/* 关闭按钮样式 */
+.close {
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+}
+
+.close:hover {
+  color: #374151;
+}
+
+/* 确保弹窗内的按钮样式正确 */
+.modal-content button,
+.modal-content-large button {
+  margin-top: 0.5rem;
+}
+
+/* 修复确认弹窗按钮样式 */
+#confirmYes,
+#confirmNo {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#confirmYes {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+#confirmNo {
+  background-color: #6b7280;
+  color: white;
+}
+
+#confirmYes:hover {
+  background-color: rgba(0, 120, 212, 0.9);
+}
+
+#confirmNo:hover {
+  background-color: #4b5563;
+}
+
+/* 添加禁用状态的按钮样式 */
+.win11-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

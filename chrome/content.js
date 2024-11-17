@@ -134,7 +134,6 @@ async function loadCookies(password) {
   const cookiesList = document.getElementById("cookieShareList");
 
   try {
-    // 获取自定义 URL
     const result = await new Promise((resolve) => {
       chrome.storage.sync.get(["customUrl"], resolve);
     });
@@ -146,9 +145,7 @@ async function loadCookies(password) {
 
     const currentHost = window.location.hostname;
     const response = await fetch(
-      `${result.customUrl}/admin/list-cookies-by-host/${encodeURIComponent(
-        currentHost
-      )}`,
+      `${result.customUrl}/admin/list-cookies-by-host/${encodeURIComponent(currentHost)}`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +155,6 @@ async function loadCookies(password) {
     );
 
     const data = await response.json();
-    console.log("Response data:", data); // 添加调试日志
 
     if (data.success) {
       if (data.cookies.length === 0) {
@@ -195,7 +191,7 @@ async function loadCookies(password) {
       }
     }
   } catch (error) {
-    console.error("Error:", error); // 添加错误日志
+    console.error("Error:", error);
     cookiesList.innerHTML = `<div class="cookie-share-error">Failed to load cookies: ${error.message}</div>`;
   }
 }
@@ -204,13 +200,39 @@ async function loadCookies(password) {
 function attachButtonListeners() {
   // Receive 按钮事件
   document.querySelectorAll(".cookie-share-receive").forEach((button) => {
-    button.addEventListener("click", (e) => {
+    button.addEventListener("click", async (e) => {
       const cookieId = e.target.dataset.id;
-      chrome.runtime.sendMessage({
-        action: "receiveCookies",
-        cookieId: cookieId,
-      });
-      document.querySelector(".cookie-share-modal").classList.add("hidden");
+      try {
+        // 获取自定义 URL
+        const result = await new Promise((resolve) => {
+          chrome.storage.sync.get(["customUrl"], resolve);
+        });
+
+        if (!result.customUrl) {
+          throw new Error("Please set custom URL in extension popup first");
+        }
+
+        // 发送消息给 background script 处理 cookies
+        chrome.runtime.sendMessage({
+          action: "contentReceiveCookies",
+          cookieId: cookieId,
+          customUrl: result.customUrl,
+          url: window.location.origin
+        }, response => {
+          if (response.success) {
+            // 隐藏弹窗并刷新页面
+            document.querySelector(".cookie-share-modal").classList.add("hidden");
+            window.location.reload();
+          } else {
+            throw new Error(response.error || "Failed to receive cookies");
+          }
+        });
+
+      } catch (error) {
+        console.error("Error receiving cookies:", error);
+        document.getElementById("cookieShareList").innerHTML = 
+          `<div class="cookie-share-error">${error.message}</div>`;
+      }
     });
   });
 
@@ -219,7 +241,42 @@ function attachButtonListeners() {
     button.addEventListener("click", async (e) => {
       const cookieId = e.target.dataset.id;
       if (confirm("Are you sure you want to delete this cookie?")) {
-        // 实现删除逻辑
+        try {
+          const [passwordResult, urlResult] = await Promise.all([
+            new Promise((resolve) => chrome.storage.local.get("adminPassword", resolve)),
+            new Promise((resolve) => chrome.storage.sync.get(["customUrl"], resolve))
+          ]);
+
+          if (!passwordResult.adminPassword) {
+            throw new Error("Admin password not found");
+          }
+
+          if (!urlResult.customUrl) {
+            throw new Error("Custom URL not set");
+          }
+
+          const response = await fetch(
+            `${urlResult.customUrl}/admin/delete?key=${encodeURIComponent(cookieId)}`,
+            {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Admin-Password": passwordResult.adminPassword,
+              },
+            }
+          );
+
+          const data = await response.json();
+          if (data.success) {
+            await loadCookies(passwordResult.adminPassword);
+          } else {
+            throw new Error(data.message || "Failed to delete cookie");
+          }
+        } catch (error) {
+          console.error("Error deleting cookie:", error);
+          document.getElementById("cookieShareList").innerHTML = 
+            `<div class="cookie-share-error">Failed to delete cookie: ${error.message}</div>`;
+        }
       }
     });
   });

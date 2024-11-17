@@ -179,65 +179,53 @@ document.addEventListener("DOMContentLoaded", function () {
       const currentTab = tabs[0];
       const url = new URL(currentTab.url);
 
-      showCustomConfirm(
-        "Do you want to clear all cookies on the current page? This will delete your login status.",
-        (result) => {
-          if (!result) {
-            showMessage("Operation cancelled");
-            return;
-          }
-
-          clearAllCookies(url.origin)
-            .then(() => {
-              return fetch(`${customUrl}/receive-cookies/${cookieId}`);
-            })
-            .then((response) => response.json())
-            .then((data) => {
-              if (data.success && data.cookies) {
-                const promises = data.cookies.map((cookie) => {
-                  return new Promise((resolve) => {
-                    chrome.cookies.set(
-                      {
-                        url: url.origin,
-                        name: cookie.name,
-                        value: cookie.value,
-                        domain: cookie.domain || url.hostname,
-                        path: cookie.path || "/",
-                        secure: cookie.secure || false,
-                        httpOnly: cookie.httpOnly || false,
-                        sameSite: cookie.sameSite || "lax",
-                        expirationDate:
-                          cookie.expirationDate ||
-                          Math.floor(Date.now() / 1000) + 3600 * 24 * 365,
-                      },
-                      (result) => {
-                        if (chrome.runtime.lastError) {
-                          console.error(
-                            "Error setting cookie:",
-                            chrome.runtime.lastError
-                          );
-                        }
-                        resolve();
-                      }
-                    );
-                  });
-                });
-
-                Promise.all(promises).then(() => {
-                  showMessage(
-                    "Cookies cleared and new cookies set successfully!"
-                  );
-                  chrome.tabs.reload(currentTab.id);
-                });
-              } else {
-                showError(data.message || "Error receiving cookies");
-              }
-            })
-            .catch((error) => {
-              showError("Error receiving cookies: " + error.message);
+      clearAllCookies(url.origin)
+        .then(() => {
+          return fetch(`${customUrl}/receive-cookies/${cookieId}`);
+        })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success && data.cookies) {
+            const promises = data.cookies.map((cookie) => {
+              return new Promise((resolve) => {
+                chrome.cookies.set(
+                  {
+                    url: url.origin,
+                    name: cookie.name,
+                    value: cookie.value,
+                    domain: cookie.domain || url.hostname,
+                    path: cookie.path || "/",
+                    secure: cookie.secure || false,
+                    httpOnly: cookie.httpOnly || false,
+                    sameSite: cookie.sameSite || "lax",
+                    expirationDate:
+                      cookie.expirationDate ||
+                      Math.floor(Date.now() / 1000) + 3600 * 24 * 365,
+                  },
+                  (result) => {
+                    if (chrome.runtime.lastError) {
+                      console.error(
+                        "Error setting cookie:",
+                        chrome.runtime.lastError
+                      );
+                    }
+                    resolve();
+                  }
+                );
+              });
             });
-        }
-      );
+
+            Promise.all(promises).then(() => {
+              showMessage("Cookies cleared and new cookies set successfully!");
+              chrome.tabs.reload(currentTab.id);
+            });
+          } else {
+            showError(data.message || "Error receiving cookies");
+          }
+        })
+        .catch((error) => {
+          showError("Error receiving cookies: " + error.message);
+        });
     });
   }
 
@@ -567,7 +555,8 @@ document.addEventListener("DOMContentLoaded", function () {
         if (customUrl) {
           document.getElementById("cookieId").value = cookieId;
           document.getElementById("listCookiesModal").classList.remove("show");
-          handleReceiveCookies();
+          document.getElementById("listCookiesModal").classList.add("hidden");
+          receiveCookies(cookieId, customUrl);
         }
       });
     });

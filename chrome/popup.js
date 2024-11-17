@@ -44,26 +44,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function showMessage(message) {
     messageDiv.textContent = message;
-    messageDiv.classList.remove('hidden');
-    errorMessageDiv.classList.add('hidden');
+    messageDiv.classList.remove("hidden");
+    errorMessageDiv.classList.add("hidden");
     setTimeout(() => {
-      messageDiv.classList.add('opacity-0');
+      messageDiv.classList.add("opacity-0");
       setTimeout(() => {
-        messageDiv.classList.add('hidden');
-        messageDiv.classList.remove('opacity-0');
+        messageDiv.classList.add("hidden");
+        messageDiv.classList.remove("opacity-0");
       }, 300);
     }, 3000);
   }
 
   function showError(message) {
     errorMessageDiv.textContent = message;
-    errorMessageDiv.classList.remove('hidden');
-    messageDiv.classList.add('hidden');
+    errorMessageDiv.classList.remove("hidden");
+    messageDiv.classList.add("hidden");
     setTimeout(() => {
-      errorMessageDiv.classList.add('opacity-0');
+      errorMessageDiv.classList.add("opacity-0");
       setTimeout(() => {
-        errorMessageDiv.classList.add('hidden');
-        errorMessageDiv.classList.remove('opacity-0');
+        errorMessageDiv.classList.add("hidden");
+        errorMessageDiv.classList.remove("opacity-0");
       }, 300);
     }, 3000);
   }
@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", function () {
             showMessage("Operation cancelled");
             return;
           }
-          
+
           clearAllCookies(url.origin)
             .then(() => {
               return fetch(`${customUrl}/receive-cookies/${cookieId}`);
@@ -224,7 +224,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
 
                 Promise.all(promises).then(() => {
-                  showMessage("Cookies cleared and new cookies set successfully!");
+                  showMessage(
+                    "Cookies cleared and new cookies set successfully!"
+                  );
                   chrome.tabs.reload(currentTab.id);
                 });
               } else {
@@ -272,27 +274,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 自定义确认弹窗函数
   function showCustomConfirm(message, callback) {
-    const modal = document.getElementById('confirmModal');
-    const confirmMessage = document.getElementById('confirmMessage');
-    const yesBtn = document.getElementById('confirmYes');
-    const noBtn = document.getElementById('confirmNo');
+    const modal = document.getElementById("confirmModal");
+    const confirmMessage = document.getElementById("confirmMessage");
+    const yesBtn = document.getElementById("confirmYes");
+    const noBtn = document.getElementById("confirmNo");
 
     confirmMessage.textContent = message;
-    modal.classList.add('show');
+    modal.classList.add("show");
 
     yesBtn.onclick = () => {
-      modal.classList.remove('show');
+      modal.classList.remove("show");
       callback(true);
     };
 
     noBtn.onclick = () => {
-      modal.classList.remove('show');
+      modal.classList.remove("show");
       callback(false);
     };
   }
 
   // Admin按钮点击事件
-  document.getElementById('adminLink').addEventListener('click', () => {
+  document.getElementById("adminLink").addEventListener("click", () => {
     const customUrl = customUrlInput.value.trim();
     if (!customUrl) {
       showError("Please enter a custom URL");
@@ -302,102 +304,312 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // List Cookies按钮点击事件
-  document.getElementById('listCookiesBtn').addEventListener('click', () => {
+  const listCookiesBtn = document.getElementById('listCookiesBtn');
+  if (listCookiesBtn) {
+    listCookiesBtn.addEventListener('click', async () => {
+      const modal = document.getElementById('listCookiesModal');
+      showLoadingState();
+      
+      try {
+        // 显示modal
+        modal.classList.remove('hidden');
+        modal.classList.add('show');
+
+        // 检查是否有保存的密码
+        const result = await new Promise((resolve) => {
+          chrome.storage.local.get('adminPassword', resolve);
+        });
+        
+        if (!result.adminPassword) {
+          showPasswordInput();
+        } else {
+          await fetchCurrentSiteCookies(result.adminPassword);
+        }
+      } catch (error) {
+        console.error('Error in list cookies click handler:', error);
+        showError('Failed to handle list cookies: ' + error.message);
+      }
+    });
+  }
+
+  // 添加关闭按钮事件监听器
+  document.querySelector('#listCookiesModal .close').addEventListener('click', () => {
     const modal = document.getElementById('listCookiesModal');
-    modal.classList.add('show');
+    modal.classList.remove('show');
+    modal.classList.add('hidden');
   });
 
-  // 关闭按钮事件
-  document.querySelector('.close').addEventListener('click', () => {
-    document.getElementById('listCookiesModal').classList.remove('show');
-  });
+  // 显示/隐藏状态控制函数
+  function showLoadingState() {
+    document.getElementById("loadingState").classList.remove("hidden");
+    document.getElementById("emptyState").classList.add("hidden");
+    document.getElementById("cookiesList").innerHTML = "";
+  }
 
-  // 保存admin密码
-  document.getElementById('adminPassword').addEventListener('input', (e) => {
-    chrome.storage.local.set({ adminPassword: e.target.value });
-  });
+  function showPasswordInput() {
+    document
+      .getElementById("adminPasswordContainer")
+      .classList.remove("hidden");
+    document.getElementById("loadingState").classList.add("hidden");
+  }
 
-  // 加载保存的admin密码
-  chrome.storage.local.get(['adminPassword'], (result) => {
-    if (result.adminPassword) {
-      document.getElementById('adminPassword').value = result.adminPassword;
+  function showEmptyState(host) {
+    document.getElementById("currentHostDisplay").textContent = host;
+    document.getElementById("emptyState").classList.remove("hidden");
+    document.getElementById("loadingState").classList.add("hidden");
+  }
+
+  // 渲染 cookies 列表
+  function renderCookies(cookies) {
+    const cookiesList = document.getElementById("cookiesList");
+    const templateItem = cookiesList.querySelector(
+      ".cookie-item[data-template]"
+    );
+
+    if (!templateItem) {
+      console.error("Template element not found");
+      return;
     }
-  });
 
-  // 获取Cookies列表
-  document.getElementById('fetchCookiesBtn').addEventListener('click', async () => {
-    const customUrl = customUrlInput.value.trim();
+    document.getElementById("loadingState").classList.add("hidden");
+
+    // 清空列表，但保留模板
+    const template = templateItem.cloneNode(true);
+    cookiesList.innerHTML = "";
+    cookiesList.appendChild(template); // 重新添加模板
+
+    cookies.forEach((cookie) => {
+      const cookieItem = template.cloneNode(true);
+      cookieItem.classList.remove("hidden");
+      cookieItem.removeAttribute("data-template");
+
+      const idElement = cookieItem.querySelector(".cookie-id");
+      const receiveButton = cookieItem.querySelector(".receive-cookie");
+      const deleteButton = cookieItem.querySelector(".delete-cookie");
+
+      if (idElement) idElement.textContent = `ID: ${cookie.id}`;
+      if (receiveButton) receiveButton.dataset.id = cookie.id;
+      if (deleteButton) deleteButton.dataset.id = cookie.id;
+
+      cookiesList.appendChild(cookieItem);
+    });
+
+    attachCookieButtonListeners();
+  }
+
+  // 获取当前站点 cookies 的函数
+  async function fetchCurrentSiteCookies(password) {
+    const customUrl = document.getElementById('customUrl').value.trim();
     if (!customUrl) {
       showError("Please enter a custom URL");
       return;
     }
 
-    const password = document.getElementById('adminPassword').value;
-    const fetchButton = document.getElementById('fetchCookiesBtn');
-    const cookiesList = document.getElementById('cookiesList');
-    const searchInput = document.getElementById('searchInput');
-    
     try {
-      // 设置按钮加载状态
-      fetchButton.textContent = 'Loading...';
-      fetchButton.style.opacity = '0.7';
-      fetchButton.disabled = true;
-      
-      cookiesList.innerHTML = '';
-      searchInput.value = '';
-      
-      const response = await fetch(`${customUrl}/admin/list-cookies`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Password': password
-        }
+      const [currentTab] = await new Promise((resolve) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, resolve);
       });
-      
+
+      if (!currentTab) {
+        throw new Error('No active tab found');
+      }
+
+      const currentHost = new URL(currentTab.url).hostname;
+      console.log('Fetching cookies for host:', currentHost); // 调试日志
+
+      const response = await fetch(
+        `${customUrl}/admin/list-cookies-by-host/${encodeURIComponent(currentHost)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Password': password
+          }
+        }
+      );
+
       const data = await response.json();
-      
+      console.log('Response data:', data); // 调试日志
+
+      // 移除加载状态
+      document.getElementById('loadingState').classList.add('hidden');
+
       if (data.success) {
-        cookiesData = data.cookies;
-        renderCookiesList(cookiesData);
-        showMessage("Cookies loaded successfully");
+        if (data.cookies.length === 0) {
+          showEmptyState(currentHost);
+        } else {
+          const cookiesList = document.getElementById('cookiesList');
+          cookiesList.innerHTML = ''; // 清空现有内容
+
+          data.cookies.forEach(cookie => {
+            // 创建新的 cookie 项元素
+            const cookieItem = document.createElement('div');
+            cookieItem.className = 'flex items-center p-3 bg-surface-hover rounded-lg hover:shadow-win11 transition-shadow';
+            cookieItem.innerHTML = `
+              <div class="flex items-center space-x-4">
+                <span class="text-sm flex-grow">ID: ${cookie.id}</span>
+                <button class="win11-button-small receive-cookie bg-primary text-white" data-id="${cookie.id}">Receive</button>
+                <button class="win11-button-small delete-cookie bg-red-500 text-white" data-id="${cookie.id}">Delete</button>
+              </div>
+            `;
+            cookiesList.appendChild(cookieItem);
+          });
+
+          attachCookieButtonListeners();
+        }
       } else {
-        showError('Failed to get cookies: ' + (data.message || 'Unknown error'));
+        if (response.status === 401) {
+          showPasswordInput();
+          showError('Invalid password. Please enter the correct password.');
+        } else {
+          showError('Failed to get cookies: ' + (data.message || 'Unknown error'));
+        }
       }
     } catch (error) {
+      // 确保在出错时也移除加载状态
+      document.getElementById('loadingState').classList.add('hidden');
       console.error('Error:', error);
       showError('Request failed: ' + error.message);
-    } finally {
-      // 恢复按钮状态
-      fetchButton.textContent = 'Get Cookies';
-      fetchButton.style.opacity = '1';
-      fetchButton.disabled = false;
     }
-  });
+  }
+
+  // 获取Cookies列表
+  document
+    .getElementById("fetchCookiesBtn")
+    .addEventListener("click", async () => {
+      const customUrl = customUrlInput.value.trim();
+      if (!customUrl) {
+        showError("Please enter a custom URL");
+        return;
+      }
+
+      const password = document.getElementById("adminPassword").value;
+      const fetchButton = document.getElementById("fetchCookiesBtn");
+      const cookiesList = document.getElementById("cookiesList");
+      const searchInput = document.getElementById("searchInput");
+
+      try {
+        // 设置按钮加载状态
+        fetchButton.textContent = "Loading...";
+        fetchButton.disabled = true;
+
+        cookiesList.innerHTML = "";
+        searchInput.value = "";
+
+        const response = await fetch(`${customUrl}/admin/list-cookies`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Admin-Password": password,
+          },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          cookiesData = data.cookies;
+          renderCookiesList(cookiesData);
+          showMessage("Cookies loaded successfully");
+        } else {
+          showError(
+            "Failed to get cookies: " + (data.message || "Unknown error")
+          );
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        showError("Request failed: " + error.message);
+      } finally {
+        // 恢复按钮状态
+        fetchButton.textContent = "Get Cookies";
+        fetchButton.disabled = false;
+      }
+    });
 
   // 搜索功能
-  document.getElementById('searchInput').addEventListener('input', (e) => {
+  document.getElementById("searchInput").addEventListener("input", (e) => {
     const searchTerm = e.target.value.toLowerCase();
-    const filteredCookies = cookiesData.filter(cookie => 
-      cookie.id.toLowerCase().includes(searchTerm) || 
-      cookie.url.toLowerCase().includes(searchTerm)
-    );
-    
+    let filteredCookies;
+
+    if (searchTerm) {
+      // 如果有搜索词，则搜索所有 cookies
+      filteredCookies = cookiesData.filter(
+        (cookie) =>
+          cookie.id.toLowerCase().includes(searchTerm) ||
+          cookie.url.toLowerCase().includes(searchTerm)
+      );
+    } else {
+      // 如果没有搜索词，显示所有 cookies（保持分组显示）
+      filteredCookies = cookiesData;
+    }
+
     renderCookiesList(filteredCookies);
   });
 
-  // 渲染cookies列表
-  function renderCookiesList(cookies) {
-    const cookiesList = document.getElementById('cookiesList');
-    cookiesList.innerHTML = cookies.map(cookie => `
-      <div class="p-3 bg-surface-hover rounded-lg hover:shadow-win11 transition-shadow">
-        <p class="text-sm"><span class="font-medium text-secondary">ID:</span> ${cookie.id}</p>
-        <p class="text-sm"><span class="font-medium text-secondary">URL:</span> ${cookie.url}</p>
-      </div>
-    `).join('');
+  // 存储cookies数据的全局变量
+  let cookiesData = [];
+
+  // 获取URL的主机名
+  function getHostFromUrl(url) {
+    try {
+      return new URL(url).hostname;
+    } catch (e) {
+      return url;
+    }
+  }
+
+  // 添加按钮事件监听器
+  function attachCookieButtonListeners() {
+    // Receive按钮事件
+    document.querySelectorAll(".receive-cookie").forEach((button) => {
+      button.addEventListener("click", (e) => {
+        const cookieId = e.target.dataset.id;
+        const customUrl = document.getElementById("customUrl").value.trim();
+        if (customUrl) {
+          document.getElementById("cookieId").value = cookieId;
+          document.getElementById("listCookiesModal").classList.remove("show");
+          handleReceiveCookies();
+        }
+      });
+    });
+
+    // Delete按钮事件
+    document.querySelectorAll(".delete-cookie").forEach((button) => {
+      button.addEventListener("click", async (e) => {
+        const cookieId = e.target.dataset.id;
+        const customUrl = document.getElementById("customUrl").value.trim();
+        const password = document.getElementById("adminPassword").value;
+
+        if (confirm("Are you sure you want to delete this cookie?")) {
+          try {
+            const response = await fetch(
+              `${customUrl}/admin/delete?key=${encodeURIComponent(cookieId)}`,
+              {
+                method: "DELETE",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Admin-Password": password,
+                },
+              }
+            );
+
+            const data = await response.json();
+            if (data.success) {
+              showMessage("Cookie deleted successfully");
+              // 重新获取当前域名的 cookies
+              await fetchCurrentSiteCookies(password);
+            } else {
+              showError(data.message || "Failed to delete cookie");
+            }
+          } catch (error) {
+            showError("Error deleting cookie: " + error.message);
+          }
+        }
+      });
+    });
   }
 
   // 修改确认弹窗中的按钮文本
-  document.getElementById('confirmModal').innerHTML = `
+  document.getElementById("confirmModal").innerHTML = `
     <div class="modal-content">
       <p id="confirmMessage"></p>
       <button id="confirmYes">Confirm</button>

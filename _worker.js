@@ -40,6 +40,18 @@ function isValidId(id) {
   return /^[a-zA-Z0-9]+$/.test(id);
 }
 
+// 定义路由表
+const routes = {
+  "POST:/send-cookies": handleSendCookies,
+  "GET:/admin/list-cookies": handleListCookies,
+  "POST:/admin/create": handleCreate,
+  "GET:/admin/read": handleRead,
+  "PUT:/admin/update": handleUpdate,
+  "DELETE:/admin/delete": handleDelete,
+  "DELETE:/admin/delete-all": handleDeleteAll,
+  "GET:/admin": handleAdminPage,
+};
+
 async function handleRequest(request) {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -58,22 +70,14 @@ async function handleRequest(request) {
     }
   }
 
-  // 定义路由表
-  const routes = {
-    "POST:/send-cookies": handleSendCookies,
-    "GET:/admin/list-cookies": handleListCookies,
-    "POST:/admin/create": createData,
-    "GET:/admin/read": readData,
-    "PUT:/admin/update": updateData,
-    "DELETE:/admin/delete": deleteData,
-    "DELETE:/admin/delete-all": deleteAllData,
-    "GET:/admin/list": listAllData,
-    "GET:/admin": handleAdminPage,
-  };
-
   // 处理动态路由
-  if (method === "GET" && path.startsWith("/receive-cookies/")) {
-    return handleReceiveCookies(request, path);
+  if (method === "GET") {
+    if (path.startsWith("/receive-cookies/")) {
+      return handleReceiveCookies(request, path);
+    }
+    if (path.startsWith("/admin/list-cookies-by-host/")) {
+      return handleListCookiesByHost(request, path);
+    }
   }
 
   const routeKey = `${method}:${path}`;
@@ -87,6 +91,115 @@ async function handleRequest(request) {
   const response = new Response("Not Found", { status: 404 });
   setCorsHeaders(response);
   return response;
+}
+
+// 添加新的处理函数
+async function handleListCookiesByHost(request, path) {
+  const host = decodeURIComponent(path.split("/").pop());
+  const list = await COOKIE_STORE.list();
+  const cookies = await Promise.all(
+    list.keys.map(async (key) => {
+      const data = await COOKIE_STORE.get(key.name);
+      if (data) {
+        try {
+          const { id, url } = JSON.parse(data);
+          // 检查 URL 的主机名是否匹配
+          if (new URL(url).hostname === host) {
+            return { id, url };
+          }
+        } catch (e) {
+          console.error(`Error parsing data for key ${key.name}:`, e);
+        }
+      }
+      return null;
+    })
+  );
+
+  const filteredCookies = cookies.filter((cookie) => cookie !== null);
+  return createJsonResponse(200, { success: true, cookies: filteredCookies });
+}
+
+function handleCorsPreflightRequest() {
+  const response = new Response(null, {
+    status: 204,
+  });
+  setCorsHeaders(response);
+  return response;
+}
+
+async function handleSendCookies(request) {
+  const { id, url, cookies } = await request.json();
+
+  if (!isValidId(id)) {
+    const response = new Response(
+      JSON.stringify({
+        success: false,
+        message: "Invalid ID. Only letters and numbers are allowed.",
+      }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    setCorsHeaders(response);
+    return response;
+  }
+
+  // Check if the ID already exists
+  const existing = await COOKIE_STORE.get(id);
+  if (existing !== null) {
+    const response = new Response(
+      JSON.stringify({
+        success: false,
+        message: "Cookie ID already exists. Please use a unique ID.",
+      }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    setCorsHeaders(response);
+    return response;
+  }
+
+  // Store the new cookies
+  await COOKIE_STORE.put(id, JSON.stringify({ id, url, cookies }));
+
+  const response = new Response(
+    JSON.stringify({
+      success: true,
+      message: "Cookies received and stored successfully",
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+  setCorsHeaders(response);
+  return response;
+}
+
+async function handleReceiveCookies(request, path) {
+  const id = path.split("/").pop();
+
+  if (!isValidId(id)) {
+    return createJsonResponse(400, {
+      success: false,
+      message: "Invalid ID. Only letters and numbers are allowed.",
+    });
+  }
+
+  const storedData = await COOKIE_STORE.get(id);
+  if (storedData === null) {
+    return createJsonResponse(404, {
+      success: false,
+      message: "No cookies found for the given ID: " + id,
+    });
+  }
+
+  const { cookies } = JSON.parse(storedData);
+
+  return createJsonResponse(200, { success: true, id, cookies });
 }
 
 // 新增的处理函数
@@ -218,7 +331,7 @@ async function handleAdminPage(request) {
       let adminPassword = '';
   
       document.addEventListener('DOMContentLoaded', () => {
-        // 从本地存储中获取保存的密码
+        // 从本存储中获取保存的密码
         adminPassword = localStorage.getItem('adminPassword') || '';
         if (adminPassword) {
           document.getElementById('adminPassword').value = adminPassword;
@@ -387,282 +500,119 @@ async function handleAdminPage(request) {
   return response;
 }
 
-function handleCorsPreflightRequest() {
-  const response = new Response(null, {
-    status: 204,
-  });
-  setCorsHeaders(response);
-  return response;
-}
+// 新增独立的 CRUD 处理函数
 
-async function handleSendCookies(request) {
+// 创建数据
+async function handleCreate(request) {
   const { id, url, cookies } = await request.json();
 
   if (!isValidId(id)) {
-    const response = new Response(
-      JSON.stringify({
-        success: false,
-        message: "Invalid ID. Only letters and numbers are allowed.",
-      }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
+    return createJsonResponse(400, {
+      success: false,
+      message: "Invalid ID. Only letters and numbers are allowed.",
+    });
   }
 
-  // Check if the ID already exists
   const existing = await COOKIE_STORE.get(id);
   if (existing !== null) {
-    const response = new Response(
-      JSON.stringify({
-        success: false,
-        message: "Cookie ID already exists. Please use a unique ID.",
-      }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
+    return createJsonResponse(400, {
+      success: false,
+      message: "Cookie ID already exists. Please use a unique ID.",
+    });
   }
 
-  // Store the new cookies
   await COOKIE_STORE.put(id, JSON.stringify({ id, url, cookies }));
 
-  const response = new Response(
-    JSON.stringify({
-      success: true,
-      message: "Cookies received and stored successfully",
-    }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }
-  );
-  setCorsHeaders(response);
-  return response;
+  return createJsonResponse(201, {
+    success: true,
+    message: "Cookies received and stored successfully",
+  });
 }
 
-async function handleReceiveCookies(request, path) {
-  const id = path.split("/").pop();
-
-  if (!isValidId(id)) {
-    const response = new Response(
-      JSON.stringify({
-        success: false,
-        message: "Invalid ID. Only letters and numbers are allowed.",
-      }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
-  }
-
-  const storedData = await COOKIE_STORE.get(id);
-  if (storedData === null) {
-    const response = new Response(
-      JSON.stringify({
-        success: false,
-        message: "No cookies found for the given ID: " + id,
-      }),
-      {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
-  }
-
-  const { cookies } = JSON.parse(storedData);
-
-  const response = new Response(
-    JSON.stringify({
-      success: true,
-      id,
-      cookies: cookies,
-    }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }
-  );
-  setCorsHeaders(response);
-  return response;
-}
-
-async function handleListCookies() {
-  const list = await COOKIE_STORE.list();
-  const cookies = [];
-
-  for (const key of list.keys) {
-    const value = await COOKIE_STORE.get(key.name);
-    const { id, url } = JSON.parse(value);
-    cookies.push({ id, url });
-  }
-
-  const response = new Response(
-    JSON.stringify({
-      success: true,
-      cookies: cookies,
-    }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }
-  );
-  setCorsHeaders(response);
-  return response;
-}
-
-async function createData(request) {
-  const { key, value } = await request.json();
-
-  if (!isValidId(key)) {
-    const response = new Response(
-      JSON.stringify({
-        success: false,
-        message: "Invalid key. Only letters and numbers are allowed.",
-      }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
-  }
-
-  await COOKIE_STORE.put(key, JSON.stringify(value));
-  const response = new Response(
-    JSON.stringify({ success: true, message: "Data created successfully" }),
-    {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    }
-  );
-  setCorsHeaders(response);
-  return response;
-}
-
-async function readData(request) {
+// 读取数据
+async function handleRead(request) {
   const url = new URL(request.url);
   const key = url.searchParams.get("key");
 
   if (!isValidId(key)) {
-    const response = new Response(
-      JSON.stringify({
-        success: false,
-        message: "Invalid key. Only letters and numbers are allowed.",
-      }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
+    return createJsonResponse(400, {
+      success: false,
+      message: "Invalid key. Only letters and numbers are allowed.",
+    });
   }
 
   const value = await COOKIE_STORE.get(key);
   if (value === null) {
-    const response = new Response(
-      JSON.stringify({ success: false, message: "Data not found" }),
-      {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
+    return createJsonResponse(404, {
+      success: false,
+      message: "Data not found",
+    });
   }
-  const response = new Response(
-    JSON.stringify({ success: true, data: JSON.parse(value) }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }
-  );
-  setCorsHeaders(response);
-  return response;
+
+  return createJsonResponse(200, { success: true, data: JSON.parse(value) });
 }
 
-async function updateData(request) {
+// 更新数据
+async function handleUpdate(request) {
   const { key, value } = await request.json();
 
   if (!isValidId(key)) {
-    const response = new Response(
-      JSON.stringify({
-        success: false,
-        message: "Invalid key. Only letters and numbers are allowed.",
-      }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
+    return createJsonResponse(400, {
+      success: false,
+      message: "Invalid key. Only letters and numbers are allowed.",
+    });
   }
 
-  const existingValue = await COOKIE_STORE.get(key);
-  if (existingValue === null) {
-    const response = new Response(
-      JSON.stringify({ success: false, message: "Data not found" }),
-      {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
+  const existing = await COOKIE_STORE.get(key);
+  if (existing === null) {
+    return createJsonResponse(404, {
+      success: false,
+      message: "Data not found",
+    });
   }
+
   await COOKIE_STORE.put(key, JSON.stringify(value));
-  const response = new Response(
-    JSON.stringify({ success: true, message: "Data updated successfully" }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }
-  );
-  setCorsHeaders(response);
-  return response;
+  return createJsonResponse(200, {
+    success: true,
+    message: "Data updated successfully",
+  });
 }
 
-async function deleteData(request) {
+// 删除数据
+async function handleDelete(request) {
   const url = new URL(request.url);
   const key = url.searchParams.get("key");
 
   if (!isValidId(key)) {
-    const response = new Response(
-      JSON.stringify({
-        success: false,
-        message: "Invalid key. Only letters and numbers are allowed.",
-      }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    setCorsHeaders(response);
-    return response;
+    return createJsonResponse(400, {
+      success: false,
+      message: "Invalid key. Only letters and numbers are allowed.",
+    });
   }
 
   await COOKIE_STORE.delete(key);
-  const response = new Response(
-    JSON.stringify({ success: true, message: "Data deleted successfully" }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }
-  );
+  return createJsonResponse(200, {
+    success: true,
+    message: "Data deleted successfully",
+  });
+}
+
+// **新增的 handleDeleteAll 函数**
+async function handleDeleteAll(request) {
+  const keys = await COOKIE_STORE.list();
+  await Promise.all(keys.keys.map((key) => COOKIE_STORE.delete(key.name)));
+  return createJsonResponse(200, {
+    success: true,
+    message: "All data deleted successfully",
+  });
+}
+
+// 保持 createJsonResponse 助函数
+function createJsonResponse(status, body) {
+  const response = new Response(JSON.stringify(body), {
+    status: status,
+    headers: { "Content-Type": "application/json" },
+  });
   setCorsHeaders(response);
   return response;
 }
@@ -702,4 +652,29 @@ async function listAllData() {
   );
   setCorsHeaders(response);
   return response;
+}
+
+// 修正后的 handleListCookies 函数
+async function handleListCookies(request) {
+  const list = await COOKIE_STORE.list();
+  const cookies = await Promise.all(
+    list.keys.map(async (key) => {
+      const data = await COOKIE_STORE.get(key.name);
+      if (data) {
+        try {
+          const { id, url } = JSON.parse(data);
+          return { id, url };
+        } catch (e) {
+          console.error(`Error parsing data for key ${key.name}:`, e);
+          return null;
+        }
+      }
+      return null;
+    })
+  );
+
+  // 过滤掉所有 null 条目
+  const filteredCookies = cookies.filter((cookie) => cookie !== null);
+
+  return createJsonResponse(200, { success: true, cookies: filteredCookies });
 }

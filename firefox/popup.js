@@ -396,7 +396,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function renderCookiesList(cookies) {
     const cookiesList = document.getElementById('cookiesList');
     cookiesList.innerHTML = cookies.map(cookie => `
-      <div class="p-3 bg-surface-hover rounded-lg hover:shadow-win11 transition-shadow">
+      <div class="bg-surface-hover rounded-lg hover:shadow-win11 transition-shadow">
         <p class="text-sm"><span class="font-medium text-secondary">ID:</span> ${cookie.id}</p>
         <p class="text-sm"><span class="font-medium text-secondary">URL:</span> ${cookie.url}</p>
       </div>

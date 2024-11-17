@@ -424,25 +424,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (data.success) {
         if (data.cookies.length === 0) {
-          showEmptyState(currentHost);
+          cookiesList.innerHTML = `<div class="text-center text-gray-500 p-4">No cookies found for ${currentHost}</div>`;
         } else {
-          const cookiesList = document.getElementById('cookiesList');
-          cookiesList.innerHTML = ''; // 清空现有内容
-
-          data.cookies.forEach(cookie => {
-            // 创建新的 cookie 项元素
-            const cookieItem = document.createElement('div');
-            cookieItem.className = 'flex items-center p-3 bg-surface-hover rounded-lg hover:shadow-win11 transition-shadow';
-            cookieItem.innerHTML = `
-              <div class="flex items-center space-x-4">
-                <span class="text-sm flex-grow">ID: ${cookie.id}</span>
-                <button class="win11-button-small receive-cookie bg-primary text-white" data-id="${cookie.id}">Receive</button>
-                <button class="win11-button-small delete-cookie bg-red-500 text-white" data-id="${cookie.id}">Delete</button>
+          cookiesList.innerHTML = data.cookies.map(cookie => `
+            <div class="cookie-share-item">
+              <div class="flex items-center justify-between w-full">
+                <span>ID: ${cookie.id}</span>
+                <div class="cookie-share-buttons">
+                  <button class="cookie-share-receive" data-id="${cookie.id}">Receive</button>
+                  <button class="cookie-share-delete" data-id="${cookie.id}">Delete</button>
+                </div>
               </div>
-            `;
-            cookiesList.appendChild(cookieItem);
-          });
-
+            </div>
+          `).join('');
           attachCookieButtonListeners();
         }
       } else {
@@ -605,4 +599,31 @@ document.addEventListener("DOMContentLoaded", function () {
       <button id="confirmNo">Cancel</button>
     </div>
   `;
+
+  // 添加 SVG 按钮点击事件
+  document.getElementById('listCookiesSvgBtn').addEventListener('click', async () => {
+    // 复用原有的 List Cookies 按钮点击事件处理逻辑
+    const modal = document.getElementById('listCookiesModal');
+    showLoadingState();
+    
+    try {
+      // 显示modal
+      modal.classList.remove('hidden');
+      modal.classList.add('show');
+
+      // 检查是否有保存的密码
+      const result = await new Promise((resolve) => {
+        chrome.storage.local.get('adminPassword', resolve);
+      });
+      
+      if (!result.adminPassword) {
+        showPasswordInput();
+      } else {
+        await fetchCurrentSiteCookies(result.adminPassword);
+      }
+    } catch (error) {
+      console.error('Error in list cookies click handler:', error);
+      showError('Failed to handle list cookies: ' + error.message);
+    }
+  });
 });

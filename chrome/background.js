@@ -30,15 +30,25 @@ async function checkForUpdates() {
 
 // 自动检查更新（每天一次）
 async function autoCheckUpdate() {
-  // 获取上次检查时间
-  const { lastCheckTime = 0 } = await chrome.storage.local.get("lastCheckTime");
-  const now = Date.now();
+  try {
+    // 修正 chrome.storage.local.get 的使用方式
+    const result = await new Promise((resolve) => {
+      chrome.storage.local.get('lastCheckTime', resolve);
+    });
+    
+    const lastCheckTime = result.lastCheckTime || 0;
+    const now = Date.now();
 
-  // 如果距离上次检查超过24小时，则进行检查
-  if (now - lastCheckTime >= ONE_DAY) {
-    await checkForUpdates();
-    // 更新检查时间
-    await chrome.storage.local.set({ lastCheckTime: now });
+    // 如果距离上次检查超过24小时，则进行检查
+    if (now - lastCheckTime >= ONE_DAY) {
+      await checkForUpdates();
+      // 更新检查时间
+      await new Promise((resolve) => {
+        chrome.storage.local.set({ lastCheckTime: now }, resolve);
+      });
+    }
+  } catch (error) {
+    console.error("Error in autoCheckUpdate:", error);
   }
 }
 

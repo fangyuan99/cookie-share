@@ -4,69 +4,150 @@
 
 /* Windows 11 style variables */
 :root {
+  /* 颜色系统 */
   --color-primary: #0078d4;
-  --color-secondary: #2b2b2b;
-  --color-accent: #4cc2ff;
+  --color-primary-hover: #006cbe;
+  --color-danger: #dc2626;
+  --color-danger-hover: #ef4444;
   --color-surface: #fafafa;
   --color-surface-hover: #f0f0f0;
-  --shadow-win11: 0 2px 5px rgba(0,0,0,0.1);
-  --shadow-win11-hover: 0 4px 10px rgba(0,0,0,0.15);
+  --color-text: #2b2b2b;
+  --color-text-secondary: #6b7280;
+  
+  /* 阴影 */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+  
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  
+  /* 动画 */
+  --transition-fast: 0.2s;
+  --transition-normal: 0.3s;
 }
 
-/* Base styles */
+/* 基础样式 */
 body {
-  background-color: var(--color-surface);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--color-text);
+  background: var(--color-surface);
 }
 
-/* Components */
-.win11-button {
-  padding: 0.75rem 1.5rem;
-  background-color: var(--color-primary);
-  color: white;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-  box-shadow: var(--shadow-win11);
-  font-size: 0.95rem;
+/* 按钮基础样式 */
+.win11-button,
+.cookie-share-receive,
+.cookie-share-delete {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 0.875rem;
   font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 80px;
+  text-align: center;
 }
 
-.win11-button:hover {
-  background-color: rgba(0, 120, 212, 0.9);
-  box-shadow: var(--shadow-win11-hover);
+/* 主要按钮 */
+.win11-button,
+.cookie-share-receive {
+  background: var(--color-primary);
+  color: white;
 }
 
-.win11-input {
-  padding: 0.75rem 1rem;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
+.win11-button:hover,
+.cookie-share-receive:hover {
+  background: var(--color-primary-hover);
+}
+
+/* 危险按钮 */
+.cookie-share-delete {
+  background: var(--color-danger);
+  color: white;
+}
+
+.cookie-share-delete:hover {
+  background: var(--color-danger-hover);
+}
+
+/* 输入框样式 */
+.win11-input,
+.cookie-share-input {
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-sm);
   width: 100%;
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
 }
 
-.win11-input:focus {
+.win11-input:focus,
+.cookie-share-input:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
 }
 
-.win11-link {
-  color: var(--color-primary);
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: color 0.2s;
+/* 模态框样式 */
+.modal,
+.cookie-share-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
 }
 
-.win11-link:hover {
-  color: var(--color-accent);
+.modal-content,
+.cookie-share-modal-content {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+/* 列表项样式 */
+.cookie-share-item {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all var(--transition-fast);
+}
+
+.cookie-share-item:hover {
+  background: var(--color-surface-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 加载动画 */
+.cookie-share-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Layout */
 .container {
-  max-width: 32rem;
-  min-width: 28rem;
+  max-width: 36rem;
+  min-width: 30rem;
   margin: 0 auto;
   padding: 1rem;
 }
@@ -162,11 +243,14 @@ body {
 
 /* Modal */
 .modal {
-  display: none;
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.3);
   z-index: 50;
+}
+
+.modal.hidden {
+  display: none;
 }
 
 .modal.show {
@@ -177,13 +261,13 @@ body {
 
 .modal-content {
   background-color: white;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   box-shadow: var(--shadow-win11);
-  padding: 2rem;
-  max-width: 32rem;
-  width: 100%;
-  margin: 0 1rem;
-  max-height: 80vh;
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 500px;
+  margin: 1rem;
+  max-height: 85vh;
   overflow-y: auto;
 }
 
@@ -191,10 +275,10 @@ body {
   background-color: white;
   border-radius: 0.75rem;
   box-shadow: var(--shadow-win11);
-  padding: 2rem;
+  padding: 1.5rem;
   width: 90%;
-  max-width: 40rem;
-  margin: 0 1.5rem;
+  max-width: 600px;
+  margin: 1rem;
   max-height: 85vh;
   overflow-y: auto;
 }
@@ -250,15 +334,17 @@ body {
 }
 
 /* Cookies列表项样式优化 */
-#cookiesList div {
-  padding: 1rem;
-  background-color: var(--color-surface-hover);
+.cookie-card {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
-  margin-bottom: 0.75rem;
+  transition: all 0.2s;
 }
 
-#cookiesList div:hover {
-  box-shadow: var(--shadow-win11-hover);
+.cookie-card:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+  box-shadow: var(--shadow-win11);
 }
 
 /* GitHub图标大小调整 */
@@ -273,14 +359,10 @@ body {
 /* 小按钮样式 */
 .win11-button-small {
   padding: 0.5rem 1rem;
-  background-color: #f3f4f6;
-  color: var(--color-secondary);
-  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
-  transition: all 0.2s;
   font-size: 0.875rem;
-  min-width: 5rem;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .win11-button-small:hover {
@@ -290,11 +372,14 @@ body {
 
 /* Modal样式修复 */
 .modal {
-  display: none; /* 初始状态隐藏 */
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.3);
   z-index: 50;
+}
+
+.modal.hidden {
+  display: none;
 }
 
 .modal.show {
@@ -310,30 +395,19 @@ body {
   box-shadow: var(--shadow-win11);
   padding: 1.5rem;
   width: 90%;
-  max-width: 32rem;
+  max-width: 500px;
   margin: 1rem;
   max-height: 85vh;
   overflow-y: auto;
 }
 
 .modal-content-large {
-  max-width: 40rem;
+  max-width: 600px;
 }
 
 /* Cookies列表样式优化 */
 #cookiesList div {
-  padding: 1rem;
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
   margin-bottom: 0.75rem;
-  transition: all 0.2s;
-}
-
-#cookiesList div:hover {
-  background-color: #f3f4f6;
-  border-color: #d1d5db;
-  box-shadow: var(--shadow-win11);
 }
 
 /* 关闭按钮样式 */
@@ -387,4 +461,102 @@ body {
 .win11-button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* 在文件末尾添加以下样式 */
+.win11-button-small.delete-cookie {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+}
+
+.win11-button-small.delete-cookie:hover {
+  background-color: #dc2626;
+}
+
+.win11-button-small.receive-cookie {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+}
+
+.win11-button-small.receive-cookie:hover {
+  background-color: rgba(0, 120, 212, 0.9);
+}
+
+#cookiesList h3 {
+  color: var(--color-secondary);
+  padding-left: 0.5rem;
+  border-left: 3px solid var(--color-primary);
+}
+
+/* 添加与 content.css 相同的样式 */
+.cookie-share-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  width: 80%;
+}
+
+.cookie-share-item > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 20px;
+}
+
+.cookie-share-buttons {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.cookie-share-receive,
+.cookie-share-delete {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  min-width: 80px;
+  text-align: center;
+}
+
+.cookie-share-receive {
+  background: #0078d4;
+  color: white;
+}
+
+.cookie-share-delete {
+  background: #dc2626;
+  color: white;
+}
+
+.cookie-share-receive:hover {
+  background: rgba(0, 120, 212, 0.9);
+}
+
+.cookie-share-delete:hover {
+  background: #ef4444;
+}
+
+/* 链接样式 */
+.text-primary {
+  color: var(--color-primary);
+}
+
+.hover\:text-primary-hover:hover {
+  color: var(--color-primary-hover);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.transition-colors {
+  transition: color var(--transition-fast);
 }

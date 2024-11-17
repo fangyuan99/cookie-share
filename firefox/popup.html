@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <title>Cookie-share</title>
     <link rel="stylesheet" type="text/css" href="style.css" />
   </head>
@@ -10,8 +11,8 @@
         <h1 class="text-3xl font-semibold text-secondary">cookie-share</h1>
         <div class="flex items-center justify-center space-x-4 text-sm">
           <span id="currentVersion" class="text-gray-600"></span>
-          <span id="updateCheck" class="win11-link">check for updates</span>
-          <span id="adminLink" class="win11-link">admin</span>
+          <span id="updateCheck" class="text-primary hover:text-primary-hover cursor-pointer transition-colors">检查更新</span>
+          <span id="adminLink" class="text-primary hover:text-primary-hover cursor-pointer transition-colors">管理面板</span>
         </div>
       </div>
 
@@ -27,9 +28,6 @@
         <div class="flex items-center space-x-3">
           <input type="text" id="customUrl" placeholder="Enter custom URL" 
                  class="win11-input flex-1" />
-          <button id="listCookiesBtn" class="win11-button-small">
-            List Cookies
-          </button>
         </div>
 
         <div class="flex space-x-4 mt-2">
@@ -48,36 +46,6 @@
                alt="GitHub" class="w-6 h-6" />
           <span class="text-sm">GitHub Repository</span>
         </a>
-      </div>
-
-      <!-- 确认弹窗 -->
-      <div id="confirmModal" class="modal hidden">
-        <div class="modal-content">
-          <p id="confirmMessage" class="text-secondary mb-6 text-lg"></p>
-          <div class="flex space-x-4">
-            <button id="confirmYes" class="win11-button flex-1">Confirm</button>
-            <button id="confirmNo" class="win11-button bg-gray-500 flex-1">Cancel</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- List Cookies弹窗 -->
-      <div id="listCookiesModal" class="modal hidden">
-        <div class="modal-content-large">
-          <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-semibold text-secondary">Cookies List</h3>
-            <span class="close cursor-pointer text-gray-500 hover:text-gray-700">&times;</span>
-          </div>
-          <div class="space-y-4">
-            <input type="password" id="adminPassword" placeholder="Enter admin password" 
-                   class="win11-input w-full" />
-            <input type="text" id="searchInput" placeholder="Search by ID or URL" 
-                   class="win11-input w-full" />
-            <button id="fetchCookiesBtn" class="win11-button w-full">Get Cookies</button>
-          </div>
-          <div id="loading" class="hidden my-6 text-center"></div>
-          <div id="cookiesList" class="mt-6 space-y-3"></div>
-        </div>
       </div>
     </div>
     <script src="popup.js"></script>

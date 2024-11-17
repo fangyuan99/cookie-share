@@ -1,0 +1,137 @@
+.cookie-share-float-btn {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999999;
+  transition: all var(--transition-fast);
+}
+
+.cookie-share-float-btn:hover {
+  transform: scale(1.05);
+  background: var(--color-primary-hover);
+  box-shadow: var(--shadow-lg);
+}
+
+.cookie-share-float-btn svg {
+  width: 28px;
+  height: 28px;
+  color: white;
+}
+
+.cookie-share-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+}
+
+.cookie-share-modal.hidden {
+  display: none;
+}
+
+.cookie-share-modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.cookie-share-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.cookie-share-close {
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.cookie-share-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.cookie-share-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.cookie-share-item:hover {
+  background: #f0f0f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cookie-share-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.cookie-share-receive,
+.cookie-share-delete {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  min-width: 80px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.cookie-share-receive {
+  background: #0078d4;
+  color: white;
+}
+
+.cookie-share-delete {
+  background: #dc2626;
+  color: white;
+}
+
+.cookie-share-loading,
+.cookie-share-error,
+.cookie-share-empty {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.cookie-share-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #0078d4;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: cookie-share-spin 1s linear infinite;
+}
+
+@keyframes cookie-share-spin {
+  to { transform: rotate(360deg); }
+} 

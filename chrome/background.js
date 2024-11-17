@@ -39,7 +39,7 @@ async function autoCheckUpdate() {
     const lastCheckTime = result.lastCheckTime || 0;
     const now = Date.now();
 
-    // 如果距离上次检查超过24小时，则进行检查
+    // 果距离上次检查超过24小时，则进行检查
     if (now - lastCheckTime >= ONE_DAY) {
       await checkForUpdates();
       // 更新检查时间
@@ -98,15 +98,19 @@ async function handleSendCookies(cookieId, customUrl, tab, sendResponse) {
     const url = new URL(tab.url);
     const cookies = await getAllCookies(url.origin);
     
+    // 修改为正确的 cookie 格式
     const cookieData = cookies.map(cookie => ({
-      name: cookie.name,
-      value: cookie.value,
       domain: cookie.domain,
-      path: cookie.path,
-      httpOnly: cookie.httpOnly,
-      secure: cookie.secure,
-      sameSite: cookie.sameSite,
       expirationDate: cookie.expirationDate,
+      hostOnly: cookie.hostOnly || true,
+      httpOnly: cookie.httpOnly,
+      name: cookie.name,
+      path: cookie.path,
+      sameSite: cookie.sameSite.toLowerCase(),
+      secure: cookie.secure,
+      session: cookie.session || false,
+      storeId: null,
+      value: cookie.value
     }));
 
     const response = await fetch(`${customUrl}/send-cookies`, {
@@ -161,17 +165,23 @@ async function handleReceiveCookies(cookieId, customUrl, tab, sendResponse) {
 // Cookie 操作的辅助函数
 function getAllCookies(url) {
   return new Promise((resolve) => {
-    chrome.cookies.getAll({ url }, resolve);
+    chrome.cookies.getAll({ domain: new URL(url).hostname }, resolve);
   });
 }
 
 function clearAllCookies(url) {
   return new Promise((resolve) => {
-    chrome.cookies.getAll({ url }, (cookies) => {
+    chrome.cookies.getAll({ domain: new URL(url).hostname }, (cookies) => {
       Promise.all(
         cookies.map(cookie =>
-          new Promise(resolve => {
-            chrome.cookies.remove({ url, name: cookie.name }, resolve);
+          new Promise(resolveDelete => {
+            // 使用 cookie 的实际域名和路径来删除
+            const cookieUrl = `${cookie.secure ? 'https:' : 'http:'}//${cookie.domain.startsWith('.') ? cookie.domain.slice(1) : cookie.domain}${cookie.path}`;
+            chrome.cookies.remove({
+              url: cookieUrl,
+              name: cookie.name,
+              storeId: cookie.storeId
+            }, resolveDelete);
           })
         )
       ).then(resolve);
@@ -181,22 +191,27 @@ function clearAllCookies(url) {
 
 function setCookie(url, cookie) {
   return new Promise((resolve) => {
-    chrome.cookies.set({
-      url,
-      name: cookie.name,
-      value: cookie.value,
-      domain: cookie.domain || new URL(url).hostname,
-      path: cookie.path || "/",
-      secure: cookie.secure || false,
-      httpOnly: cookie.httpOnly || false,
-      sameSite: cookie.sameSite || "lax",
-      expirationDate: cookie.expirationDate || Math.floor(Date.now() / 1000) + 3600 * 24 * 365,
-    }, (result) => {
-      if (chrome.runtime.lastError) {
-        console.error("Error setting cookie:", chrome.runtime.lastError);
+    const urlObj = new URL(url);
+    chrome.cookies.set(
+      {
+        url: `${cookie.secure ? "https:" : "http:"}//${urlObj.hostname}${
+          cookie.path || "/"
+        }`,
+        name: cookie.name,
+        value: cookie.value,
+        path: cookie.path || "/",
+        secure: cookie.secure,
+        httpOnly: cookie.httpOnly,
+        sameSite: cookie.sameSite,
+        expirationDate: cookie.expirationDate,
+      },
+      (result) => {
+        if (chrome.runtime.lastError) {
+          console.error("Error setting cookie:", chrome.runtime.lastError);
+        }
+        resolve(result);
       }
-      resolve(result);
-    });
+    );
   });
 }
 

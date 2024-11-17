@@ -52,42 +52,88 @@ async function autoCheckUpdate() {
   }
 }
 
-// 监听来自 content script 的消息
+// 集中处理所有 cookie 相关的操作
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "checkUpdate") {
     checkForUpdates().then(sendResponse);
     return true;
   }
-  
-  if (request.action === "receiveCookies") {
-    // 获取当前标签页
-    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+
+  // 处理发送 cookies
+  if (request.action === "sendCookies") {
+    // 从 popup 发来的消息需要先获取当前标签页
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
-        const currentTab = tabs[0];
-        // 将 cookieId 设置到 popup 的输入框中
-        chrome.runtime.sendMessage({ 
-          action: "setCookieId", 
-          cookieId: request.cookieId 
-        });
-        // 打开 popup
-        chrome.browserAction.openPopup();
+        handleSendCookies(request.cookieId, request.customUrl, tabs[0], sendResponse);
+      } else {
+        sendResponse({ success: false, message: "No active tab found" });
       }
     });
+    return true;
   }
-  
+
+  // 处理接收 cookies
+  if (request.action === "receiveCookies") {
+    // 从 popup 发来的消息需要先获取当前标签页
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        handleReceiveCookies(request.cookieId, request.customUrl, tabs[0], sendResponse);
+      } else {
+        sendResponse({ success: false, message: "No active tab found" });
+      }
+    });
+    return true;
+  }
+
+  // 处理来自 content 的接收 cookies
   if (request.action === "contentReceiveCookies") {
-    handleContentReceiveCookies(request, sendResponse);
-    return true; // 保持消息通道开放
+    handleReceiveCookies(request.cookieId, request.customUrl, sender.tab, sendResponse);
+    return true;
   }
 });
 
-// 添加处理 content script cookies 请求的函数
-async function handleContentReceiveCookies(request, sendResponse) {
+// 处理发送 cookies
+async function handleSendCookies(cookieId, customUrl, tab, sendResponse) {
   try {
-    const { cookieId, customUrl, url } = request;
+    const url = new URL(tab.url);
+    const cookies = await getAllCookies(url.origin);
+    
+    const cookieData = cookies.map(cookie => ({
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain,
+      path: cookie.path,
+      httpOnly: cookie.httpOnly,
+      secure: cookie.secure,
+      sameSite: cookie.sameSite,
+      expirationDate: cookie.expirationDate,
+    }));
+
+    const response = await fetch(`${customUrl}/send-cookies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: cookieId,
+        url: tab.url,
+        cookies: cookieData,
+      }),
+    });
+
+    const data = await response.json();
+    sendResponse({ success: data.success, message: data.message });
+  } catch (error) {
+    console.error("Error sending cookies:", error);
+    sendResponse({ success: false, message: error.message });
+  }
+}
+
+// 处理接收 cookies
+async function handleReceiveCookies(cookieId, customUrl, tab, sendResponse) {
+  try {
+    const url = new URL(tab.url);
     
     // 清除现有的 cookies
-    await clearAllCookies(url);
+    await clearAllCookies(url.origin);
 
     // 获取新的 cookies
     const response = await fetch(`${customUrl}/receive-cookies/${cookieId}`);
@@ -98,51 +144,58 @@ async function handleContentReceiveCookies(request, sendResponse) {
     }
 
     // 设置新的 cookies
-    const promises = data.cookies.map(cookie => {
-      return new Promise((resolve) => {
-        chrome.cookies.set({
-          url: url,
-          name: cookie.name,
-          value: cookie.value,
-          domain: cookie.domain || new URL(url).hostname,
-          path: cookie.path || "/",
-          secure: cookie.secure || false,
-          httpOnly: cookie.httpOnly || false,
-          sameSite: cookie.sameSite || "lax",
-          expirationDate: cookie.expirationDate || Math.floor(Date.now() / 1000) + 3600 * 24 * 365,
-        }, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error("Error setting cookie:", chrome.runtime.lastError);
-          }
-          resolve();
-        });
-      });
-    });
+    await Promise.all(data.cookies.map(cookie => 
+      setCookie(url.origin, cookie)
+    ));
 
-    await Promise.all(promises);
+    // 刷新页面
+    chrome.tabs.reload(tab.id);
+    
     sendResponse({ success: true });
   } catch (error) {
-    console.error("Error in handleContentReceiveCookies:", error);
-    sendResponse({ success: false, error: error.message });
+    console.error("Error receiving cookies:", error);
+    sendResponse({ success: false, message: error.message });
   }
 }
 
-// 添加 clearAllCookies 辅助函数
+// Cookie 操作的辅助函数
+function getAllCookies(url) {
+  return new Promise((resolve) => {
+    chrome.cookies.getAll({ url }, resolve);
+  });
+}
+
 function clearAllCookies(url) {
   return new Promise((resolve) => {
     chrome.cookies.getAll({ url }, (cookies) => {
-      const clearPromises = cookies.map((cookie) => {
-        return new Promise((resolveDelete) => {
-          chrome.cookies.remove(
-            {
-              url,
-              name: cookie.name,
-            },
-            () => resolveDelete()
-          );
-        });
-      });
-      Promise.all(clearPromises).then(resolve);
+      Promise.all(
+        cookies.map(cookie =>
+          new Promise(resolve => {
+            chrome.cookies.remove({ url, name: cookie.name }, resolve);
+          })
+        )
+      ).then(resolve);
+    });
+  });
+}
+
+function setCookie(url, cookie) {
+  return new Promise((resolve) => {
+    chrome.cookies.set({
+      url,
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain || new URL(url).hostname,
+      path: cookie.path || "/",
+      secure: cookie.secure || false,
+      httpOnly: cookie.httpOnly || false,
+      sameSite: cookie.sameSite || "lax",
+      expirationDate: cookie.expirationDate || Math.floor(Date.now() / 1000) + 3600 * 24 * 365,
+    }, (result) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error setting cookie:", chrome.runtime.lastError);
+      }
+      resolve(result);
     });
   });
 }

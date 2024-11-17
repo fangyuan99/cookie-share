@@ -543,3 +543,20 @@ body {
 .cookie-share-delete:hover {
   background: #ef4444;
 }
+
+/* 链接样式 */
+.text-primary {
+  color: var(--color-primary);
+}
+
+.hover\:text-primary-hover:hover {
+  color: var(--color-primary-hover);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.transition-colors {
+  transition: color var(--transition-fast);
+}

@@ -203,7 +203,6 @@ function attachButtonListeners() {
     button.addEventListener("click", async (e) => {
       const cookieId = e.target.dataset.id;
       try {
-        // 获取自定义 URL
         const result = await new Promise((resolve) => {
           chrome.storage.sync.get(["customUrl"], resolve);
         });
@@ -212,22 +211,18 @@ function attachButtonListeners() {
           throw new Error("Please set custom URL in extension popup first");
         }
 
-        // 发送消息给 background script 处理 cookies
         chrome.runtime.sendMessage({
           action: "contentReceiveCookies",
-          cookieId: cookieId,
-          customUrl: result.customUrl,
-          url: window.location.origin
+          cookieId,
+          customUrl: result.customUrl
         }, response => {
           if (response.success) {
-            // 隐藏弹窗并刷新页面
             document.querySelector(".cookie-share-modal").classList.add("hidden");
             window.location.reload();
           } else {
-            throw new Error(response.error || "Failed to receive cookies");
+            throw new Error(response.message || "Failed to receive cookies");
           }
         });
-
       } catch (error) {
         console.error("Error receiving cookies:", error);
         document.getElementById("cookieShareList").innerHTML = 

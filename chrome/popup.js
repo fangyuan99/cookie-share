@@ -112,120 +112,33 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function sendCookies(cookieId, customUrl) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      const currentTab = tabs[0];
-      const url = new URL(currentTab.url);
-
-      chrome.cookies.getAll({ url: url.origin }, function (cookies) {
-        const cookieData = cookies.map(function (cookie) {
-          return {
-            name: cookie.name,
-            value: cookie.value,
-            domain: cookie.domain,
-            path: cookie.path,
-            httpOnly: cookie.httpOnly,
-            secure: cookie.secure,
-            sameSite: cookie.sameSite,
-            expirationDate: cookie.expirationDate,
-          };
-        });
-
-        fetch(`${customUrl}/send-cookies`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            id: cookieId,
-            url: currentTab.url,
-            cookies: cookieData,
-          }),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.success) {
-              showMessage("Cookies sent successfully!");
-            } else {
-              showError(data.message || "Error sending cookies");
-            }
-          })
-          .catch((error) => {
-            showError("Error sending cookies: " + error.message);
-          });
-      });
-    });
-  }
-
-  function clearAllCookies(url) {
-    return new Promise((resolve) => {
-      chrome.cookies.getAll({ url: url }, function (cookies) {
-        const clearPromises = cookies.map((cookie) => {
-          return new Promise((resolveDelete) => {
-            chrome.cookies.remove(
-              {
-                url: url,
-                name: cookie.name,
-              },
-              () => resolveDelete()
-            );
-          });
-        });
-        Promise.all(clearPromises).then(resolve);
+      chrome.runtime.sendMessage({
+        action: "sendCookies",
+        cookieId,
+        customUrl
+      }, response => {
+        if (response.success) {
+          showMessage("Cookies sent successfully!");
+        } else {
+          showError(response.message || "Error sending cookies");
+        }
       });
     });
   }
 
   function receiveCookies(cookieId, customUrl) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      const currentTab = tabs[0];
-      const url = new URL(currentTab.url);
-
-      clearAllCookies(url.origin)
-        .then(() => {
-          return fetch(`${customUrl}/receive-cookies/${cookieId}`);
-        })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success && data.cookies) {
-            const promises = data.cookies.map((cookie) => {
-              return new Promise((resolve) => {
-                chrome.cookies.set(
-                  {
-                    url: url.origin,
-                    name: cookie.name,
-                    value: cookie.value,
-                    domain: cookie.domain || url.hostname,
-                    path: cookie.path || "/",
-                    secure: cookie.secure || false,
-                    httpOnly: cookie.httpOnly || false,
-                    sameSite: cookie.sameSite || "lax",
-                    expirationDate:
-                      cookie.expirationDate ||
-                      Math.floor(Date.now() / 1000) + 3600 * 24 * 365,
-                  },
-                  (result) => {
-                    if (chrome.runtime.lastError) {
-                      console.error(
-                        "Error setting cookie:",
-                        chrome.runtime.lastError
-                      );
-                    }
-                    resolve();
-                  }
-                );
-              });
-            });
-
-            Promise.all(promises).then(() => {
-              showMessage("Cookies cleared and new cookies set successfully!");
-              chrome.tabs.reload(currentTab.id);
-            });
-          } else {
-            showError(data.message || "Error receiving cookies");
-          }
-        })
-        .catch((error) => {
-          showError("Error receiving cookies: " + error.message);
-        });
+      chrome.runtime.sendMessage({
+        action: "receiveCookies",
+        cookieId,
+        customUrl
+      }, response => {
+        if (response.success) {
+          showMessage("Cookies received and set successfully!");
+        } else {
+          showError(response.message || "Error receiving cookies");
+        }
+      });
     });
   }
 

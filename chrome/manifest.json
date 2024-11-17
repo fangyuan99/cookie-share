@@ -8,7 +8,6 @@
     "activeTab",
     "tabs",
     "storage",
-    "notifications",
     "<all_urls>"
   ],
   "browser_action": {

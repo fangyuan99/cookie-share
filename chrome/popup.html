@@ -28,9 +28,6 @@
         <div class="flex items-center space-x-3">
           <input type="text" id="customUrl" placeholder="Enter custom URL" 
                  class="win11-input flex-1" />
-          <button id="listCookiesBtn" class="win11-button-small">
-            List Cookies
-          </button>
         </div>
 
         <div class="flex space-x-4 mt-2">
@@ -49,65 +46,6 @@
                alt="GitHub" class="w-6 h-6" />
           <span class="text-sm">GitHub Repository</span>
         </a>
-      </div>
-
-      <!-- 确认弹窗 -->
-      <div id="confirmModal" class="modal hidden">
-        <div class="modal-content">
-          <p id="confirmMessage" class="text-secondary mb-6 text-lg"></p>
-          <div class="flex space-x-4">
-            <button id="confirmYes" class="win11-button flex-1">Confirm</button>
-            <button id="confirmNo" class="win11-button bg-gray-500 flex-1">Cancel</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- List Cookies弹窗 -->
-      <div id="listCookiesModal" class="modal hidden">
-        <div class="modal-content-large">
-          <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-semibold text-secondary">Cookies List</h3>
-            <span class="close cursor-pointer text-gray-500 hover:text-gray-700">&times;</span>
-          </div>
-          
-          <!-- 密码输入框 -->
-          <div id="adminPasswordContainer" class="mb-4 hidden">
-            <input type="password" id="adminPassword" placeholder="Enter admin password" 
-                   class="win11-input w-full" />
-          </div>
-          
-          <!-- Cookies列表容器 -->
-          <div id="cookiesContainer">
-            <!-- 加载状态 -->
-            <div id="loadingState" class="hidden">
-              <div class="flex items-center justify-center p-8 text-gray-600">
-                <div class="animate-spin mr-3 h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
-                <span>Loading cookies...</span>
-              </div>
-            </div>
-            
-            <!-- 空状态 -->
-            <div id="emptyState" class="hidden">
-              <div class="text-center text-gray-500 p-4">
-                No cookies found for <span id="currentHostDisplay"></span>
-              </div>
-            </div>
-            
-            <!-- Cookies列表 -->
-            <div id="cookiesList" class="space-y-3">
-              <!-- 每个 cookie 项的结构 -->
-              <div class="cookie-item hidden" data-template>
-                <div class="flex items-center p-3 bg-surface-hover rounded-lg hover:shadow-win11 transition-shadow">
-                  <span class="text-sm flex-grow cookie-id"></span>
-                  <div class="flex items-center space-x-4">
-                    <button class="win11-button-small receive-cookie bg-primary text-white">Receive</button>
-                    <button class="win11-button-small delete-cookie bg-red-500 text-white">Delete</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
     <script src="popup.js"></script>

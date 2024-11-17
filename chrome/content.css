@@ -1,0 +1,128 @@
+.cookie-share-float-btn {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999999;
+  transition: all 0.2s;
+}
+
+.cookie-share-float-btn:hover {
+  transform: scale(1.1);
+  background: #ef4444;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.cookie-share-float-btn svg {
+  width: 28px;
+  height: 28px;
+  color: white;
+}
+
+.cookie-share-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+}
+
+.cookie-share-modal.hidden {
+  display: none;
+}
+
+.cookie-share-modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.cookie-share-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.cookie-share-close {
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.cookie-share-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.cookie-share-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.cookie-share-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.cookie-share-receive,
+.cookie-share-delete {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.cookie-share-receive {
+  background: #0078d4;
+  color: white;
+}
+
+.cookie-share-delete {
+  background: #dc2626;
+  color: white;
+}
+
+.cookie-share-loading,
+.cookie-share-error,
+.cookie-share-empty {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.cookie-share-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #0078d4;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: cookie-share-spin 1s linear infinite;
+}
+
+@keyframes cookie-share-spin {
+  to { transform: rotate(360deg); }
+} 

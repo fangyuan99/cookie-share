@@ -65,8 +65,8 @@ body {
 
 /* Layout */
 .container {
-  max-width: 32rem;
-  min-width: 28rem;
+  max-width: 36rem;
+  min-width: 30rem;
   margin: 0 auto;
   padding: 1rem;
 }
@@ -180,13 +180,13 @@ body {
 
 .modal-content {
   background-color: white;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   box-shadow: var(--shadow-win11);
-  padding: 2rem;
-  max-width: 32rem;
-  width: 100%;
-  margin: 0 1rem;
-  max-height: 80vh;
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 500px;
+  margin: 1rem;
+  max-height: 85vh;
   overflow-y: auto;
 }
 
@@ -194,10 +194,10 @@ body {
   background-color: white;
   border-radius: 0.75rem;
   box-shadow: var(--shadow-win11);
-  padding: 2rem;
+  padding: 1.5rem;
   width: 90%;
-  max-width: 40rem;
-  margin: 0 1.5rem;
+  max-width: 600px;
+  margin: 1rem;
   max-height: 85vh;
   overflow-y: auto;
 }
@@ -314,14 +314,14 @@ body {
   box-shadow: var(--shadow-win11);
   padding: 1.5rem;
   width: 90%;
-  max-width: 32rem;
+  max-width: 500px;
   margin: 1rem;
   max-height: 85vh;
   overflow-y: auto;
 }
 
 .modal-content-large {
-  max-width: 40rem;
+  max-width: 600px;
 }
 
 /* Cookies列表样式优化 */
@@ -407,4 +407,58 @@ body {
   color: var(--color-secondary);
   padding-left: 0.5rem;
   border-left: 3px solid var(--color-primary);
+}
+
+/* 添加与 content.css 相同的样式 */
+.cookie-share-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  width: 80%;
+}
+
+.cookie-share-item > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 20px;
+}
+
+.cookie-share-buttons {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.cookie-share-receive,
+.cookie-share-delete {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  min-width: 80px;
+  text-align: center;
+}
+
+.cookie-share-receive {
+  background: #0078d4;
+  color: white;
+}
+
+.cookie-share-delete {
+  background: #dc2626;
+  color: white;
+}
+
+.cookie-share-receive:hover {
+  background: rgba(0, 120, 212, 0.9);
+}
+
+.cookie-share-delete:hover {
+  background: #ef4444;
 }

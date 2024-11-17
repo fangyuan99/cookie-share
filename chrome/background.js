@@ -58,6 +58,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     checkForUpdates().then(sendResponse);
     return true; // 保持消息通道开启
   }
+  // 添加新的消息处理
+  if (request.action === "openListCookies") {
+    // 获取当前标签页
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+      if (tabs[0]) {
+        // 打开扩展的 popup
+        chrome.browserAction.openPopup();
+        // 触发 List Cookies 按钮点击
+        chrome.runtime.sendMessage({ action: "triggerListCookies" });
+      }
+    });
+  }
 });
 
 // 启动时检查一次

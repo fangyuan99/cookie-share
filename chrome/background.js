@@ -52,25 +52,100 @@ async function autoCheckUpdate() {
   }
 }
 
-// 导出函数供popup使用
+// 监听来自 content script 的消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "checkUpdate") {
     checkForUpdates().then(sendResponse);
-    return true; // 保持消息通道开启
+    return true;
   }
-  // 添加新的消息处理
-  if (request.action === "openListCookies") {
+  
+  if (request.action === "receiveCookies") {
     // 获取当前标签页
     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
       if (tabs[0]) {
-        // 打开扩展的 popup
+        const currentTab = tabs[0];
+        // 将 cookieId 设置到 popup 的输入框中
+        chrome.runtime.sendMessage({ 
+          action: "setCookieId", 
+          cookieId: request.cookieId 
+        });
+        // 打开 popup
         chrome.browserAction.openPopup();
-        // 触发 List Cookies 按钮点击
-        chrome.runtime.sendMessage({ action: "triggerListCookies" });
       }
     });
   }
+  
+  if (request.action === "contentReceiveCookies") {
+    handleContentReceiveCookies(request, sendResponse);
+    return true; // 保持消息通道开放
+  }
 });
+
+// 添加处理 content script cookies 请求的函数
+async function handleContentReceiveCookies(request, sendResponse) {
+  try {
+    const { cookieId, customUrl, url } = request;
+    
+    // 清除现有的 cookies
+    await clearAllCookies(url);
+
+    // 获取新的 cookies
+    const response = await fetch(`${customUrl}/receive-cookies/${cookieId}`);
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || "Failed to receive cookies");
+    }
+
+    // 设置新的 cookies
+    const promises = data.cookies.map(cookie => {
+      return new Promise((resolve) => {
+        chrome.cookies.set({
+          url: url,
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain || new URL(url).hostname,
+          path: cookie.path || "/",
+          secure: cookie.secure || false,
+          httpOnly: cookie.httpOnly || false,
+          sameSite: cookie.sameSite || "lax",
+          expirationDate: cookie.expirationDate || Math.floor(Date.now() / 1000) + 3600 * 24 * 365,
+        }, (result) => {
+          if (chrome.runtime.lastError) {
+            console.error("Error setting cookie:", chrome.runtime.lastError);
+          }
+          resolve();
+        });
+      });
+    });
+
+    await Promise.all(promises);
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error("Error in handleContentReceiveCookies:", error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// 添加 clearAllCookies 辅助函数
+function clearAllCookies(url) {
+  return new Promise((resolve) => {
+    chrome.cookies.getAll({ url }, (cookies) => {
+      const clearPromises = cookies.map((cookie) => {
+        return new Promise((resolveDelete) => {
+          chrome.cookies.remove(
+            {
+              url,
+              name: cookie.name,
+            },
+            () => resolveDelete()
+          );
+        });
+      });
+      Promise.all(clearPromises).then(resolve);
+    });
+  });
+}
 
 // 启动时检查一次
 autoCheckUpdate();

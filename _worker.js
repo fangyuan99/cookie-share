@@ -183,10 +183,10 @@ async function handleReceiveCookies(request, path) {
       hostOnly: cookie.hostOnly,
       httpOnly: cookie.httpOnly,
       name: cookie.name,
-      path: cookie.path,
+      path: cookie.path || "/",
       sameSite: cookie.sameSite,
       secure: cookie.secure,
-      session: cookie.session,
+      session: false,
       storeId: null,
       value: cookie.value
     }))

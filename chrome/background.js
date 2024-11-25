@@ -96,23 +96,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleSendCookies(cookieId, customUrl, tab, sendResponse) {
   try {
     const url = new URL(tab.url);
-    const cookies = await getAllCookies(url.origin);
+    // 获取所有相关域名的 cookies
+    const cookies = await getAllCookies(url.hostname);
     
-    // 修改为正确的 cookie 格式
+    // 直接使用获取到的 cookies，不需要去重
     const cookieData = cookies.map(cookie => ({
       domain: cookie.domain,
       expirationDate: cookie.expirationDate,
-      hostOnly: cookie.hostOnly || true,
+      hostOnly: cookie.hostOnly,
       httpOnly: cookie.httpOnly,
       name: cookie.name,
       path: cookie.path,
-      sameSite: cookie.sameSite.toLowerCase(),
+      sameSite: cookie.sameSite ? cookie.sameSite.toLowerCase() : null,
       secure: cookie.secure,
-      session: cookie.session || false,
-      storeId: null,
+      session: cookie.session,
+      storeId: cookie.storeId || null,
       value: cookie.value
     }));
 
+    // 发送请求
     const response = await fetch(`${customUrl}/send-cookies`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -124,7 +126,11 @@ async function handleSendCookies(cookieId, customUrl, tab, sendResponse) {
     });
 
     const data = await response.json();
-    sendResponse({ success: data.success, message: data.message });
+    if (!data.success) {
+      throw new Error(data.message || "Failed to send cookies");
+    }
+
+    sendResponse({ success: true, message: "Cookies sent successfully" });
   } catch (error) {
     console.error("Error sending cookies:", error);
     sendResponse({ success: false, message: error.message });
@@ -136,9 +142,9 @@ async function handleReceiveCookies(cookieId, customUrl, tab, sendResponse) {
   try {
     const url = new URL(tab.url);
     
-    // 清除现有的 cookies
-    await clearAllCookies(url.origin);
-
+    // 获取当前所有 cookies
+    const currentCookies = await getAllCookies(url.hostname);
+    
     // 获取新的 cookies
     const response = await fetch(`${customUrl}/receive-cookies/${cookieId}`);
     const data = await response.json();
@@ -147,71 +153,118 @@ async function handleReceiveCookies(cookieId, customUrl, tab, sendResponse) {
       throw new Error(data.message || "Failed to receive cookies");
     }
 
-    // 设置新的 cookies
-    await Promise.all(data.cookies.map(cookie => 
-      setCookie(url.origin, cookie)
-    ));
+    // 先删除所有现有的 cookies
+    await Promise.all(currentCookies.map(cookie => removeCookie(cookie)));
 
-    // 刷新页面
-    chrome.tabs.reload(tab.id);
+    // 设置新的 cookies
+    const results = await Promise.all(data.cookies.map(async cookie => {
+      try {
+        return await setCookie(url.origin, cookie);
+      } catch (error) {
+        console.error("Error setting cookie:", error, cookie);
+        return false;
+      }
+    }));
+
+    // 检查设置结果
+    const failedCount = results.filter(r => !r).length;
+    if (failedCount > 0) {
+      console.warn(`Failed to set ${failedCount} cookies`);
+    }
+
+    // 使用 chrome.tabs.reload 的回调确保刷新完成
+    chrome.tabs.reload(tab.id, { bypassCache: true }, () => {
+      sendResponse({ success: true });
+    });
     
-    sendResponse({ success: true });
+    return true; // 保持消息通道开放
   } catch (error) {
     console.error("Error receiving cookies:", error);
     sendResponse({ success: false, message: error.message });
   }
 }
 
-// Cookie 操作的辅助函数
-function getAllCookies(url) {
+// 改进的 Cookie 操作辅助函数
+function getAllCookies(hostname) {
   return new Promise((resolve) => {
-    chrome.cookies.getAll({ domain: new URL(url).hostname }, resolve);
+    // 不传入 domain 参数，获取所有 cookies
+    chrome.cookies.getAll({}, (cookies) => {
+      // 过滤相关域名的 cookies
+      const filteredCookies = cookies.filter(cookie => {
+        const cookieDomain = cookie.domain.startsWith('.') ? 
+          cookie.domain.slice(1) : cookie.domain;
+        return hostname.endsWith(cookieDomain);
+      });
+
+      // 按照 domain、path 和 name 排序，确保顺序一致
+      const sortedCookies = filteredCookies.sort((a, b) => {
+        // 先按域名排序
+        if (a.domain !== b.domain) {
+          return a.domain.localeCompare(b.domain);
+        }
+        // 域名相同则按路径排序
+        if (a.path !== b.path) {
+          return a.path.localeCompare(b.path);
+        }
+        // 路径相同则按名称排序
+        return a.name.localeCompare(b.name);
+      });
+
+      resolve(sortedCookies);
+    });
   });
 }
 
-function clearAllCookies(url) {
+function removeCookie(cookie) {
   return new Promise((resolve) => {
-    chrome.cookies.getAll({ domain: new URL(url).hostname }, (cookies) => {
-      Promise.all(
-        cookies.map(cookie =>
-          new Promise(resolveDelete => {
-            // 使用 cookie 的实际域名和路径来删除
-            const cookieUrl = `${cookie.secure ? 'https:' : 'http:'}//${cookie.domain.startsWith('.') ? cookie.domain.slice(1) : cookie.domain}${cookie.path}`;
-            chrome.cookies.remove({
-              url: cookieUrl,
-              name: cookie.name,
-              storeId: cookie.storeId
-            }, resolveDelete);
-          })
-        )
-      ).then(resolve);
+    const protocol = cookie.secure ? 'https:' : 'http:';
+    const cookieUrl = `${protocol}//${cookie.domain.startsWith('.') ? cookie.domain.slice(1) : cookie.domain}${cookie.path}`;
+    
+    chrome.cookies.remove({
+      url: cookieUrl,
+      name: cookie.name,
+      storeId: cookie.storeId || null
+    }, (details) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error removing cookie:", chrome.runtime.lastError, cookie);
+      }
+      resolve(!!details);
     });
   });
 }
 
 function setCookie(url, cookie) {
   return new Promise((resolve) => {
-    const urlObj = new URL(url);
-    chrome.cookies.set(
-      {
-        url: `${cookie.secure ? "https:" : "http:"}//${urlObj.hostname}${
-          cookie.path || "/"
-        }`,
-        name: cookie.name,
-        value: cookie.value,
-        path: cookie.path || "/",
-        secure: cookie.secure,
-        httpOnly: cookie.httpOnly,
-        sameSite: cookie.sameSite,
-        expirationDate: cookie.expirationDate,
-      },
-      (result) => {
-        if (chrome.runtime.lastError) {
-          console.error("Error setting cookie:", chrome.runtime.lastError);
-        }
-        resolve(result);
+    const cookieData = {
+      url: `${cookie.secure ? "https:" : "http:"}//${
+        cookie.domain.startsWith('.') ? cookie.domain.slice(1) : cookie.domain
+      }${cookie.path || "/"}`,
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain,
+      path: cookie.path || "/",
+      secure: cookie.secure,
+      httpOnly: cookie.httpOnly,
+      sameSite: cookie.sameSite,
+      storeId: cookie.storeId || null
+    };
+
+    // 处理过期时间
+    const now = Math.floor(Date.now() / 1000);
+    if (cookie.expirationDate && cookie.expirationDate > now) {
+      cookieData.expirationDate = cookie.expirationDate;
+    } else {
+      cookieData.expirationDate = now + (30 * 24 * 60 * 60); // 30 天后过期
+    }
+
+    chrome.cookies.set(cookieData, (result) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error setting cookie:", chrome.runtime.lastError, cookieData);
+        resolve(false);
+      } else {
+        resolve(true);
       }
-    );
+    });
   });
 }
 

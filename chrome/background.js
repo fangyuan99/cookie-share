@@ -52,6 +52,20 @@ async function autoCheckUpdate() {
   }
 }
 
+// 添加存储默认设置的函数
+async function initializeSettings() {
+  const result = await new Promise(resolve => {
+    chrome.storage.sync.get({
+      showFloatButton: true, // 默认显示浮动按钮
+      autoHideFullscreen: true // 默认全屏自动隐藏
+    }, resolve);
+  });
+  return result;
+}
+
+// 在启动时初始化设置
+initializeSettings();
+
 // 集中处理所有 cookie 相关的操作
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "checkUpdate") {
@@ -88,6 +102,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // 处理来自 content 的接收 cookies
   if (request.action === "contentReceiveCookies") {
     handleReceiveCookies(request.cookieId, request.customUrl, sender.tab, sendResponse);
+    return true;
+  }
+
+  if (request.action === "getSettings") {
+    initializeSettings().then(sendResponse);
     return true;
   }
 });

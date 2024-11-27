@@ -12,7 +12,14 @@
     "default_icon": "/images/icons/icon-16.png",
     "default_popup": "popup.html"
   },
-  "permissions": ["cookies", "activeTab", "tabs", "storage", "<all_urls>"],
+  "permissions": [
+    "cookies",
+    "activeTab",
+    "tabs",
+    "storage",
+    "fullscreen",
+    "<all_urls>"
+  ],
   "background": {
     "scripts": ["background.js"],
     "persistent": false
@@ -21,7 +28,8 @@
     {
       "matches": ["<all_urls>"],
       "css": ["content.css"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_start"
     }
   ]
 }

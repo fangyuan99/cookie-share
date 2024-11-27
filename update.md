@@ -1,3 +1,12 @@
+- v0.3.7:
+  - Refactored worker code
+  - 重构 worker 代码
+  - Refactored page and modified icons
+  - 重构页面，修改图标
+  - Added floating button for quick account switching
+  - 新增浮动按钮，可以快速切换账号
+  - Attempted to fix Firefox browser compatibility issues
+  - 尝试修复 Firefox 浏览器兼容问题
 - v0.2.0: 
   - Significantly refactored the page
   - 大幅重构了页面

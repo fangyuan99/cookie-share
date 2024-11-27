@@ -457,7 +457,7 @@ body {
   background-color: #4b5563;
 }
 
-/* 添加禁用状态的按钮��式 */
+/* 添加禁用状态的按钮式 */
 .win11-button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
@@ -636,4 +636,14 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+/* 在文件中添加危险按钮样式 */
+.win11-button-danger {
+  background: var(--color-danger);
+  color: white;
+}
+
+.win11-button-danger:hover {
+  background: var(--color-danger-hover);
 }

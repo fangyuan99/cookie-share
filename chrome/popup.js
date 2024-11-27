@@ -8,10 +8,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const customUrlInput = document.getElementById("customUrl");
   const currentVersionSpan = document.getElementById("currentVersion");
   const updateCheckSpan = document.getElementById("updateCheck");
+  const clearButton = document.getElementById("clearButton");
 
   sendButton.addEventListener("click", handleSendCookies);
   receiveButton.addEventListener("click", handleReceiveCookies);
   generateIdButton.addEventListener("click", handleGenerateId);
+  clearButton.addEventListener("click", handleClearCookies);
 
   // 添加 URL 输入框的变化监听器
   customUrlInput.addEventListener("input", function () {
@@ -108,6 +110,22 @@ document.addEventListener("DOMContentLoaded", function () {
     const randomId = generateRandomId();
     cookieIdInput.value = randomId;
     showMessage("Random ID generated: " + randomId);
+  }
+
+  function handleClearCookies() {
+    if (confirm("Are you sure you want to clear all cookies for this site?")) {
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        chrome.runtime.sendMessage({
+          action: "clearAllCookies"
+        }, response => {
+          if (response.success) {
+            showMessage(response.message);
+          } else {
+            showError(response.message || "Error clearing cookies");
+          }
+        });
+      });
+    }
   }
 
   function sendCookies(cookieId, customUrl) {

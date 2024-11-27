@@ -1,4 +1,5 @@
-# Cookie-share Chrome/Edge/Firefox 扩展
+# Cookie-share Chrome/Edge/Firefox 扩展 
+
 
 ## 请所有v0.1.5之前的用户紧急更新并修改CF worker代码以及密码，旧版本不小心删除了鉴权的代码，可以通过 `/admin/list-cookies` 接口访问到cookie
 
@@ -14,9 +15,16 @@
 
 ## 概述
 
-Cookie-share 是一个 Chrome/Edge/Firefox 扩展，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于多账号切换、视频会员共享、星球合租等场景。自建 Cloudflare Worker 保障数据安全。
+Cookie-share 是一个 Chrome/Edge/Firefox 扩展，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于**多账号切换、视频会员共享、星球合租**等场景。自建 Cloudflare Worker 保障数据安全。
 
-<img src="https://github.com/user-attachments/assets/b422d993-46cf-4de0-aa08-fc3a7d07fb77" width="45%" height="45%" alt=""  style="margin-right: 20px;">
+![image](https://github.com/user-attachments/assets/48877965-4c5e-40ec-9b40-ceeb31a469ef)
+
+---
+
+![image](https://github.com/user-attachments/assets/0260e0b4-760d-4635-88ec-c9417cef6d9b)
+
+---
+
 <img src="https://github.com/user-attachments/assets/309a4e2f-63f2-4ff1-a5c4-d8c9982c1840" width="50%" height="50%" alt="" >
 
 

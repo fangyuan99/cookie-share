@@ -195,4 +195,43 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
   });
+
+  // 添加设置区域
+  const settingsDiv = document.createElement('div');
+  settingsDiv.className = 'settings-section';
+  settingsDiv.innerHTML = `
+    <div class="settings-header">Settings</div>
+    <div class="settings-item">
+      <label class="switch">
+        <input type="checkbox" id="showFloatButton">
+        <span class="slider round"></span>
+      </label>
+      <span>Show Float Button</span>
+    </div>
+    <div class="settings-item">
+      <label class="switch">
+        <input type="checkbox" id="autoHideFullscreen">
+        <span class="slider round"></span>
+      </label>
+      <span>Auto Hide in Fullscreen</span>
+    </div>
+  `;
+  document.querySelector('.container').appendChild(settingsDiv);
+
+  // 加载设置
+  chrome.runtime.sendMessage({ action: "getSettings" }, function(settings) {
+    if (settings) {
+      document.getElementById('showFloatButton').checked = settings.showFloatButton;
+      document.getElementById('autoHideFullscreen').checked = settings.autoHideFullscreen;
+    }
+  });
+
+  // 添加设置变更监听器
+  document.getElementById('showFloatButton').addEventListener('change', function(e) {
+    chrome.storage.sync.set({ showFloatButton: e.target.checked });
+  });
+
+  document.getElementById('autoHideFullscreen').addEventListener('change', function(e) {
+    chrome.storage.sync.set({ autoHideFullscreen: e.target.checked });
+  });
 });

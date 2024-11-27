@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // Load the saved URL from storage
-  browser.storage.sync.get(["customUrl"]).then((result) => {
+  browser.storage.sync.get(["customUrl"], (result) => {
     if (result.customUrl) {
       customUrlInput.value = result.customUrl;
     }
@@ -83,19 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {
       showError("Please enter a custom URL");
       return;
     }
-    browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-      browser.runtime.sendMessage({
-        action: "sendCookies",
-        cookieId,
-        customUrl
-      }).then(response => {
-        if (response.success) {
-          showMessage("Cookies sent successfully!");
-        } else {
-          showError(response.message || "Error sending cookies");
-        }
-      });
-    });
+    sendCookies(cookieId, customUrl);
   }
 
   function handleReceiveCookies() {
@@ -113,19 +101,7 @@ document.addEventListener("DOMContentLoaded", function () {
       showError("Please enter a custom URL");
       return;
     }
-    browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-      browser.runtime.sendMessage({
-        action: "receiveCookies",
-        cookieId,
-        customUrl
-      }).then(response => {
-        if (response.success) {
-          showMessage("Cookies received and set successfully!");
-        } else {
-          showError(response.message || "Error receiving cookies");
-        }
-      });
-    });
+    receiveCookies(cookieId, customUrl);
   }
 
   function handleGenerateId() {
@@ -134,20 +110,38 @@ document.addEventListener("DOMContentLoaded", function () {
     showMessage("Random ID generated: " + randomId);
   }
 
-  function receiveCookies(cookieId, customUrl) {
-    browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-      browser.runtime.sendMessage({
-        action: "receiveCookies",
-        cookieId,
-        customUrl
-      }).then(response => {
-        if (response.success) {
-          showMessage("Cookies received and set successfully!");
-        } else {
-          showError(response.message || "Error receiving cookies");
-        }
+  function sendCookies(cookieId, customUrl) {
+    browser.tabs.query({ active: true, currentWindow: true })
+      .then(tabs => {
+        browser.runtime.sendMessage({
+          action: "sendCookies",
+          cookieId,
+          customUrl
+        }, response => {
+          if (response.success) {
+            showMessage("Cookies sent successfully!");
+          } else {
+            showError(response.message || "Error sending cookies");
+          }
+        });
       });
-    });
+  }
+
+  function receiveCookies(cookieId, customUrl) {
+    browser.tabs.query({ active: true, currentWindow: true })
+      .then(tabs => {
+        browser.runtime.sendMessage({
+          action: "receiveCookies",
+          cookieId,
+          customUrl
+        }, response => {
+          if (response.success) {
+            showMessage("Cookies received and set successfully!");
+          } else {
+            showError(response.message || "Error receiving cookies");
+          }
+        });
+      });
   }
 
   // 显示当前版本
@@ -157,7 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // 检查更新函数
   function checkForUpdates() {
     updateCheckSpan.textContent = "Checking...";
-    browser.runtime.sendMessage({ action: "checkUpdate" }).then(response => {
+    browser.runtime.sendMessage({ action: "checkUpdate" }, (response) => {
       if (response.error) {
         updateCheckSpan.textContent = "Check for updates";
         showError("Failed to check for updates: " + response.error);
@@ -191,9 +185,10 @@ document.addEventListener("DOMContentLoaded", function () {
     browser.tabs.create({ url: `${customUrl}/admin` });
   });
 
-  // 消息监听器
+  // 在 DOMContentLoaded 事件监听器中添加
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "setCookieId") {
+      // 设置 cookie ID 并触发接收
       const cookieId = request.cookieId;
       const customUrl = customUrlInput.value.trim();
       if (customUrl) {
@@ -201,5 +196,44 @@ document.addEventListener("DOMContentLoaded", function () {
         receiveCookies(cookieId, customUrl);
       }
     }
+  });
+
+  // 添加设置区域
+  const settingsDiv = document.createElement('div');
+  settingsDiv.className = 'settings-section';
+  settingsDiv.innerHTML = `
+    <div class="settings-header">Settings</div>
+    <div class="settings-item">
+      <label class="switch">
+        <input type="checkbox" id="showFloatButton">
+        <span class="slider round"></span>
+      </label>
+      <span>Show Float Button</span>
+    </div>
+    <div class="settings-item">
+      <label class="switch">
+        <input type="checkbox" id="autoHideFullscreen">
+        <span class="slider round"></span>
+      </label>
+      <span>Auto Hide in Fullscreen</span>
+    </div>
+  `;
+  document.querySelector('.container').appendChild(settingsDiv);
+
+  // 加载设置
+  browser.runtime.sendMessage({ action: "getSettings" }, function(settings) {
+    if (settings) {
+      document.getElementById('showFloatButton').checked = settings.showFloatButton;
+      document.getElementById('autoHideFullscreen').checked = settings.autoHideFullscreen;
+    }
+  });
+
+  // 添加设置变更监听器
+  document.getElementById('showFloatButton').addEventListener('change', function(e) {
+    browser.storage.sync.set({ showFloatButton: e.target.checked });
+  });
+
+  document.getElementById('autoHideFullscreen').addEventListener('change', function(e) {
+    browser.storage.sync.set({ autoHideFullscreen: e.target.checked });
   });
 });

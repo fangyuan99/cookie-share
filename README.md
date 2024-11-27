@@ -85,6 +85,8 @@ Tested websites:
 
 ## Backend (Cloudflare Worker)
 
+**If the `/admin/*` interface encounters issues, please check if `X-Admin-Password` is added or use the cf official kv management page**
+
 Backend is implemented as a Cloudflare Worker, providing the following endpoints:
 
 Note: Add `X-Admin-Password: yourpassword`

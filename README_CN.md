@@ -85,6 +85,8 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展，允许用户在不同设备�
 
 ## 后端（Cloudflare Worker）
 
+**若 `/admin/*` 接口出现问题，请检查是否添加了 X-Admin-Password 或者使用 cf 官方的 kv 管理页面**
+
 后端实现为 Cloudflare Worker，提供以下端点：
 
 注意添加 `X-Admin-Password: yourpassword`

@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Cookie Share",
-  "version": "0.3.5",
+  "version": "0.3.7",
   "description": "Sends and receives cookies with your friends",
   "icons": {
     "128": "/images/icons/icon-128.png",
@@ -12,7 +12,14 @@
     "default_icon": "/images/icons/icon-16.png",
     "default_popup": "popup.html"
   },
-  "permissions": ["cookies", "activeTab", "tabs", "storage", "<all_urls>"],
+  "permissions": [
+    "cookies",
+    "activeTab",
+    "tabs",
+    "storage",
+    "fullscreen",
+    "<all_urls>"
+  ],
   "background": {
     "scripts": ["background.js"],
     "persistent": false
@@ -21,13 +28,14 @@
     {
       "matches": ["<all_urls>"],
       "css": ["content.css"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_start"
     }
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "cookie-share@c774174e-db6e-4da6-8315-2aa51647cc48",
-      "strict_min_version": "57.0"
+      "id": "your-extension-id@example.com",
+      "strict_min_version": "42.0"
     }
   }
 }

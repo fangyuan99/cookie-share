@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Cookie Share",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Sends and receives cookies with your friends",
   "icons": {
     "128": "/images/icons/icon-128.png",

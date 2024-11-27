@@ -637,3 +637,13 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
+
+/* 在文件中添加危险按钮样式 */
+.win11-button-danger {
+  background: var(--color-danger);
+  color: white;
+}
+
+.win11-button-danger:hover {
+  background: var(--color-danger-hover);
+}

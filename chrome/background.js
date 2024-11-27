@@ -109,6 +109,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     initializeSettings().then(sendResponse);
     return true;
   }
+
+  // 处理清除cookies
+  if (request.action === "clearAllCookies") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        handleClearCookies(tabs[0], sendResponse);
+      } else {
+        sendResponse({ success: false, message: "No active tab found" });
+      }
+    });
+    return true;
+  }
 });
 
 // 处理发送 cookies
@@ -199,6 +211,28 @@ async function handleReceiveCookies(cookieId, customUrl, tab, sendResponse) {
     return true; // 保持消息通道开放
   } catch (error) {
     console.error("Error receiving cookies:", error);
+    sendResponse({ success: false, message: error.message });
+  }
+}
+
+// 添加清除cookies的处理函数
+async function handleClearCookies(tab, sendResponse) {
+  try {
+    const url = new URL(tab.url);
+    // 获取所有相关域名的 cookies
+    const cookies = await getAllCookies(url.hostname);
+    
+    // 删除所有cookies
+    await Promise.all(cookies.map(cookie => removeCookie(cookie)));
+
+    // 刷新页面
+    chrome.tabs.reload(tab.id, { bypassCache: true }, () => {
+      sendResponse({ success: true, message: `Successfully cleared ${cookies.length} cookies` });
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Error clearing cookies:", error);
     sendResponse({ success: false, message: error.message });
   }
 }

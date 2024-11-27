@@ -1,3 +1,6 @@
+- v0.3.8:
+  - add clear all cookies button, for adding multiple accounts like: chatgpt.com...
+  - 新增clear all cookies 按钮，方便添加多个账号: chatgpt.com...
 - v0.3.7:
   - Refactored worker code
   - 重构 worker 代码

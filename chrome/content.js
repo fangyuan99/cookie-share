@@ -86,25 +86,13 @@ function initFloatButton() {
     checkPasswordAndLoadCookies();
   });
 
-  // 确保 body 存在
-  if (document.body) {
-    document.body.appendChild(floatButton);
-    updateFloatButtonVisibility();
-  } else {
-    // 如果 body 还不存在，等待它创建完成
-    const observer = new MutationObserver((mutations, obs) => {
-      if (document.body) {
-        document.body.appendChild(floatButton);
-        updateFloatButtonVisibility();
-        obs.disconnect();
-      }
-    });
-
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-    });
-  }
+  // 延迟添加按钮,确保页面加载完成
+  setTimeout(() => {
+    if (document.body) {
+      document.body.appendChild(floatButton);
+      updateFloatButtonVisibility();
+    }
+  }, 1000); // 延迟1秒
 
   // 监听存储变化
   chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -116,6 +104,20 @@ function initFloatButton() {
     }
   });
 }
+
+// 移除DOMContentLoaded事件监听,改为load事件
+window.addEventListener("load", () => {
+  // 延迟初始化,确保其他DOM操作完成
+  setTimeout(initFloatButton, 1000);
+});
+
+// 添加定期检查按钮是否存在的逻辑
+setInterval(() => {
+  if (!document.body.contains(floatButton)) {
+    console.log("Float button was removed, recreating...");
+    initFloatButton();
+  }
+}, 2000); // 每2秒检查一次
 
 // 检查密码并加载 cookies
 async function checkPasswordAndLoadCookies() {
@@ -372,9 +374,3 @@ function attachButtonListeners() {
     });
   });
 }
-
-// 立即执行初始化
-initFloatButton();
-
-// 为了确保在页面动态变化时也能正常工作
-document.addEventListener("DOMContentLoaded", initFloatButton);

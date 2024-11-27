@@ -1,6 +1,8 @@
 - v0.3.8:
   - add clear all cookies button, for adding multiple accounts like: chatgpt.com...
   - 新增clear all cookies 按钮，方便添加多个账号: chatgpt.com...
+  - change the logic of floating button, wait for the page to load before generating
+  - 修改浮动按钮的生成逻辑，等待页面加载完成后再生成
 - v0.3.7:
   - Refactored worker code
   - 重构 worker 代码

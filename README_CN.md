@@ -15,7 +15,7 @@
 
 ## 概述
 
-Cookie-share 是一个 Chrome/Edge/Firefox 扩展，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于**多账号切换、视频会员共享、星球合租**等场景。自建 Cloudflare Worker 保障数据安全。
+Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚本)，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于**多账号切换、视频会员共享、星球合租**等场景。后端采用自建 Cloudflare Worker 保障数据安全。
 
 ![image](https://github.com/user-attachments/assets/48877965-4c5e-40ec-9b40-ceeb31a469ef)
 
@@ -28,7 +28,7 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展，允许用户在不同设备�
 <img src="https://github.com/user-attachments/assets/309a4e2f-63f2-4ff1-a5c4-d8c9982c1840" width="50%" height="50%" alt="" >
 
 
-[下载地址](https://github.com/fangyuan99/cookie-share/releases)
+[下载地址](https://github.com/fangyuan99/cookie-share/releases) | [脚本国内地址](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [脚本海外地址](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
 
 ### 效果与应用场景
 **很多网站不支持多账号切换，不想退出重登？**

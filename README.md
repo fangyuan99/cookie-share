@@ -14,7 +14,7 @@
 
 ## Overview
 
-Cookie-share is a Chrome/Edge/Firefox extension that allows users to send and receive cookies between different devices or browsers. It can be used for **multi-account switching, sharing video memberships, co-renting planets, and other scenarios.** A self-hosted Cloudflare Worker ensures data security.
+Cookie-share is a Chrome/Edge/Firefox extension (also has a Tampermonkey script) that allows users to send and receive cookies between different devices or browsers, and can be used for **multi-account switching, sharing video memberships, co-renting planets** and other scenarios. The backend uses a self-hosted Cloudflare Worker to ensure data security.
 
 
 ![image](https://github.com/user-attachments/assets/48877965-4c5e-40ec-9b40-ceeb31a469ef)
@@ -27,7 +27,7 @@ Cookie-share is a Chrome/Edge/Firefox extension that allows users to send and re
 
 <img src="https://github.com/user-attachments/assets/309a4e2f-63f2-4ff1-a5c4-d8c9982c1840" width="50%" height="50%" alt="" >
 
-[Download Link](https://github.com/fangyuan99/cookie-share/releases)
+[Download Link](https://github.com/fangyuan99/cookie-share/releases) | [Tampermonkey Script Chinese Address](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Tampermonkey Script Global Address](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
 
 ### Effects and Use Cases
 **Many websites don't support multi-account switching, and you don't want to log out and log in again?**
@@ -68,6 +68,11 @@ Tested websites:
 4. Send cookies from logged-in browser page
 5. Receive cookies on non-logged-in browser page
 6. Note: Don't add `/` at the end of the address, example: `https://your-worker-name.your-subdomain.workers.dev`
+
+### Tampermonkey Usage
+
+1. Install [Tampermonkey](https://www.crxsoso.com/webstore/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) or other script managers
+2. [Script Chinese Address](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Script Global Address](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
 
 ### Backend Deployment Tutorial
 

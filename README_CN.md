@@ -70,6 +70,10 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展，允许用户在不同设备�
 5. 在未登录的浏览器页面接受 Cookie
 6. 注意地址后面不要加 `/`，示例: `https://your-worker-name.your-subdomain.workers.dev`
 
+### 油猴脚本使用方法
+1. 安装 [油猴](https://www.crxsoso.com/webstore/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) 或者其他脚本管理器: 
+2. [脚本国内地址](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [脚本海外地址](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
+
 ### 后端部署教程
 
 
@@ -164,6 +168,8 @@ curl --location --request DELETE 'https://your-worker-name.your-subdomain.worker
 - 只提供管理接口，没有管理页面（不知道何时更新）
 
 ## 贡献
+
+[aBER0724 (aBER)](https://github.com/aBER0724) - 重写油猴脚本
 
 欢迎贡献！请随时提交 Pull Request。
 

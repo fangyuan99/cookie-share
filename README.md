@@ -164,6 +164,7 @@ Modifying the backend:
 
 ## Contributing
 
+[aBER0724 (aBER)](https://github.com/aBER0724) - Rewrite the Tampermonkey script
 Contributions welcome! Feel free to submit Pull Requests.
 
 ## Star History

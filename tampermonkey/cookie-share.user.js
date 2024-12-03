@@ -673,7 +673,7 @@
                 <div class="cookie-share-container">
                     <button class="close-btn" onclick="return false;">×</button>
                     <h1>Cookie Share</h1>
-                    <div class="cookie-share-version">
+                    <div class="cookie-share-version" style="display: none;">
                         <span>Version 0.0.1</span>
                         <a href="https://github.com/fangyuan99/cookie-share" target="_blank">GitHub</a>
                         <a href="#" class="admin-panel-a">Admin Panel</a>
@@ -685,17 +685,18 @@
                             class="cookie-id-input"
                             placeholder="Cookie ID"
                         >
-                        <button class="generate-btn" onclick="return false;">Generate ID</button>
+                        <button class="generate-btn" onclick="return false;" style="display: none;">Generate ID</button>
                     </div>
 
                     <input type="text"
                         class="server-url-input"
                         placeholder="Server Address (e.g., https://example.com)"
                         value="${GM_getValue(STORAGE_KEYS.CUSTOM_URL, "")}"
+                        style="display: none;"
                     >
 
                     <div class="action-buttons">
-                        <button class="action-btn send-btn">Send Cookie</button>
+                        <button class="action-btn send-btn" style="display: none;">Send Cookie</button>
                         <button class="action-btn receive-btn">Receive Cookie</button>
                     </div>
 

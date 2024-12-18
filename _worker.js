@@ -32,13 +32,13 @@ function isValidId(id) {
 
 // 定义路由表
 const routes = {
-  "POST:/send-cookies": handleSendCookies,
-  "GET:/admin": handleAdminPage,
-  "GET:/admin/list-cookies": handleListCookies,
-  "GET:/admin/list-cookies-by-host": handleListCookiesByHost,
-  "DELETE:/admin/delete": handleDelete,
-  "PUT:/admin/update": handleUpdate,
-  "OPTIONS:/": handleCorsPreflightRequest,
+  [`POST:/${PATH_SECRET}/send-cookies`]: handleSendCookies,
+  [`GET:/${PATH_SECRET}/admin`]: handleAdminPage,
+  [`GET:/${PATH_SECRET}/admin/list-cookies`]: handleListCookies,
+  [`GET:/${PATH_SECRET}/admin/list-cookies-by-host`]: handleListCookiesByHost,
+  [`DELETE:/${PATH_SECRET}/admin/delete`]: handleDelete,
+  [`PUT:/${PATH_SECRET}/admin/update`]: handleUpdate,
+  [`OPTIONS:/${PATH_SECRET}/`]: handleCorsPreflightRequest,
 };
 
 async function handleAdminPage(request) {
@@ -166,7 +166,7 @@ async function handleAdminPage(request) {
     </div>
   
     <script>
-      const API_BASE = '';
+      const API_BASE = '/${PATH_SECRET}';
       let adminPassword = '';
   
       document.addEventListener('DOMContentLoaded', () => {
@@ -206,7 +206,7 @@ async function handleAdminPage(request) {
       }
   
       async function loadCookies() {
-        const response = await fetch('/admin/list-cookies', {
+        const response = await fetch(API_BASE + '/admin/list-cookies', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -248,7 +248,7 @@ async function handleAdminPage(request) {
           return;
         }
   
-        const response = await fetch('/send-cookies', {
+        const response = await fetch(API_BASE + '/send-cookies', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -277,7 +277,7 @@ async function handleAdminPage(request) {
           return;
         }
   
-        const response = await fetch('/admin/update', {
+        const response = await fetch(API_BASE + '/admin/update', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
           body: JSON.stringify({ key, value, url })
@@ -295,7 +295,7 @@ async function handleAdminPage(request) {
         event.preventDefault();
         const key = document.getElementById('deleteId').value;
   
-        const response = await fetch('/admin/delete?key='+encodeURIComponent(key), {
+        const response = await fetch(API_BASE + '/admin/delete?key='+encodeURIComponent(key), {
           method: 'DELETE',
           headers: { 
             'Content-Type': 'application/json', 
@@ -314,7 +314,7 @@ async function handleAdminPage(request) {
       async function deleteCookieById(id) {
         if (!confirm('确定要删除 ID 为'+id+' 的 Cookie 吗？')) return;
   
-        const response = await fetch('/admin/delete?key='+encodeURIComponent(id), {
+        const response = await fetch(API_BASE + '/admin/delete?key='+encodeURIComponent(id), {
           method: 'DELETE',
           headers: { 
             'Content-Type': 'application/json', 
@@ -346,22 +346,27 @@ async function handleRequest(request) {
   const path = url.pathname;
   const method = request.method;
 
+  // 检查路径是否包含正确的 PATH_SECRET
+  if (!path.startsWith(`/${PATH_SECRET}/`)) {
+    return createJsonResponse(404, { success: false, message: "Not Found" });
+  }
+
   // 处理 OPTIONS 请求
   if (method === "OPTIONS") {
     return handleCorsPreflightRequest();
   }
 
   // 对所有 /admin 开头的路径进行密码校验
-  if (path.startsWith("/admin/")) {
+  if (path.includes("/admin/")) {
     const authResponse = verifyAdminPassword(request);
     if (authResponse) return authResponse;
   }
 
   // 处理动态路由
-  if (path.startsWith("/receive-cookies/")) {
+  if (path.includes("/receive-cookies/")) {
     return handleReceiveCookies(request, path);
   }
-  if (path.startsWith("/admin/list-cookies-by-host/")) {
+  if (path.includes("/admin/list-cookies-by-host/")) {
     return handleListCookiesByHost(request, path);
   }
 

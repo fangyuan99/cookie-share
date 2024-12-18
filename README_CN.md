@@ -56,7 +56,13 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 ### 油猴脚本使用方法（推荐）
 
 1. 安装 [油猴](https://www.crxsoso.com/webstore/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) 或者其他脚本管理器:
-2.  [一键安装](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [镜像加速](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
+2. [一键安装](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [镜像加速](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
+3. 若出现 cookie 权限问题，请在油猴设置中开启
+![1](https://linux.do/uploads/default/optimized/4X/5/3/8/538542cf5469125cfb2f2c3a38f7a8aaba1bd586_2_963x750.png)
+![2](https://linux.do/uploads/default/optimized/4X/5/3/8/538542cf5469125cfb2f2c3a38f7a8aaba1bd586_2_963x750.png)
+4. 在已登录的浏览器页面发送 Cookie
+5. 在未登录的浏览器页面接受 Cookie
+6. 注意地址后面不要加 `/`，示例: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
 
 ### 插件使用方法
 1. 开启浏览器的开发者模式：

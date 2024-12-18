@@ -55,6 +55,12 @@ Tested websites:
 
 1. Install [Tampermonkey](https://www.crxsoso.com/webstore/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) or other script managers
 2. [One-Click Install](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Mirror](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
+3. If you encounter cookie permission issues, please enable it in Tampermonkey settings
+![1](https://linux.do/uploads/default/optimized/4X/5/3/8/538542cf5469125cfb2f2c3a38f7a8aaba1bd586_2_963x750.png)
+![2](https://linux.do/uploads/default/optimized/4X/5/3/8/538542cf5469125cfb2f2c3a38f7a8aaba1bd586_2_963x750.png)
+4. Send Cookie from logged-in browser page
+5. Accept Cookie on non-logged-in browser page
+6. Note: Don't add `/` after the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
 
 ### Extension Usage
 1. Enable browser developer mode:

@@ -741,7 +741,12 @@
       modal.innerHTML = `
         <div class="cookie-share-container">
           <button class="close-btn" onclick="return false;">×</button>
-          <h1>Cookie Share</h1>
+          <div class="title-container">
+            <h1>Cookie Share</h1>
+            <a href="https://github.com/fangyuan99/cookie-share" target="_blank" class="github-link">
+              <img src="https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/github.svg" alt="GitHub">
+            </a>
+          </div>
 
           <div class="id-input-container">
             <input type="text"
@@ -784,6 +789,71 @@
           align-items: center !important;
           margin-bottom: 16px !important;
         }
+
+        .github-link {
+          display: flex !important;
+          justify-content: center !important;
+          margin-bottom: 20px !important;
+        }
+
+        .github-link a {
+          display: flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          text-decoration: none !important;
+          color: #666 !important;
+          font-size: 14px !important;
+          transition: all 0.3s ease !important;
+        }
+
+        .github-link a:hover {
+          color: #333 !important;
+          transform: translateY(-1px) !important;
+        }
+
+        .github-link img {
+          width: 16px !important;
+          height: 16px !important;
+          opacity: 0.7 !important;
+        }
+
+        .github-link a:hover img {
+          opacity: 1 !important;
+        }
+
+        .github-link span {
+          font-weight: 400 !important;
+        }
+
+        .title-container {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          position: relative !important;
+          margin-bottom: 20px !important;
+        }
+
+        .title-container h1 {
+          margin: 0 !important;
+        }
+
+        .github-link {
+          position: absolute !important;
+          right: 0 !important;
+          top: 50% !important;
+          transform: translateY(-50%) !important;
+        }
+
+        .github-link img {
+          width: 20px !important;
+          height: 20px !important;
+          opacity: 0.7 !important;
+          transition: all 0.3s ease !important;
+        }
+
+        .github-link:hover img {
+          opacity: 1 !important;
+        }
       `);
 
       // Add event listeners
@@ -803,7 +873,7 @@
         GM_setValue(STORAGE_KEYS.CUSTOM_URL, url);
       });
 
-      // 添加 blur 事件监听���，在失去焦点时格式化显示
+      // 添加 blur 事件监听，在失去焦点时格式化显示
       serverUrlInput.addEventListener("blur", () => {
         let url = serverUrlInput.value.trim();
         // 去掉末尾的斜杠
@@ -1395,7 +1465,7 @@ GM_addStyle(`
     transform: rotate(0deg) !important;
   }
 
-  /* 调整危险操作按钮的颜色 */
+  /* 调整危险操作按���的颜��� */
   .cookie-share-container .clear-btn {
     background: #FF6B6B !important;
   }

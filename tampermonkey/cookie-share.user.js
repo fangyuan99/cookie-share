@@ -262,7 +262,7 @@
     confirmDelete() {
       return new Promise((resolve) => {
         // 创建确认对话框容器
-        const container = document.createElement('div');
+        const container = document.createElement("div");
         container.style.cssText = `
           position: fixed;
           top: 0;
@@ -278,7 +278,7 @@
         `;
 
         // 创建对话框内容
-        const dialog = document.createElement('div');
+        const dialog = document.createElement("div");
         dialog.style.cssText = `
           background: rgba(255, 255, 255, 0.95);
           padding: 24px;
@@ -321,27 +321,27 @@
         document.body.appendChild(container);
 
         // 添加按钮事件监听器
-        const cancelBtn = dialog.querySelector('#cancelBtn');
-        const confirmBtn = dialog.querySelector('#confirmBtn');
+        const cancelBtn = dialog.querySelector("#cancelBtn");
+        const confirmBtn = dialog.querySelector("#confirmBtn");
 
         // 添加按钮悬浮效果
-        const buttons = dialog.querySelectorAll('button');
-        buttons.forEach(btn => {
-          btn.addEventListener('mouseover', () => {
-            btn.style.transform = 'translateY(-1px)';
-            if (btn.id === 'cancelBtn') {
-              btn.style.background = '#7A9B8F';
+        const buttons = dialog.querySelectorAll("button");
+        buttons.forEach((btn) => {
+          btn.addEventListener("mouseover", () => {
+            btn.style.transform = "translateY(-1px)";
+            if (btn.id === "cancelBtn") {
+              btn.style.background = "#7A9B8F";
             } else {
-              btn.style.background = '#FF5252';
+              btn.style.background = "#FF5252";
             }
           });
-          
-          btn.addEventListener('mouseout', () => {
-            btn.style.transform = 'none';
-            if (btn.id === 'cancelBtn') {
-              btn.style.background = '#91B3A7';
+
+          btn.addEventListener("mouseout", () => {
+            btn.style.transform = "none";
+            if (btn.id === "cancelBtn") {
+              btn.style.background = "#91B3A7";
             } else {
-              btn.style.background = '#FF6B6B';
+              btn.style.background = "#FF6B6B";
             }
           });
         });
@@ -366,16 +366,16 @@
         };
 
         // 添加动画效果
-        dialog.style.opacity = '0';
-        dialog.style.transform = 'scale(0.9)';
-        dialog.style.transition = 'all 0.2s ease';
-        
+        dialog.style.opacity = "0";
+        dialog.style.transform = "scale(0.9)";
+        dialog.style.transition = "all 0.2s ease";
+
         // 强制重绘
         dialog.offsetHeight;
-        
+
         // 显示动画
-        dialog.style.opacity = '1';
-        dialog.style.transform = 'scale(1)';
+        dialog.style.opacity = "1";
+        dialog.style.transform = "scale(1)";
       });
     },
 
@@ -1291,7 +1291,6 @@
   // Start the application
   init();
 })();
-
 // 首先添加一个通知系统的样式
 GM_addStyle(`
   .cookie-share-notification {

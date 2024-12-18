@@ -259,6 +259,126 @@
 
   // ===================== UI Components =====================
   const ui = {
+    confirmDelete() {
+      return new Promise((resolve) => {
+        // 创建确认对话框容器
+        const container = document.createElement('div');
+        container.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(2px);
+          z-index: 2147483647;
+        `;
+
+        // 创建对话框内容
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+          background: rgba(255, 255, 255, 0.95);
+          padding: 24px;
+          border-radius: 12px;
+          text-align: center;
+          min-width: 320px;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+        `;
+
+        dialog.innerHTML = `
+          <h3 style="margin: 0 0 16px 0; color: #4A5567; font-size: 18px;">Confirm Delete</h3>
+          <p style="margin: 0 0 24px 0; color: #666;">Are you sure you want to delete this cookie?</p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button id="cancelBtn" style="
+              padding: 8px 24px;
+              border-radius: 6px;
+              background: #91B3A7;
+              color: white;
+              border: none;
+              cursor: pointer;
+              min-width: 100px;
+              transition: all 0.3s ease;
+            ">Cancel</button>
+            <button id="confirmBtn" style="
+              padding: 8px 24px;
+              border-radius: 6px;
+              background: #FF6B6B;
+              color: white;
+              border: none;
+              cursor: pointer;
+              min-width: 100px;
+              transition: all 0.3s ease;
+            ">Delete</button>
+          </div>
+        `;
+
+        container.appendChild(dialog);
+        document.body.appendChild(container);
+
+        // 添加按钮事件监听器
+        const cancelBtn = dialog.querySelector('#cancelBtn');
+        const confirmBtn = dialog.querySelector('#confirmBtn');
+
+        // 添加按钮悬浮效果
+        const buttons = dialog.querySelectorAll('button');
+        buttons.forEach(btn => {
+          btn.addEventListener('mouseover', () => {
+            btn.style.transform = 'translateY(-1px)';
+            if (btn.id === 'cancelBtn') {
+              btn.style.background = '#7A9B8F';
+            } else {
+              btn.style.background = '#FF5252';
+            }
+          });
+          
+          btn.addEventListener('mouseout', () => {
+            btn.style.transform = 'none';
+            if (btn.id === 'cancelBtn') {
+              btn.style.background = '#91B3A7';
+            } else {
+              btn.style.background = '#FF6B6B';
+            }
+          });
+        });
+
+        // 绑定事件
+        cancelBtn.onclick = () => {
+          container.remove();
+          resolve(false);
+        };
+
+        confirmBtn.onclick = () => {
+          container.remove();
+          resolve(true);
+        };
+
+        // 点击背景关闭
+        container.onclick = (e) => {
+          if (e.target === container) {
+            container.remove();
+            resolve(false);
+          }
+        };
+
+        // 添加动画效果
+        dialog.style.opacity = '0';
+        dialog.style.transform = 'scale(0.9)';
+        dialog.style.transition = 'all 0.2s ease';
+        
+        // 强制重绘
+        dialog.offsetHeight;
+        
+        // 显示动画
+        dialog.style.opacity = '1';
+        dialog.style.transform = 'scale(1)';
+      });
+    },
+
     injectStyles() {
       GM_addStyle(`
                     .cookie-share-overlay {
@@ -445,7 +565,12 @@
       }
 
       const cookieSvg = `
-        <svg t="1732536814920" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1636" width="24" height="24"><path d="M1003.56796 470.474919c-59.400116-20.998041-99.598195-77.398151-99.598194-140.398274 1.202002-10.20202-3.600007-18.600036-11.400023-25.800051-6.600013-5.402011-16.798033-7.800015-25.198049-6.602013-50.402098 7.200014-98.400192-7.200014-135.000264-36.600071s-62.402122-73.798144-66.60013-125.398245c-0.600001-9.002018-6.002012-17.402034-13.802027-22.800045-7.800015-4.802009-17.398034-6.002012-26.400051-2.402004-81.600159 29.400057-158.400309-22.200043-188.998369-92.398181-6.002012-13.202026-19.802039-20.40204-34.200067-17.398034-115.202225 25.80005-218.802427 98.120192-289.600566 189.32237-163.79832 210.600411-147.000287 500.402977 36.600072 684.603337 199.80239 199.196389 522.00102 199.196389 721.203408 0 92.39818-92.40218 153.4003-224.126438 153.4003-364.524712-1.206002-19.802039-1.806004-33.000064-20.40604-39.604077z" fill="#FEA832" p-id="1637"></path><path d="M1023.968 510.076996c0 140.398274-61.000119 272.122531-153.4003 364.524712-199.200389 199.196389-521.401018 199.196389-721.203408 0l583.003138-613.527198c36.600071 29.400057 84.598165 43.798086 135.000264 36.600071 8.400016-1.198002 18.600036 1.202002 25.198049 6.602013 7.800015 7.200014 12.602025 15.59603 11.400023 25.800051 0 63.000123 40.198079 119.400233 99.598194 140.398274 18.604036 6.604013 19.204038 19.802039 20.40404 39.602077z" fill="#FE9923" p-id="1638"></path><path d="M386.968756 624.999221c-15.000029-13.198026-35.402069-20.998041-57.000112-20.998041-49.802097 0-90.000176 40.198079-90.000175 90.000175 0 23.400046 9.002018 44.400087 23.400045 60.000118 16.198032 18.600036 40.198079 30.000059 66.60013 30.000058 49.802097 0 90.000176-40.202079 90.000176-90.000176-0.002-28.202055-12.602025-52.800103-33.000064-69.002134z" fill="#994C0F" p-id="1639"></path><path d="M629.96723 604.00118c-49.628097 0-90.000176-40.372079-90.000175-90.000176s40.372079-90.000176 90.000175-90.000176 90.000176 40.372079 90.000176 90.000176-40.370079 90.000176-90.000176 90.000176zM599.967172 844.001648c-33.076065 0-60.000117-26.924053-60.000117-60.000117s26.924053-60.000117 60.000117-60.000117 60.000117 26.924053 60.000117 60.000117-26.924053 60.000117-60.000117 60.000117z" fill="#713708" p-id="1640"></path><path d="M359.966703 424.000828c-33.076065 0-60.000117-26.924053-60.000117-60.000117s26.924053-60.000117 60.000117-60.000117 60.000117 26.924053 60.000117 60.000117-26.924053 60.000117-60.000117 60.000117z" fill="#994C0F" p-id="1641"></path><path d="M808.477579 636.261243m-30.000059 0a30.000059 30.000059 0 1 0 60.000118 0 30.000059 30.000059 0 1 0-60.000118 0Z" fill="#713708" p-id="1642"></path><path d="M208.456407 516.261008m-30.000058 0a30.000059 30.000059 0 1 0 60.000117 0 30.000059 30.000059 0 1 0-60.000117 0Z" fill="#994C0F" p-id="1643"></path><path d="M419.96682 694.001355c0 49.798097-40.198079 90.000176-90.000176 90.000176-26.400052 0-50.402098-11.400022-66.60013-30.000058l123.600242-129.002252c20.40004 16.202032 33.000064 40.80008 33.000064 69.002134z" fill="#713708" p-id="1644"></path></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+          <path fill="#91B3A7" d="M21.598 13.789c-1.646-.583-2.76-2.145-2.76-3.891 0-.284-.1-.516-.316-.715-.184-.15-.466-.217-.699-.183-1.397.2-2.728-.2-3.743-1.015-1.015-.816-1.73-2.045-1.847-3.476-.017-.25-.167-.483-.383-.633-.217-.133-.483-.167-.732-.067-2.262.815-4.391-.616-5.239-2.562-.167-.366-.549-.566-.949-.482-3.193.715-6.07 2.72-8.031 5.248C-6.804 11.66-6.354 19.82.366 26.54c5.538 5.53 14.48 5.53 20.002 0 2.562-2.562 4.257-6.22 4.257-10.11-.033-.55-.05-.915-.566-1.098z"/>
+          <circle fill="#4A5567" cx="10" cy="12" r="1.5"/>
+          <circle fill="#4A5567" cx="16" cy="9" r="1.5"/>
+          <circle fill="#4A5567" cx="14" cy="15" r="1.5"/>
+        </svg>
       `;
 
       const floatingBtn = document.createElement("button");
@@ -678,7 +803,7 @@
         GM_setValue(STORAGE_KEYS.CUSTOM_URL, url);
       });
 
-      // 添加 blur 事件监听器，在失去焦点时格式化显示
+      // 添加 blur 事件监听���，在失去焦点时格式化显示
       serverUrlInput.addEventListener("blur", () => {
         let url = serverUrlInput.value.trim();
         // 去掉末尾的斜杠
@@ -693,12 +818,12 @@
           const idInput = modal.querySelector(".cookie-id-input");
 
           if (!urlInput.value.trim()) {
-            alert("Please enter the server address");
+            notification.show("Please enter the server address", "error");
             return;
           }
 
           if (!idInput.value.trim()) {
-            alert("Please enter or generate a Cookie ID");
+            notification.show("Please enter or generate a Cookie ID", "error");
             return;
           }
 
@@ -706,9 +831,12 @@
             idInput.value.trim(),
             urlInput.value.trim()
           );
-          alert(result.message || "Sent successfully");
+          notification.show(
+            result.message || "Sent successfully",
+            result.success ? "success" : "error"
+          );
         } catch (error) {
-          alert("Send failed: " + error.message);
+          notification.show("Send failed: " + error.message, "error");
         }
       };
 
@@ -718,12 +846,12 @@
           const idInput = modal.querySelector(".cookie-id-input");
 
           if (!urlInput.value.trim()) {
-            alert("Please enter the server address");
+            notification.show("Please enter the server address", "error");
             return;
           }
 
           if (!idInput.value.trim()) {
-            alert("Please enter a Cookie ID");
+            notification.show("Please enter a Cookie ID", "error");
             return;
           }
 
@@ -731,17 +859,22 @@
             idInput.value.trim(),
             urlInput.value.trim()
           );
-          alert(result.message || "Received successfully");
+          notification.show(
+            result.message || "Received successfully",
+            "success"
+          );
         } catch (error) {
-          alert("Receive failed: " + error.message);
+          notification.show("Receive failed: " + error.message, "error");
         }
       };
 
-      modal.querySelector(".clear-btn").onclick = () => {
-        if (confirm("Are you sure you want to clear all cookies?")) {
-          cookieManager.clearAll();
-          alert("Cookies have been cleared, the page will refresh shortly");
-          // Use a short delay to ensure the message is seen
+      modal.querySelector(".clear-btn").onclick = async () => {
+        if (await this.confirmDelete()) {
+          await cookieManager.clearAll();
+          notification.show(
+            "Cookies have been cleared, the page will refresh shortly",
+            "success"
+          );
           setTimeout(() => {
             window.location.reload();
           }, 500);
@@ -1004,51 +1137,62 @@
       `;
 
       const currentHost = window.location.hostname;
-      const response = await fetch(
-        `${customUrl}/admin/list-cookies-by-host/${encodeURIComponent(
-          currentHost
-        )}`,
-        {
+
+      return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method: "GET",
+          url: `${customUrl}/admin/list-cookies-by-host/${encodeURIComponent(
+            currentHost
+          )}`,
           headers: {
             "Content-Type": "application/json",
             "X-Admin-Password": password,
           },
-        }
-      );
+          onload: (response) => {
+            try {
+              const data = JSON.parse(response.responseText);
 
-      const data = await response.json();
+              if (response.status !== 200) {
+                if (response.status === 401) {
+                  // Password error, clear saved password
+                  GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, "");
+                  throw new Error("Invalid password");
+                }
+                throw new Error(data.message || "Failed to load cookies");
+              }
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Password error, clear saved password
-          GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, "");
-          throw new Error("Invalid password");
-        }
-        throw new Error(data.message || "Failed to load cookies");
-      }
-
-      if (data.success && Array.isArray(data.cookies)) {
-        if (data.cookies.length === 0) {
-          cookiesList.innerHTML = `<div class="cookie-share-empty">No cookies found for ${currentHost}</div>`;
-        } else {
-          cookiesList.innerHTML = data.cookies
-            .map(
-              (cookie) => `
-              <div class="cookie-share-item">
-                <span class="cookie-id">ID: ${cookie.id}</span>
-                <div class="cookie-share-buttons">
-                  <button class="cookie-share-receive" data-id="${cookie.id}">Receive</button>
-                  <button class="cookie-share-delete" data-id="${cookie.id}">Delete</button>
-                </div>
-              </div>
-            `
-            )
-            .join("");
-          this.attachButtonListeners(cookiesList);
-        }
-      } else {
-        throw new Error(data.message || "Failed to load cookies");
-      }
+              if (data.success && Array.isArray(data.cookies)) {
+                if (data.cookies.length === 0) {
+                  cookiesList.innerHTML = `<div class="cookie-share-empty">No cookies found for ${currentHost}</div>`;
+                } else {
+                  cookiesList.innerHTML = data.cookies
+                    .map(
+                      (cookie) => `
+                    <div class="cookie-share-item">
+                      <span class="cookie-id">ID: ${cookie.id}</span>
+                      <div class="cookie-share-buttons">
+                        <button class="cookie-share-receive" data-id="${cookie.id}">Receive</button>
+                        <button class="cookie-share-delete" data-id="${cookie.id}">Delete</button>
+                      </div>
+                    </div>
+                  `
+                    )
+                    .join("");
+                  this.attachButtonListeners(cookiesList);
+                }
+              } else {
+                throw new Error(data.message || "Failed to load cookies");
+              }
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          },
+          onerror: (error) => {
+            reject(new Error("Network request failed"));
+          },
+        });
+      });
     },
 
     attachButtonListeners(container) {
@@ -1059,10 +1203,17 @@
           const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
 
           try {
-            await api.receiveCookies(cookieId, customUrl);
+            const result = await api.receiveCookies(cookieId, customUrl);
+            notification.show(
+              result.message || "Received successfully",
+              "success"
+            );
             this.hideCookieList();
           } catch (error) {
-            container.innerHTML = `<div class="cookie-share-error">Failed to receive cookies: ${error.message}</div>`;
+            notification.show(
+              "Failed to receive cookies: " + error.message,
+              "error"
+            );
           }
         };
       });
@@ -1071,30 +1222,48 @@
       container.querySelectorAll(".cookie-share-delete").forEach((button) => {
         button.onclick = async () => {
           const cookieId = button.dataset.id;
-          if (confirm("Are you sure you want to delete this cookie?")) {
+          if (await this.confirmDelete()) {
             try {
               const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
               const password = GM_getValue(STORAGE_KEYS.ADMIN_PASSWORD);
 
-              const response = await fetch(
-                `${customUrl}/admin/delete?key=${encodeURIComponent(cookieId)}`,
-                {
+              await new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
                   method: "DELETE",
+                  url: `${customUrl}/admin/delete?key=${encodeURIComponent(
+                    cookieId
+                  )}`,
                   headers: {
                     "Content-Type": "application/json",
                     "X-Admin-Password": password,
                   },
-                }
-              );
-
-              const data = await response.json();
-              if (data.success) {
-                await this.showCookieList(); // Refresh the list
-              } else {
-                throw new Error(data.message || "Failed to delete cookie");
-              }
+                  onload: async (response) => {
+                    try {
+                      const data = JSON.parse(response.responseText);
+                      if (data.success) {
+                        await this.showCookieList(); // Refresh the list
+                        notification.show(
+                          "Cookie deleted successfully",
+                          "success"
+                        );
+                        resolve();
+                      } else {
+                        reject(
+                          new Error(data.message || "Failed to delete cookie")
+                        );
+                      }
+                    } catch (error) {
+                      reject(error);
+                    }
+                  },
+                  onerror: () => reject(new Error("Network request failed")),
+                });
+              });
             } catch (error) {
-              container.innerHTML = `<div class="cookie-share-error">Failed to delete cookie: ${error.message}</div>`;
+              notification.show(
+                "Failed to delete cookie: " + error.message,
+                "error"
+              );
             }
           }
         };
@@ -1122,3 +1291,181 @@
   // Start the application
   init();
 })();
+
+// 首先添加一个通知系统的样式
+GM_addStyle(`
+  .cookie-share-notification {
+    position: fixed !important;
+    bottom: 24px !important;
+    right: 24px !important;
+    padding: 16px 24px !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #4A5567 !important;
+    font-family: -apple-system, system-ui, sans-serif !important;
+    font-size: 14px !important;
+    transform: translateY(150%) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    z-index: 2147483647 !important;
+  }
+
+  .cookie-share-notification.show {
+    transform: translateY(0) !important;
+  }
+
+  .cookie-share-notification.success {
+    border-left: 4px solid #91B3A7 !important;
+  }
+
+  .cookie-share-notification.error {
+    border-left: 4px solid #E8A9A2 !important;
+  }
+
+  .cookie-share-modal {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15) !important;
+  }
+
+  .cookie-share-container button {
+    background: #91B3A7 !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+    color: white !important;
+  }
+
+  .cookie-share-container button:hover {
+    background: #7A9B8F !important;
+    transform: translateY(-1px) !important;
+  }
+
+  .cookie-share-container .clear-btn {
+    background: #E8A9A2 !important;
+  }
+
+  .cookie-share-container .clear-btn:hover {
+    background: #D1918A !important;
+  }
+
+  .cookie-share-container input {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(145, 179, 167, 0.3) !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .cookie-share-container input:focus {
+    border-color: #91B3A7 !important;
+    box-shadow: 0 0 0 2px rgba(145, 179, 167, 0.2) !important;
+    outline: none !important;
+  }
+
+  .cookie-share-item {
+    background: rgba(255, 255, 255, 0.5) !important;
+    border-radius: 8px !important;
+    margin-bottom: 8px !important;
+    border: 1px solid rgba(145, 179, 167, 0.2) !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .cookie-share-item:hover {
+    background: rgba(255, 255, 255, 0.8) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  .cookie-share-floating-btn {
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    padding: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .cookie-share-floating-btn svg {
+    width: 24px !important;
+    height: 24px !important;
+    transform: rotate(0deg) !important;
+  }
+
+  /* 调整危险操作按钮的颜色 */
+  .cookie-share-container .clear-btn {
+    background: #FF6B6B !important;
+  }
+
+  .cookie-share-container .clear-btn:hover {
+    background: #FF5252 !important;
+  }
+
+  .cookie-share-container .cookie-share-delete {
+    background: #FF6B6B !important;
+  }
+
+  .cookie-share-container .cookie-share-delete:hover {
+    background: #FF5252 !important;
+  }
+
+  .cookie-share-notification.error {
+    border-left: 4px solid #FF6B6B !important;
+  }
+
+  /* 确认删除对话框中的删除按钮 */
+  .cookie-share-modal .confirm-delete {
+    background: #FF6B6B !important;
+  }
+
+  .cookie-share-modal .confirm-delete:hover {
+    background: #FF5252 !important;
+  }
+`);
+
+// 添加通知系统
+const notification = {
+  show(message, type = "success") {
+    const existingNotification = document.querySelector(
+      ".cookie-share-notification"
+    );
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+
+    const notificationEl = document.createElement("div");
+    notificationEl.className = `cookie-share-notification ${type}`;
+    notificationEl.textContent = message;
+    document.body.appendChild(notificationEl);
+
+    // 强制重绘
+    notificationEl.offsetHeight;
+    notificationEl.classList.add("show");
+
+    setTimeout(() => {
+      notificationEl.classList.remove("show");
+      setTimeout(() => notificationEl.remove(), 300);
+    }, 3000);
+  },
+};
+
+// 替换所有 alert 调用
+// 在 api.sendCookies 的成功回调中
+if (result.success) {
+  notification.show(result.message || "Sent successfully");
+} else {
+  notification.show(result.message || "Failed to send cookies", "error");
+}
+
+// 在 api.receiveCookies 的成功回调中
+notification.show(result.message || "Received successfully");
+
+// 在错误处理中
+notification.show(error.message, "error");
+
+// 在清除 cookies 时
+notification.show("Cookies have been cleared, the page will refresh shortly");

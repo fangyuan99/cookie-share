@@ -1,13 +1,8 @@
-# Cookie-share Chrome/Edge/Firefox 扩展 
-
-
-## 请所有v0.1.5之前的用户紧急更新并修改CF worker代码以及密码，旧版本不小心删除了鉴权的代码，可以通过 `/admin/list-cookies` 接口访问到cookie
-
-**安全措施:**
-- **将项目名称取的复杂一些**
-- **禁用自带的 workers.dev 域名，使用自定义域名**
+# Cookie-share Chrome/Edge/Firefox 扩展/油猴脚本
 
 *注：仅供学习交流，严禁用于商业用途，请于24小时内删除，禁止在社交平台传播。如果本项目对你有用麻烦点个 star 这对我很有帮助，谢谢！*
+
+**有问题请先看 [issues](https://github.com/fangyuan99/cookie-share/issues) | [discussions](https://github.com/fangyuan99/cookie-share/discussions)**
 
 [English](./README.md) | [简体中文](./README_CN.md) | [Update Log](./update.md)
 
@@ -94,6 +89,8 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 - 不要在代码中硬编码 `ADMIN_PASSWORD`，始终使用环境变量。
 - 定期审查存储的数据，删除不再需要的 cookie 数据。
 - 考虑为 cookie 数据设置过期时间，以减少长期存储敏感信息的风险。
+- 使用 `PATH_SECRET` 在 worker 配置中防止暴力破解攻击。
+- 将项目名称设置得复杂一些，并禁用自带的 workers.dev 域名。
 
 ## 后端（Cloudflare Worker）
 
@@ -105,30 +102,28 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 
 示例:
 
-`/admin/list-cookies`
+`/{PATH_SECRET}/admin/list-cookies`
 
 ```sh
-curl --location --request GET 'https://your-worker-name.your-subdomain.workers.dev/admin/list-cookies' \
+curl --location --request GET 'https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin/list-cookies' \
 --header 'X-Admin-Password: yourpassword'
 ```
 
-`/admin/delete`
+`/{PATH_SECRET}/admin/delete`
 
 ```sh
-curl --location --request DELETE 'https://your-worker-name.your-subdomain.workers.dev/admin/delete?key={yourid}' \
+curl --location --request DELETE 'https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin/delete?key={yourid}' \
 --header 'X-Admin-Password: yourpassword'
 ```
 
-- `POST /send-cookies`: 存储与唯一 ID 关联的 cookies
-- `GET /receive-cookies`: 检索给定 ID 的 cookies
-- `GET /admin/list-cookies`: 列出所有存储的 cookie ID 和 URL
-- `POST /admin/create`: 创建新的数据条目
-- `GET /admin/read`: 读取给定键的数据
-- `PUT /admin/update`: 更新给定键的数据
-- `DELETE /admin/delete`: 删除给定键的数据
-- `DELETE /admin/delete-all`: 删除所有存储的数据
-- `GET /admin/list`: 列出所有存储的数据
-- `GET /admin`: 访问管理员管理页面
+可用的端点：
+- `POST /{PATH_SECRET}/send-cookies`: 存储与唯一 ID 关联的 cookies
+- `GET /{PATH_SECRET}/admin`: 访问管理员管理页面
+- `GET /{PATH_SECRET}/admin/list-cookies`: 列出所有存储的 cookie ID 和 URL
+- `GET /{PATH_SECRET}/admin/list-cookies-by-host`: 按主机名筛选并列出 cookies
+- `DELETE /{PATH_SECRET}/admin/delete`: 删除给定键的数据
+- `PUT /{PATH_SECRET}/admin/update`: 更新给定键的数据
+- `OPTIONS /{PATH_SECRET}/`: 处理 CORS 预检请求
 
 管理员管理页面提供了一个用户友好的界面，用于管理 Worker 中存储的 cookies 和其他数据。它包括查看所有存储的 cookies、创建新的 cookie 条目、更新现有的 cookies 以及删除单个 cookies 或所有存储的数据等功能。
 

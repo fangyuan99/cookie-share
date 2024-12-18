@@ -1,12 +1,8 @@
-# Cookie-share Chrome/Edge/Firefox Extension
-
-## All users before v0.1.5 please urgently update and modify your CF worker code and password. The old version accidentally deleted the authentication code, cookies can be accessed through the `/admin/list-cookies` API
-
-**Security Measures:**
-- **Choose a complex project name**
-- **Disable the built-in workers.dev domain and use a custom domain**
+# Cookie-share Chrome/Edge/Firefox Extension/Tampermonkey Script
 
 *Note: For learning and communication purposes only. Strictly prohibited for commercial use. Please delete within 24 hours and do not share on social platforms. If this project is useful to you, please give it a star. It really helps me a lot, thank you!*
+
+**Please check [issues](https://github.com/fangyuan99/cookie-share/issues) | [discussions](https://github.com/fangyuan99/cookie-share/discussions) first if you have any questions**
 
 [English](./README.md) | [简体中文](./README_CN.md) | [Update Log](./update.md)
 
@@ -94,6 +90,8 @@ Tested websites:
 - Don't hardcode `ADMIN_PASSWORD` in code, always use environment variables
 - Regularly review stored data, delete unnecessary cookie data
 - Consider setting expiration times for cookie data to reduce the risk of storing sensitive information long-term
+- Use `PATH_SECRET` in worker configuration to prevent brute force attacks
+- Choose complex project names and disable the built-in workers.dev domain
 
 ## Backend (Cloudflare Worker)
 
@@ -105,30 +103,28 @@ Note: Add `X-Admin-Password: yourpassword`
 
 Example:
 
-`/admin/list-cookies`
+`/{PATH_SECRET}/admin/list-cookies`
 
 ```sh
-curl --location --request GET 'https://your-worker-name.your-subdomain.workers.dev/admin/list-cookies' \
+curl --location --request GET 'https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin/list-cookies' \
 --header 'X-Admin-Password: yourpassword'
 ```
 
-`/admin/delete`
+`/{PATH_SECRET}/admin/delete`
 
 ```sh
-curl --location --request DELETE 'https://your-worker-name.your-subdomain.workers.dev/admin/delete?key={yourid}' \
+curl --location --request DELETE 'https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin/delete?key={yourid}' \
 --header 'X-Admin-Password: yourpassword'
 ```
 
-- `POST /send-cookies`: Store cookies associated with unique ID
-- `GET /receive-cookies`: Retrieve cookies for given ID
-- `GET /admin/list-cookies`: List all stored cookie IDs and URLs
-- `POST /admin/create`: Create new data entry
-- `GET /admin/read`: Read data for given key
-- `PUT /admin/update`: Update data for given key
-- `DELETE /admin/delete`: Delete data for given key
-- `DELETE /admin/delete-all`: Delete all stored data
-- `GET /admin/list`: List all stored data
-- `GET /admin`: Access admin management page
+Available endpoints:
+- `POST /{PATH_SECRET}/send-cookies`: Store cookies associated with unique ID
+- `GET /{PATH_SECRET}/admin`: Access admin management page
+- `GET /{PATH_SECRET}/admin/list-cookies`: List all stored cookie IDs and URLs
+- `GET /{PATH_SECRET}/admin/list-cookies-by-host`: List cookies filtered by hostname
+- `DELETE /{PATH_SECRET}/admin/delete`: Delete data for given key
+- `PUT /{PATH_SECRET}/admin/update`: Update data for given key
+- `OPTIONS /{PATH_SECRET}/`: Handle CORS preflight requests
 
 The admin management page provides a user-friendly interface for managing cookies and other data stored in the Worker. It includes features for viewing all stored cookies, creating new cookie entries, updating existing cookies, and deleting individual cookies or all stored data.
 

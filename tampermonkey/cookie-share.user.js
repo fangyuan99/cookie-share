@@ -552,6 +552,147 @@
                         }
                     }
                 `);
+
+      GM_addStyle(`
+        .server-url-input {
+          width: 100% !important;
+          height: 36px !important;
+          padding: 0 12px !important;
+          margin: 16px 0 !important;
+          border: 1px solid #ddd !important;
+          border-radius: 6px !important;
+          font-size: 14px !important;
+          box-sizing: border-box !important;
+        }
+
+        .header-actions {
+          display: flex !important;
+          justify-content: space-between !important;
+          align-items: center !important;
+          margin-bottom: 16px !important;
+        }
+
+        .github-link {
+          display: flex !important;
+          justify-content: center !important;
+          margin-bottom: 20px !important;
+          position: absolute !important;
+          right: 0 !important;
+          top: 50% !important;
+          transform: translateY(-50%) !important;
+        }
+
+        .github-link img {
+          width: 20px !important;
+          height: 20px !important;
+          opacity: 0.7 !important;
+          transition: all 0.3s ease !important;
+        }
+
+        .github-link:hover img {
+          opacity: 1 !important;
+        }
+
+        .title-container {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          position: relative !important;
+          margin-bottom: 20px !important;
+        }
+
+        .title-container h1 {
+          margin: 0 !important;
+        }
+
+        .id-input-container {
+          display: flex !important;
+          gap: 16px !important;
+          margin-bottom: 16px !important;
+        }
+
+        .generate-btn {
+          width: 120px !important;
+          height: 48px !important;
+          flex-shrink: 0 !important;
+          background: #f3f3f3 !important;
+          color: #333 !important;
+          margin: 0 !important;
+          border-radius: 8px !important;
+        }
+
+        .action-buttons {
+          display: flex !important;
+          gap: 16px !important;
+          margin-bottom: 16px !important;
+        }
+
+        .action-btn {
+          flex: 1 !important;
+          height: 48px !important;
+          background: #0078d4 !important;
+          color: white !important;
+          border: none !important;
+          border-radius: 8px !important;
+          font-size: 16px !important;
+          cursor: pointer !important;
+          transition: all 0.3s ease !important;
+        }
+
+        .action-btn:hover {
+          background: #006cbd !important;
+          transform: translateY(-1px) !important;
+        }
+
+        .clear-btn {
+          width: 100% !important;
+          height: 48px !important;
+          background: #FF6B6B !important;
+          color: white !important;
+          border: none !important;
+          border-radius: 8px !important;
+          font-size: 16px !important;
+          cursor: pointer !important;
+          transition: all 0.3s ease !important;
+        }
+
+        .clear-btn:hover {
+          background: #FF5252 !important;
+          transform: translateY(-1px) !important;
+        }
+
+        .close-btn {
+          position: absolute !important;
+          right: 16px !important;
+          top: 16px !important;
+          width: 32px !important;
+          height: 32px !important;
+          background: none !important;
+          border: none !important;
+          font-size: 24px !important;
+          color: #666 !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 0 !important;
+          transition: all 0.3s ease !important;
+        }
+
+        .close-btn:hover {
+          color: #333 !important;
+          transform: scale(1.1) !important;
+        }
+
+        .cookie-id-input {
+          flex: 1 !important;
+          height: 48px !important;
+          padding: 0 16px !important;
+          border: 1px solid #ddd !important;
+          border-radius: 8px !important;
+          font-size: 16px !important;
+        }
+      `);
     },
 
     createFloatingButton() {
@@ -738,156 +879,99 @@
 
       const modal = document.createElement("div");
       modal.className = "cookie-share-modal";
-      modal.innerHTML = `
-        <div class="cookie-share-container">
-          <button class="close-btn" onclick="return false;">×</button>
-          <div class="title-container">
-            <h1>Cookie Share</h1>
-            <a href="https://github.com/fangyuan99/cookie-share" target="_blank" class="github-link">
-              <img src="https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/github.svg" alt="GitHub">
-            </a>
-          </div>
 
-          <div class="id-input-container">
-            <input type="text"
-              class="cookie-id-input"
-              placeholder="Cookie ID"
-            >
-            <button class="generate-btn" onclick="return false;">Generate ID</button>
-          </div>
+      // 创建容器
+      const container = document.createElement("div");
+      container.className = "cookie-share-container";
 
-          <input type="text"
-            class="server-url-input"
-            placeholder="Server Address (e.g., https://example.com)"
-            value="${GM_getValue(STORAGE_KEYS.CUSTOM_URL, "")}"
-          >
+      // 创建关闭按钮
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "close-btn";
+      closeBtn.textContent = "×";
+      closeBtn.onclick = () => ui.hideModal();
 
-          <div class="action-buttons">
-            <button class="action-btn send-btn">Send Cookie</button>
-            <button class="action-btn receive-btn">Receive Cookie</button>
-          </div>
+      // 创建标题容器
+      const titleContainer = document.createElement("div");
+      titleContainer.className = "title-container";
 
-          <button class="clear-btn">Clear All Cookies of This Page</button>
-        </div>
-      `;
+      const title = document.createElement("h1");
+      title.textContent = "Cookie Share";
 
-      GM_addStyle(`
-        .server-url-input {
-          width: 100%;
-          height: 36px;
-          padding: 0 12px;
-          margin: 16px 0;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 14px;
-          box-sizing: border-box;
-        }
+      const githubLink = document.createElement("a");
+      githubLink.href = "https://github.com/fangyuan99/cookie-share";
+      githubLink.target = "_blank";
+      githubLink.className = "github-link";
 
-        .header-actions {
-          display: flex !important;
-          justify-content: space-between !important;
-          align-items: center !important;
-          margin-bottom: 16px !important;
-        }
+      const githubImg = document.createElement("img");
+      githubImg.src =
+        "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/github.svg";
+      githubImg.alt = "GitHub";
 
-        .github-link {
-          display: flex !important;
-          justify-content: center !important;
-          margin-bottom: 20px !important;
-        }
+      // ID 输入容器
+      const idContainer = document.createElement("div");
+      idContainer.className = "id-input-container";
 
-        .github-link a {
-          display: flex !important;
-          align-items: center !important;
-          gap: 6px !important;
-          text-decoration: none !important;
-          color: #666 !important;
-          font-size: 14px !important;
-          transition: all 0.3s ease !important;
-        }
+      const idInput = document.createElement("input");
+      idInput.type = "text";
+      idInput.className = "cookie-id-input";
+      idInput.placeholder = "Cookie ID";
 
-        .github-link a:hover {
-          color: #333 !important;
-          transform: translateY(-1px) !important;
-        }
-
-        .github-link img {
-          width: 16px !important;
-          height: 16px !important;
-          opacity: 0.7 !important;
-        }
-
-        .github-link a:hover img {
-          opacity: 1 !important;
-        }
-
-        .github-link span {
-          font-weight: 400 !important;
-        }
-
-        .title-container {
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          position: relative !important;
-          margin-bottom: 20px !important;
-        }
-
-        .title-container h1 {
-          margin: 0 !important;
-        }
-
-        .github-link {
-          position: absolute !important;
-          right: 0 !important;
-          top: 50% !important;
-          transform: translateY(-50%) !important;
-        }
-
-        .github-link img {
-          width: 20px !important;
-          height: 20px !important;
-          opacity: 0.7 !important;
-          transition: all 0.3s ease !important;
-        }
-
-        .github-link:hover img {
-          opacity: 1 !important;
-        }
-      `);
-
-      // Add event listeners
-      modal.querySelector(".close-btn").onclick = ui.hideModal;
-      modal.querySelector(".generate-btn").onclick = () => {
-        const idInput = modal.querySelector(".cookie-id-input");
+      const generateBtn = document.createElement("button");
+      generateBtn.className = "generate-btn";
+      generateBtn.textContent = "Generate ID";
+      generateBtn.onclick = () => {
         idInput.value = utils.generateId();
       };
 
-      const serverUrlInput = modal.querySelector(".server-url-input");
+      // 服务器地址输入
+      const serverInput = document.createElement("input");
+      serverInput.type = "text";
+      serverInput.className = "server-url-input";
+      serverInput.placeholder = "Server Address (e.g., https://example.com)";
+      serverInput.value = GM_getValue(STORAGE_KEYS.CUSTOM_URL, "");
 
-      // 添加 input 事件监听器，在输入时自动保存
-      serverUrlInput.addEventListener("input", () => {
-        let url = serverUrlInput.value.trim();
-        // 去掉末尾的斜杠
-        url = url.replace(/\/+$/, "");
-        GM_setValue(STORAGE_KEYS.CUSTOM_URL, url);
-      });
+      // 操作按钮容器
+      const actionButtons = document.createElement("div");
+      actionButtons.className = "action-buttons";
 
-      // 添加 blur 事件监听，在失去焦点时格式化显示
-      serverUrlInput.addEventListener("blur", () => {
-        let url = serverUrlInput.value.trim();
-        // 去掉末尾的斜杠
-        url = url.replace(/\/+$/, "");
-        serverUrlInput.value = url;
-        GM_setValue(STORAGE_KEYS.CUSTOM_URL, url);
-      });
+      const sendBtn = document.createElement("button");
+      sendBtn.className = "action-btn send-btn";
+      sendBtn.textContent = "Send Cookie";
 
-      modal.querySelector(".send-btn").onclick = async () => {
+      const receiveBtn = document.createElement("button");
+      receiveBtn.className = "action-btn receive-btn";
+      receiveBtn.textContent = "Receive Cookie";
+
+      const clearBtn = document.createElement("button");
+      clearBtn.className = "clear-btn";
+      clearBtn.textContent = "Clear All Cookies of This Page";
+
+      // 组装 DOM
+      githubLink.appendChild(githubImg);
+      titleContainer.appendChild(title);
+      titleContainer.appendChild(githubLink);
+
+      idContainer.appendChild(idInput);
+      idContainer.appendChild(generateBtn);
+
+      actionButtons.appendChild(sendBtn);
+      actionButtons.appendChild(receiveBtn);
+
+      container.appendChild(closeBtn);
+      container.appendChild(titleContainer);
+      container.appendChild(idContainer);
+      container.appendChild(serverInput);
+      container.appendChild(actionButtons);
+      container.appendChild(clearBtn);
+
+      modal.appendChild(container);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      // 添加事件监听器
+      sendBtn.onclick = async () => {
         try {
-          const urlInput = modal.querySelector(".server-url-input");
-          const idInput = modal.querySelector(".cookie-id-input");
-
-          if (!urlInput.value.trim()) {
+          if (!serverInput.value.trim()) {
             notification.show("Please enter the server address", "error");
             return;
           }
@@ -899,7 +983,7 @@
 
           const result = await api.sendCookies(
             idInput.value.trim(),
-            urlInput.value.trim()
+            serverInput.value.trim()
           );
           notification.show(
             result.message || "Sent successfully",
@@ -910,12 +994,9 @@
         }
       };
 
-      modal.querySelector(".receive-btn").onclick = async () => {
+      receiveBtn.onclick = async () => {
         try {
-          const urlInput = modal.querySelector(".server-url-input");
-          const idInput = modal.querySelector(".cookie-id-input");
-
-          if (!urlInput.value.trim()) {
+          if (!serverInput.value.trim()) {
             notification.show("Please enter the server address", "error");
             return;
           }
@@ -927,7 +1008,7 @@
 
           const result = await api.receiveCookies(
             idInput.value.trim(),
-            urlInput.value.trim()
+            serverInput.value.trim()
           );
           notification.show(
             result.message || "Received successfully",
@@ -938,7 +1019,7 @@
         }
       };
 
-      modal.querySelector(".clear-btn").onclick = async () => {
+      clearBtn.onclick = async () => {
         if (await this.confirmDelete()) {
           await cookieManager.clearAll();
           notification.show(
@@ -951,9 +1032,21 @@
         }
       };
 
-      ui.createSettingsView(modal.querySelector(".cookie-share-container"));
-      overlay.appendChild(modal);
-      document.body.appendChild(overlay);
+      // 添加服务器地址输入事件
+      serverInput.addEventListener("input", () => {
+        let url = serverInput.value.trim();
+        url = url.replace(/\/+$/, "");
+        GM_setValue(STORAGE_KEYS.CUSTOM_URL, url);
+      });
+
+      serverInput.addEventListener("blur", () => {
+        let url = serverInput.value.trim();
+        url = url.replace(/\/+$/, "");
+        serverInput.value = url;
+        GM_setValue(STORAGE_KEYS.CUSTOM_URL, url);
+      });
+
+      ui.createSettingsView(container);
     },
 
     showModal() {
@@ -1465,7 +1558,7 @@ GM_addStyle(`
     transform: rotate(0deg) !important;
   }
 
-  /* 调整危险操作按���的颜��� */
+  /* 调整危险操作按钮的颜色 */
   .cookie-share-container .clear-btn {
     background: #FF6B6B !important;
   }
@@ -1521,20 +1614,3 @@ const notification = {
     }, 3000);
   },
 };
-
-// 替换所有 alert 调用
-// 在 api.sendCookies 的成功回调中
-if (result.success) {
-  notification.show(result.message || "Sent successfully");
-} else {
-  notification.show(result.message || "Failed to send cookies", "error");
-}
-
-// 在 api.receiveCookies 的成功回调中
-notification.show(result.message || "Received successfully");
-
-// 在错误处理中
-notification.show(error.message, "error");
-
-// 在清除 cookies 时
-notification.show("Cookies have been cleared, the page will refresh shortly");

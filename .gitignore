@@ -3,6 +3,9 @@
 *.xpi
 *.py
 build/
+2c.js
+.gitignore
+
 
 # Node modules
 node_modules/

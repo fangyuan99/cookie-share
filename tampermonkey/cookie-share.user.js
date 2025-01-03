@@ -16,6 +16,7 @@
 
 (function () {
   "use strict";
+  if (window.self !== window.top) return;
 
   // ===================== Constants =====================
   const STORAGE_KEYS = {
@@ -706,7 +707,7 @@
       }
 
       const cookieSvg = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12">
           <path fill="#91B3A7" d="M21.598 13.789c-1.646-.583-2.76-2.145-2.76-3.891 0-.284-.1-.516-.316-.715-.184-.15-.466-.217-.699-.183-1.397.2-2.728-.2-3.743-1.015-1.015-.816-1.73-2.045-1.847-3.476-.017-.25-.167-.483-.383-.633-.217-.133-.483-.167-.732-.067-2.262.815-4.391-.616-5.239-2.562-.167-.366-.549-.566-.949-.482-3.193.715-6.07 2.72-8.031 5.248C-6.804 11.66-6.354 19.82.366 26.54c5.538 5.53 14.48 5.53 20.002 0 2.562-2.562 4.257-6.22 4.257-10.11-.033-.55-.05-.915-.566-1.098z"/>
           <circle fill="#4A5567" cx="10" cy="12" r="1.5"/>
           <circle fill="#4A5567" cx="16" cy="9" r="1.5"/>
@@ -1464,10 +1465,10 @@ GM_addStyle(`
     border-radius: 12px !important;
     backdrop-filter: blur(10px) !important;
     -webkit-backdrop-filter: blur(10px) !important;
-    background: rgba(255, 255, 255, 0.8) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    color: #4A5567 !important;
+    color: #000000 !important;
     font-family: -apple-system, system-ui, sans-serif !important;
     font-size: 14px !important;
     transform: translateY(150%) !important;
@@ -1488,18 +1489,22 @@ GM_addStyle(`
   }
 
   .cookie-share-modal {
-    background: rgba(255, 255, 255, 0.8) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     backdrop-filter: blur(10px) !important;
     -webkit-backdrop-filter: blur(10px) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15) !important;
   }
 
+  .cookie-share-container h1 {
+    color: #000000 !important;
+  }
+
   .cookie-share-container button {
     background: #91B3A7 !important;
     transition: all 0.3s ease !important;
     border: none !important;
-    color: white !important;
+    color: #FFFFFF !important;
   }
 
   .cookie-share-container button:hover {
@@ -1516,9 +1521,14 @@ GM_addStyle(`
   }
 
   .cookie-share-container input {
-    background: rgba(255, 255, 255, 0.9) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     border: 1px solid rgba(145, 179, 167, 0.3) !important;
     transition: all 0.3s ease !important;
+    color: #000000 !important;
+  }
+
+  .cookie-share-container input::placeholder {
+    color: #666666 !important;
   }
 
   .cookie-share-container input:focus {
@@ -1528,22 +1538,29 @@ GM_addStyle(`
   }
 
   .cookie-share-item {
-    background: rgba(255, 255, 255, 0.5) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     border-radius: 8px !important;
     margin-bottom: 8px !important;
     border: 1px solid rgba(145, 179, 167, 0.2) !important;
     transition: all 0.3s ease !important;
+    color: #000000 !important;
   }
 
   .cookie-share-item:hover {
-    background: rgba(255, 255, 255, 0.8) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
     transform: translateY(-1px) !important;
+  }
+
+  .cookie-share-empty, 
+  .cookie-share-error,
+  .cookie-share-loading span {
+    color: #000000 !important;
   }
 
   .cookie-share-floating-btn {
     backdrop-filter: blur(4px) !important;
     -webkit-backdrop-filter: blur(4px) !important;
-    background: rgba(255, 255, 255, 0.8) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     padding: 8px !important;
@@ -1561,6 +1578,7 @@ GM_addStyle(`
   /* 调整危险操作按钮的颜色 */
   .cookie-share-container .clear-btn {
     background: #FF6B6B !important;
+    color: #FFFFFF !important;
   }
 
   .cookie-share-container .clear-btn:hover {
@@ -1569,6 +1587,7 @@ GM_addStyle(`
 
   .cookie-share-container .cookie-share-delete {
     background: #FF6B6B !important;
+    color: #FFFFFF !important;
   }
 
   .cookie-share-container .cookie-share-delete:hover {
@@ -1582,6 +1601,7 @@ GM_addStyle(`
   /* 确认删除对话框中的删除按钮 */
   .cookie-share-modal .confirm-delete {
     background: #FF6B6B !important;
+    color: #FFFFFF !important;
   }
 
   .cookie-share-modal .confirm-delete:hover {

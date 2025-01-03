@@ -842,7 +842,7 @@
 
       // Create floating button toggle
       const floatingBtnToggle = createToggle(
-        "Show Floating Button",
+        "Show Floating Button(Alt + Shift + L)",
         STORAGE_KEYS.SHOW_FLOATING_BUTTON,
         (newState) => {
           const existingBtn = document.querySelector(
@@ -927,9 +927,24 @@
       // 服务器地址输入
       const serverInput = document.createElement("input");
       serverInput.type = "text";
-      serverInput.className = "server-url-input";
+      serverInput.className = "cookie-id-input";
       serverInput.placeholder = "Server Address (e.g., https://example.com)";
       serverInput.value = GM_getValue(STORAGE_KEYS.CUSTOM_URL, "");
+
+      // 创建服务器地址输入容器
+      const serverContainer = document.createElement("div");
+      serverContainer.className = "id-input-container";
+
+      // 创建显示 cookie list 的按钮
+      const showListBtn = document.createElement("button");
+      showListBtn.className = "generate-btn";
+      showListBtn.textContent = "Show List";
+      showListBtn.style.width = "120px";
+      showListBtn.onclick = () => ui.showCookieList();
+
+      // 组装服务器地址输入容器
+      serverContainer.appendChild(serverInput);
+      serverContainer.appendChild(showListBtn);
 
       // 操作按钮容器
       const actionButtons = document.createElement("div");
@@ -961,7 +976,7 @@
       container.appendChild(closeBtn);
       container.appendChild(titleContainer);
       container.appendChild(idContainer);
-      container.appendChild(serverInput);
+      container.appendChild(serverContainer);
       container.appendChild(actionButtons);
       container.appendChild(clearBtn);
 
@@ -1051,7 +1066,7 @@
     },
 
     showModal() {
-      // Ensure any existing Cookie List elements are removed
+      // Ensure any existing Cookie Share elements are removed
       const existingOverlay = document.querySelector(".cookie-share-overlay");
       if (existingOverlay) {
         existingOverlay.remove();
@@ -1070,19 +1085,11 @@
 
     hideModal() {
       const overlay = document.querySelector(".cookie-share-overlay");
-      const modal = document.querySelector(".cookie-share-modal");
-
-      if (overlay && modal) {
-        const idInput = modal.querySelector(".cookie-id-input");
-        if (idInput) {
-          idInput.value = "";
-        }
-
+      if (overlay) {
         overlay.classList.remove("visible");
-        modal.classList.remove("visible");
-        if (state.floatingButton) {
-          fullscreenManager.updateFloatingButtonVisibility();
-        }
+        setTimeout(() => {
+          overlay.remove();
+        }, 300);
       }
     },
 
@@ -1448,8 +1455,49 @@
       fullscreenManager.handleFullscreenChange()
     );
 
+    // Add keyboard shortcuts
+    const handleKeyboardShortcuts = (e) => {
+      // Alt + Shift + L for cookie list
+      if (e.altKey && e.shiftKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        e.stopPropagation();
+        const overlay = document.querySelector(".cookie-share-overlay");
+        const modal = document.querySelector(".cookie-list-modal");
+        if (overlay && modal) {
+          ui.hideCookieList();
+        } else {
+          ui.showCookieList();
+        }
+        return false;
+      }
+      // Alt + Shift + C for cookie share panel
+      if (e.altKey && e.shiftKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        e.stopPropagation();
+        const overlay = document.querySelector(".cookie-share-overlay");
+        const modal = document.querySelector(
+          ".cookie-share-modal:not(.cookie-list-modal)"
+        );
+        if (overlay && modal) {
+          ui.hideModal();
+        } else {
+          ui.showModal();
+        }
+        return false;
+      }
+    };
+
+    // Remove existing event listener if any
+    document.removeEventListener("keydown", handleKeyboardShortcuts);
+    // Add new event listener
+    document.addEventListener("keydown", handleKeyboardShortcuts, {
+      capture: true,
+    });
+
     // Register menu command, click to show Cookie Share
-    GM_registerMenuCommand("Show Cookie Share", () => ui.showModal());
+    GM_registerMenuCommand("Show Cookie Share(Alt + Shift + C)", () =>
+      ui.showModal()
+    );
   }
 
   // Start the application

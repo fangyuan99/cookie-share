@@ -1,3 +1,10 @@
+- Node.js Server v0.0.1 / Node.js 服务器版v0.0.1
+  - Added standalone Node.js server implementation in separate repository (cookie-share-server)
+  - 在独立仓库中添加了 Node.js 服务器实现 (cookie-share-server)
+  - Added cookie encryption using ADMIN_PASSWORD for better security
+  - 使用 ADMIN_PASSWORD 对 cookie 数据进行加密，提高安全性
+  - SQLite database for persistent storage
+  - 使用 SQLite 数据库进行持久化存储
 - Tampermonkey Script v0.0.1 / 油猴脚本版v0.0.1
   - Reconstructed using Tampermonkey script for better compatibility and easier installation
   - 使用油猴脚本重构，兼容性更强，安装更方便

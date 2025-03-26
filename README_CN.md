@@ -10,7 +10,7 @@
 
 ## 概述
 
-Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚本)，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于**多账号切换、视频会员共享、星球合租**等场景。后端采用自建 Cloudflare Worker 保障数据安全。
+Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚本)，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于**多账号切换、视频会员共享、星球合租**等场景。后端支持自建 Cloudflare Worker 或 Node.js 服务器，保障数据安全。
 
 ![image](./images/cs1.png)
 
@@ -79,6 +79,7 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 
 ### 后端部署教程
 
+#### 方式一：Cloudflare Worker（推荐）
 
 1. [注册](https://dash.cloudflare.com/sign-up) Cloudflare 账户并创建一个 Worker。
 2. 复制 [_worker.js](./_worker.js) 文件的内容到新创建的 Worker 中。
@@ -92,6 +93,29 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 5. 保存并部署 Worker。
 6. 记下 Worker 的 URL，格式类似：`https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`（如果被墙，请自定义域名）
 
+#### 方式二：Node.js 服务器
+
+*注：自建服务器可能存在被攻击等安全性问题，请自行承担风险！*
+
+如果需要更高性能或对数据存储有更多控制，可以部署独立的 Node.js 服务器：
+
+
+1. 克隆 [cookie-share-server](https://github.com/fangyuan99/cookie-share-server) 仓库
+2. 使用 `npm install` 安装依赖
+3. 创建 `.env` 文件，包含以下变量：
+   - `PORT`: 服务器端口（默认：3000）
+   - `ADMIN_PASSWORD`: 设置管理员访问的强密码
+   - `PATH_SECRET`: 设置一个强字符串，防止被暴力破解
+   - `DB_PATH`: SQLite 数据库文件路径（默认：./data/cookie_share.db）
+4. 使用 `npm start` 启动服务器
+5. 通过 `http://你的服务器IP:端口/{PATH_SECRET}` 访问服务器
+
+Node.js 服务器实现提供以下优势：
+- 使用 Cookie 加密提升安全性
+- 持久化 SQLite 数据库存储
+- 无请求限制或存储配额
+- 自托管，完全控制您的数据
+
 ## 安全注意事项
 
 - 确保将 `ADMIN_PASSWORD` 设置为一个强密码，并定期更改。
@@ -101,11 +125,11 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 - 使用 `PATH_SECRET` 在 worker 配置中防止暴力破解攻击。
 - 将项目名称设置得复杂一些，并禁用自带的 workers.dev 域名。
 
-## 后端（Cloudflare Worker）
+## 后端 API 端点
 
 **若 `/{PATH_SECRET}/admin/*` 接口出现问题，请检查是否添加了 X-Admin-Password 或者使用 cf 官方的 kv 管理页面**
 
-后端实现为 Cloudflare Worker，提供以下端点：
+两种后端实现都提供以下端点：
 
 注意添加 `X-Admin-Password: yourpassword`
 
@@ -114,14 +138,14 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 `/{PATH_SECRET}/admin/list-cookies`
 
 ```sh
-curl --location --request GET 'https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin/list-cookies' \
+curl --location --request GET 'https://你的后端地址/{PATH_SECRET}/admin/list-cookies' \
 --header 'X-Admin-Password: yourpassword'
 ```
 
 `/{PATH_SECRET}/admin/delete`
 
 ```sh
-curl --location --request DELETE 'https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin/delete?key={yourid}' \
+curl --location --request DELETE 'https://你的后端地址/{PATH_SECRET}/admin/delete?key={yourid}' \
 --header 'X-Admin-Password: yourpassword'
 ```
 
@@ -134,9 +158,9 @@ curl --location --request DELETE 'https://your-worker-name.your-subdomain.worker
 - `PUT /{PATH_SECRET}/admin/update`: 更新给定键的数据
 - `OPTIONS /{PATH_SECRET}/`: 处理 CORS 预检请求
 
-管理员管理页面提供了一个用户友好的界面，用于管理 Worker 中存储的 cookies 和其他数据。它包括查看所有存储的 cookies、创建新的 cookie 条目、更新现有的 cookies 以及删除单个 cookies 或所有存储的数据等功能。
+管理员管理页面提供了一个用户友好的界面，用于管理存储的 cookies 和其他数据。它包括查看所有存储的 cookies、创建新的 cookie 条目、更新现有的 cookies 以及删除单个 cookies 或所有存储的数据等功能。
 
-要访问管理员页面，请在浏览器中导航至 `https://your-worker-name.your-subdomain.workers.dev/admin`。在访问管理界面之前，您将需要输入管理员密码。
+要访问管理员页面，请在浏览器中导航至 `https://你的后端地址/{PATH_SECRET}/admin`。在访问管理界面之前，您将需要输入管理员密码。
 
 **管理员端点需要使用管理员密码进行身份验证。**
 
@@ -157,8 +181,8 @@ curl --location --request DELETE 'https://your-worker-name.your-subdomain.worker
 
 修改后端：
 
-1. 编辑 `_worker.js` 文件。
-2. 将更新后的 Worker 部署到 Cloudflare。
+1. 对于 Cloudflare Worker：编辑 `_worker.js` 文件并将更新后的 Worker 部署到 Cloudflare。
+2. 对于 Node.js 服务器：编辑 cookie-share-server 仓库中的文件。
 
 ## 后续开发计划
 

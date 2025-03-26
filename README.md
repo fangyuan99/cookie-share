@@ -10,7 +10,7 @@
 
 ## Overview
 
-Cookie-share is a Chrome/Edge/Firefox extension (also available as a Tampermonkey script) that allows users to send and receive cookies between different devices or browsers. It can be used for **multiple account switching, video membership sharing, community subscription sharing**, and other scenarios. The backend uses self-hosted Cloudflare Worker to ensure data security.
+Cookie-share is a Chrome/Edge/Firefox extension (also available as a Tampermonkey script) that allows users to send and receive cookies between different devices or browsers. It can be used for **multiple account switching, video membership sharing, community subscription sharing**, and other scenarios. The backend uses self-hosted Cloudflare Worker or Node.js server to ensure data security.
 
 ![image](./images/cs1.png)
 
@@ -76,6 +76,8 @@ Tested websites:
 
 ### Backend Deployment Guide
 
+#### Option 1: Cloudflare Worker (Recommended)
+
 1. [Register](https://dash.cloudflare.com/sign-up) Cloudflare account and create a Worker
 2. Copy contents of [_worker.js](./_worker.js) to newly created Worker
 3. Add following environment variables in Cloudflare Worker settings:
@@ -86,7 +88,30 @@ Tested websites:
    - Variable name: `COOKIE_STORE`
    - KV namespace: Select your created KV namespace
 5. Save and deploy Worker
-6. Note Worker URL format: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}` (use custom domain if blocked)
+
+If you need higher performance or more control over data storage, you can deploy a standalone Node.js server:
+
+
+#### Option 2: Node.js Server
+
+*Note: Self-hosted servers may be attacked and other security issues, please take your own risk!*
+
+1. [Clone](https://github.com/fangyuan99/cookie-share-server) cookie-share-server repository
+2. Use `npm install` to install dependencies
+3. Create `.env` file with the following variables:
+
+   - `PORT`: Server port (default: 3000)
+   - `ADMIN_PASSWORD`: Set a strong password for admin access
+   - `PATH_SECRET`: Set a strong string to prevent brute force attacks
+   - `DB_PATH`: Path to SQLite database file (default: ./data/cookie_share.db)
+4. Start the server with `npm start`
+5. Access the server at `http://your-server-ip:port/{PATH_SECRET}`
+
+The Node.js server implementation offers these advantages:
+- Cookie encryption for enhanced security
+- Persistent SQLite database storage
+- No request limits or storage quotas
+- Self-hosted with complete control over your data
 
 ## Security Considerations
 
@@ -97,11 +122,11 @@ Tested websites:
 - Use `PATH_SECRET` in worker config to prevent brute force attacks
 - Set complex project names and disable built-in workers.dev domain
 
-## Backend (Cloudflare Worker)
+## Backend API Endpoints
 
 **If `/{PATH_SECRET}/admin/*` endpoints have issues, check if X-Admin-Password is added or use CF official KV management page**
 
-Backend implemented as Cloudflare Worker, provides following endpoints:
+Both backend implementations provide the following endpoints:
 
 Note: Add `X-Admin-Password: yourpassword`
 
@@ -110,14 +135,14 @@ Example:
 `/{PATH_SECRET}/admin/list-cookies`
 
 ```sh
-curl --location --request GET 'https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin/list-cookies' \
+curl --location --request GET 'https://your-backend-address/{PATH_SECRET}/admin/list-cookies' \
 --header 'X-Admin-Password: yourpassword'
 ```
 
 `/{PATH_SECRET}/admin/delete`
 
 ```sh
-curl --location --request DELETE 'https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin/delete?key={yourid}' \
+curl --location --request DELETE 'https://your-backend-address/{PATH_SECRET}/admin/delete?key={yourid}' \
 --header 'X-Admin-Password: yourpassword'
 ```
 
@@ -130,9 +155,9 @@ Available endpoints:
 - `PUT /{PATH_SECRET}/admin/update`: Update data for given key
 - `OPTIONS /{PATH_SECRET}/`: Handle CORS preflight requests
 
-Admin management page provides user-friendly interface for managing cookies and other data stored in Worker. Includes viewing all stored cookies, creating new cookie entries, updating existing cookies, and deleting individual cookies or all stored data.
+Admin management page provides user-friendly interface for managing cookies and other data. Includes viewing all stored cookies, creating new cookie entries, updating existing cookies, and deleting individual cookies or all stored data.
 
-To access admin page, navigate to `https://your-worker-name.your-subdomain.workers.dev/admin` in browser. Admin password required before accessing management interface.
+To access admin page, navigate to `https://your-backend-address/{PATH_SECRET}/admin` in browser. Admin password required before accessing management interface.
 
 **Admin endpoints require authentication using admin password.**
 
@@ -153,8 +178,8 @@ Modifying extension:
 
 Modifying backend:
 
-1. Edit `_worker.js` file
-2. Deploy updated Worker to Cloudflare
+1. For Cloudflare Worker: Edit `_worker.js` file and deploy updated Worker to Cloudflare
+2. For Node.js server: Edit files in the cookie-share-server repository
 
 ## Future Development Plans
 

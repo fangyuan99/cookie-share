@@ -21,6 +21,7 @@ Cookie-share is a Chrome/Edge/Firefox extension (also available as a Tampermonke
 ---
 
 
+
 [Tampermonkey Script One-Click Install (Recommended)](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Mirror](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Extension Download](https://github.com/fangyuan99/cookie-share/releases)
 
 ### Effects and Use Cases
@@ -46,6 +47,8 @@ Tested websites:
 - Generate random unique IDs for cookie sharing
 - Send cookies from current tab to server
 - Receive and set cookies from server to current tab
+- Save cookies locally without backend (added in v0.1.0)
+- Manage cookies with Cookie List (local and cloud data)
 - Admin features for managing stored cookies
 - Due to greater extension permissions, can support `HTTPOnly` cookies that JS cannot access
 
@@ -73,6 +76,16 @@ Tested websites:
 4. Send Cookie from logged-in browser page
 5. Accept Cookie on non-logged-in browser page
 6. Note: Don't add `/` after the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
+
+### Local Use Without Backend
+
+As of v0.1.0, Cookie-share now supports local storage functionality. This means you can use the extension without setting up a backend server:
+
+- Enable the "Save to local" checkbox to store cookies locally
+- The Cookie List now distinguishes between local and cloud data
+- Perfect for personal use on a single device or when privacy is a top concern
+
+For sharing cookies between different devices or browsers, you'll still need to set up a backend as described below.
 
 ### Backend Deployment Guide
 

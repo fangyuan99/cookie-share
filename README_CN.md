@@ -22,7 +22,6 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 
 
 
-
  [油猴脚本一键安装（推荐）](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [镜像加速](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [插件下载](https://github.com/fangyuan99/cookie-share/releases)
 
 ### 效果与应用场景
@@ -48,6 +47,8 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 - 为 cookie 共享生成随机唯一 ID
 - 将当前标签页的 cookies 发送到服务器
 - 从服务器接收并设置 cookies 到当前标签页
+- 在本地保存 cookies，无需后端（v0.1.0 新增）
+- 通过 Cookie List 管理 cookies（区分本地与云端数据）
 - 管理员功能，用于管理存储的 cookies
 - 由于插件的权限更大，可以支持 JS 无法访问的 `HTTPOnly` Cookie
 
@@ -76,6 +77,15 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 5. 在未登录的浏览器页面接受 Cookie
 6. 注意地址后面不要加 `/`，示例: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
 
+### 本地使用（无需后端）
+
+从 v0.1.0 开始，Cookie-share 支持本地存储功能。这意味着您可以不需要搭建后端服务器即可使用此扩展：
+
+- 启用"保存到本地"选项框，即可将 cookie 存储在本地
+- Cookie List 现在可以区分本地与云端数据
+- 非常适合单设备个人使用或对隐私有较高要求的场景
+
+如果需要在不同设备或浏览器之间共享 cookie，您仍然需要按照下面的说明设置后端。
 
 ### 后端部署教程
 

@@ -1,16 +1,19 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.0.3
+// @version      0.1.0
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_listValues
+// @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
 // @grant        GM_cookie
+// @updateURL    https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js
 // @connect      *
 // ==/UserScript==
 
@@ -24,7 +27,219 @@
     ADMIN_PASSWORD: "cookie_share_admin_password",
     SHOW_FLOATING_BUTTON: "cookie_share_show_floating_button",
     AUTO_HIDE_FULLSCREEN: "cookie_share_auto_hide_fullscreen",
+    SAVE_LOCALLY: "cookie_share_save_locally",
+    LANGUAGE_PREFERENCE: "cookie_share_language_preference", // Added
   };
+
+  // ===================== i18n =====================
+  const LANGUAGES = {
+    EN: "en",
+    ZH: "zh",
+  };
+
+  let currentLanguage = LANGUAGES.EN; // Default language
+
+  // Detect browser language, prioritizing saved preference
+  function detectLanguage() {
+    const savedLang = GM_getValue(STORAGE_KEYS.LANGUAGE_PREFERENCE, null);
+    if (savedLang === LANGUAGES.EN || savedLang === LANGUAGES.ZH) {
+      currentLanguage = savedLang;
+      console.log(
+        `Cookie Share: Language set from preference: ${currentLanguage}`
+      );
+      return;
+    }
+
+    // Fallback to browser language detection
+    const browserLang = navigator.language || navigator.userLanguage;
+    if (browserLang && browserLang.toLowerCase().startsWith(LANGUAGES.ZH)) {
+      currentLanguage = LANGUAGES.ZH;
+    } else {
+      currentLanguage = LANGUAGES.EN;
+    }
+    // Optional: Check GM_getValue for saved preference if implementing manual switch
+    console.log(`Cookie Share: Language set to ${currentLanguage}`);
+  }
+
+  const translations = {
+    en: {
+      // General UI
+      cookieShareTitle: "Cookie Share",
+      cookiesListTitle: "Cookies List",
+      confirmDeleteTitle: "Confirm Delete",
+      closeButton: "×",
+      cancelButton: "Cancel",
+      deleteButton: "Delete",
+      receiveButton: "Receive",
+      showListButton: "Show List",
+      showPanelButton: "Show Panel",
+      generateIdButton: "Generate ID",
+      sendCookieButton: "Send Cookie",
+      receiveCookieButton: "Receive Cookie",
+      clearAllCookiesButton: "Clear All Cookies of This Page",
+      sourceLocal: "Local",
+      sourceCloud: "Cloud",
+      loadingCookies: "Loading cookies...",
+      failed: "failed", // Added
+
+      // Placeholders
+      placeholderCookieId: "Cookie ID",
+      placeholderServerAddress: "Server Address (e.g., https://example.com)",
+      placeholderAdminPassword: "Enter admin password",
+
+      // Settings
+      settingsShowFloatingButton: "Show Floating Button (Alt+Shift+L)",
+      settingsAutoHideFullscreen:
+        "Auto Hide in Fullscreen (Not Available For Safari)",
+      settingsSaveLocally:
+        "Prefer Local Save ('Send' will only save locally if checked)",
+
+      // Menu Commands
+      menuShowShare: "Show Cookie Share (Alt+Shift+C)",
+      menuShowList: "Show Cookie List (Alt+Shift+L)",
+      menuSwitchLanguage: "Switch Language (Refresh Required)", // Added
+
+      // Notifications & Messages
+      notificationEnterCookieId: "Please enter or generate a Cookie ID",
+      notificationNoCookiesToSave: "No cookies to save on the current page",
+      notificationSavedLocally: "Cookie saved locally successfully",
+      notificationEnterServer: "Please enter the server address",
+      notificationSentSuccess: "Sent successfully",
+      notificationReceivedSuccess: "Received successfully",
+      notificationClearedSuccess:
+        "Cookies have been cleared, the page will refresh shortly",
+      notificationImportSuccess:
+        "Successfully imported {{count}} cookies from local, refreshing soon",
+      notificationLocalDataNotFound: "Local cookie data not found",
+      notificationLocalDataInvalid: "Local cookie data format invalid",
+      notificationLocalImportFailed: "Failed to import any local cookies",
+      notificationNeedServerAddress: "Please set the server address first",
+      notificationReceiveFailed:
+        "Receive {{source}} cookie failed: {{message}}",
+      notificationLocalDeleted: "Local cookie deleted",
+      notificationNeedAdminCreds:
+        "Deleting cloud cookies requires server address and admin password",
+      notificationCloudDeleted: "Cloud cookie deleted",
+      notificationDeleteFailed: "Delete {{source}} cookie failed: {{message}}",
+      notificationListInitFailed:
+        "Failed to initialize cookie list: {{message}}",
+      notificationLoadCloudFailed:
+        "Failed to load cloud cookies: {{message}} (Local cookies will still be shown)",
+      notificationLoadLocalFailed: "Failed to load local cookies: {{message}}",
+      notificationInvalidPassword: "Invalid admin password",
+      notificationAdminPermission:
+        "Invalid admin password or insufficient permissions",
+      notificationServerDeleteFailed: "Server returned delete failure",
+      notificationNetworkError: "Network request failed",
+      notificationRequestTimeout: "Request timed out",
+      notificationResponseError: "Error processing response: {{message}}",
+      confirmDeleteMessage: "Are you sure you want to delete this cookie?",
+      listEmpty: "No local or cloud cookies found related to {{host}}",
+      listEmptyLocalOnly: "No local cookies found related to {{host}}",
+
+      // API Errors (Direct mapping, may stay English if API doesn't support i18n)
+      apiErrorNoCookiesToSend: "No cookies to send on the current page",
+      apiErrorServerReturn: "Server returned error: {{status}}\n{{text}}", // Escaped newline
+      apiErrorNetwork: "Network request failed",
+      apiErrorTimeout: "Request timeout",
+      apiErrorInvalidData: "Invalid data format",
+      apiErrorNoImport: "No cookies were successfully imported",
+    },
+    zh: {
+      // General UI
+      cookieShareTitle: "Cookie Share",
+      cookiesListTitle: "Cookie List",
+      confirmDeleteTitle: "确认删除",
+      closeButton: "×",
+      cancelButton: "取消",
+      deleteButton: "删除",
+      receiveButton: "接收",
+      showListButton: "显示列表",
+      showPanelButton: "显示面板",
+      generateIdButton: "生成 ID",
+      sendCookieButton: "发送 Cookie",
+      receiveCookieButton: "接收 Cookie",
+      clearAllCookiesButton: "清除本页所有 Cookie",
+      sourceLocal: "本地",
+      sourceCloud: "云端",
+      loadingCookies: "正在加载 Cookie...",
+      failed: "失败", // Added
+
+      // Placeholders
+      placeholderCookieId: "Cookie ID",
+      placeholderServerAddress: "服务器地址 (例如 https://example.com)",
+      placeholderAdminPassword: "输入管理密码",
+
+      // Settings
+      settingsShowFloatingButton: "显示悬浮按钮 (Alt+Shift+L)",
+      settingsAutoHideFullscreen: "全屏时自动隐藏 (Safari 不可用)",
+      settingsSaveLocally: "优先本地保存 (勾选后'发送'将仅保存本地)", // Fixed quotes
+
+      // Menu Commands
+      menuShowShare: "显示 Cookie 分享面板 (Alt+Shift+C)",
+      menuShowList: "显示 Cookie 列表 (Alt+Shift+L)",
+      menuSwitchLanguage: "切换语言 (需刷新页面)", // Added
+
+      // Notifications & Messages
+      notificationEnterCookieId: "请输入或生成一个 Cookie ID",
+      notificationNoCookiesToSave: "当前页面没有可保存的 Cookie",
+      notificationSavedLocally: "Cookie 已成功保存到本地",
+      notificationEnterServer: "请输入服务器地址",
+      notificationSentSuccess: "发送成功",
+      notificationReceivedSuccess: "接收成功",
+      notificationClearedSuccess: "Cookie 已清除，页面即将刷新",
+      notificationImportSuccess: "成功从本地导入 {{count}} 个 Cookie，即将刷新",
+      notificationLocalDataNotFound: "本地 Cookie 数据未找到",
+      notificationLocalDataInvalid: "本地 Cookie 数据格式无效",
+      notificationLocalImportFailed: "未成功导入任何本地 Cookie",
+      notificationNeedServerAddress: "请先设置服务器地址",
+      notificationReceiveFailed: "接收 {{source}} Cookie 失败: {{message}}",
+      notificationLocalDeleted: "本地 Cookie 已删除",
+      notificationNeedAdminCreds: "删除云端 Cookie 需要服务器地址和管理密码",
+      notificationCloudDeleted: "云端 Cookie 已删除",
+      notificationDeleteFailed: "删除 {{source}} Cookie 失败: {{message}}",
+      notificationListInitFailed: "初始化 Cookie 列表失败: {{message}}",
+      notificationLoadCloudFailed:
+        "加载云端 Cookie 失败: {{message}} (本地 Cookie 仍会显示)",
+      notificationLoadLocalFailed: "加载本地 Cookie 失败: {{message}}",
+      notificationInvalidPassword: "无效的管理密码",
+      notificationAdminPermission: "管理密码无效或权限不足",
+      notificationServerDeleteFailed: "服务器返回删除失败",
+      notificationNetworkError: "网络请求失败",
+      notificationRequestTimeout: "请求超时",
+      notificationResponseError: "处理响应时出错: {{message}}",
+      confirmDeleteMessage: "您确定要删除此 Cookie 吗？",
+      listEmpty: "未找到与 {{host}} 相关的本地或云端 Cookie",
+      listEmptyLocalOnly: "未找到与 {{host}} 相关的本地 Cookie",
+
+      // API Errors (Maintain English or provide generic Chinese messages)
+      apiErrorNoCookiesToSend: "当前页面无 Cookie 可发送",
+      apiErrorServerReturn: "服务器返回错误: {{status}}\n{{text}}", // Escaped newline
+      apiErrorNetwork: "网络请求失败",
+      apiErrorTimeout: "请求超时",
+      apiErrorInvalidData: "无效的数据格式",
+      apiErrorNoImport: "未能成功导入任何 Cookie",
+    },
+  };
+
+  // Translation helper function
+  function t(key, replacements = {}) {
+    let translation =
+      translations[currentLanguage]?.[key] || translations[LANGUAGES.EN]?.[key];
+
+    if (translation === undefined) {
+      console.warn(`Missing translation for key: ${key}`);
+      return key; // Return the key itself if translation is missing entirely
+    }
+
+    // Perform replacements
+    for (const placeholder in replacements) {
+      const regex = new RegExp(`{{\s*${placeholder}\s*}}`, "g");
+      translation = translation.replace(regex, replacements[placeholder]);
+    }
+
+    return translation;
+  }
 
   // ===================== State Management =====================
   const state = {
@@ -163,7 +378,7 @@
         if (!cookies.length) {
           return {
             success: false,
-            message: "No cookies to send on the current page",
+            message: t("notificationNoCookiesToSave"),
           };
         }
 
@@ -191,13 +406,16 @@
               } else {
                 reject(
                   new Error(
-                    `Server returned error: ${response.status}\n${response.responseText}`
+                    t("apiErrorServerReturn", {
+                      status: response.status || "?",
+                      text: response.responseText || response.message,
+                    })
                   )
                 );
               }
             },
-            onerror: () => reject(new Error("Network request failed")),
-            ontimeout: () => reject(new Error("Request timeout")),
+            onerror: () => reject(new Error(t("apiErrorNetwork"))),
+            ontimeout: () => reject(new Error(t("apiErrorTimeout"))),
           });
         });
       } catch (error) {
@@ -220,8 +438,8 @@
             responseType: "json",
             timeout: 10000,
             onload: resolve,
-            onerror: () => reject(new Error("Request failed")),
-            ontimeout: () => reject(new Error("Request timeout")),
+            onerror: () => reject(new Error(t("apiErrorNetwork"))),
+            ontimeout: () => reject(new Error(t("apiErrorTimeout"))),
           });
         });
 
@@ -229,7 +447,7 @@
           !response?.response?.success ||
           !Array.isArray(response.response.cookies)
         ) {
-          throw new Error("Invalid data format");
+          throw new Error(t("apiErrorInvalidData"));
         }
 
         await cookieManager.clearAll();
@@ -243,13 +461,13 @@
         }
 
         if (importedCount === 0) {
-          throw new Error("No cookies were successfully imported");
+          throw new Error(t("apiErrorNoImport"));
         }
 
         setTimeout(() => window.location.reload(), 500);
         return {
           success: true,
-          message: `Successfully imported ${importedCount} cookies`,
+          message: t("notificationReceivedSuccess"),
         };
       } catch (error) {
         console.error("Error receiving cookies:", error);
@@ -292,8 +510,12 @@
         `;
 
         dialog.innerHTML = `
-          <h3 style="margin: 0 0 16px 0; color: #4A5567; font-size: 18px;">Confirm Delete</h3>
-          <p style="margin: 0 0 24px 0; color: #666;">Are you sure you want to delete this cookie?</p>
+          <h3 style="margin: 0 0 16px 0; color: #4A5567; font-size: 18px;">${t(
+            "confirmDeleteTitle"
+          )}</h3> <!-- Updated -->
+          <p style="margin: 0 0 24px 0; color: #666;">${t(
+            "confirmDeleteMessage"
+          )}</p> <!-- Updated -->
           <div style="display: flex; gap: 12px; justify-content: center;">
             <button id="cancelBtn" style="
               padding: 8px 24px;
@@ -304,17 +526,17 @@
               cursor: pointer;
               min-width: 100px;
               transition: all 0.3s ease;
-            ">Cancel</button>
+            ">${t("cancelButton")}</button> <!-- Updated -->
             <button id="confirmBtn" style="
               padding: 8px 24px;
               border-radius: 6px;
-              background: #FF6B6B;
+              background: #FF6B6B; /* Keep delete color */
               color: white;
               border: none;
               cursor: pointer;
               min-width: 100px;
               transition: all 0.3s ease;
-            ">Delete</button>
+            ">${t("deleteButton")}</button> <!-- Updated -->
           </div>
         `;
 
@@ -739,7 +961,12 @@
             `;
 
       // Create a generic toggle function
-      const createToggle = (labelText, storageKey, onChange) => {
+      const createToggle = (
+        labelTextKey,
+        storageKey,
+        onChange,
+        defaultValue = true
+      ) => {
         const toggleContainer = document.createElement("div");
         toggleContainer.style.cssText = `
                     display: flex;
@@ -749,7 +976,7 @@
                 `;
 
         const labelSpan = document.createElement("span");
-        labelSpan.textContent = labelText;
+        labelSpan.textContent = t(labelTextKey);
         labelSpan.style.cssText = `
                     font-size: 14px;
                     color: #333;
@@ -774,7 +1001,7 @@
 
         const toggleInput = document.createElement("input");
         toggleInput.type = "checkbox";
-        toggleInput.checked = GM_getValue(storageKey, true);
+        toggleInput.checked = GM_getValue(storageKey, defaultValue);
         toggleInput.style.cssText = `
                     opacity: 0;
                     width: 0;
@@ -842,7 +1069,7 @@
 
       // Create floating button toggle
       const floatingBtnToggle = createToggle(
-        "Show Floating Button(Alt + Shift + L)",
+        "settingsShowFloatingButton",
         STORAGE_KEYS.SHOW_FLOATING_BUTTON,
         (newState) => {
           const existingBtn = document.querySelector(
@@ -859,15 +1086,24 @@
 
       // Create fullscreen auto-hide toggle
       const fullscreenToggle = createToggle(
-        "Auto Hide in Fullscreen(Not Available For Safari)",
+        "settingsAutoHideFullscreen",
         STORAGE_KEYS.AUTO_HIDE_FULLSCREEN,
         (newState) => {
           fullscreenManager.updateFloatingButtonVisibility();
         }
       );
 
+      // Create save locally toggle
+      const saveLocallyToggle = createToggle(
+        "settingsSaveLocally",
+        STORAGE_KEYS.SAVE_LOCALLY,
+        null,
+        false
+      );
+
       settingsContainer.appendChild(floatingBtnToggle);
       settingsContainer.appendChild(fullscreenToggle);
+      settingsContainer.appendChild(saveLocallyToggle);
       container.appendChild(settingsContainer);
     },
 
@@ -888,7 +1124,7 @@
       // 创建关闭按钮
       const closeBtn = document.createElement("button");
       closeBtn.className = "close-btn";
-      closeBtn.textContent = "×";
+      closeBtn.textContent = t("closeButton");
       closeBtn.onclick = () => ui.hideModal();
 
       // 创建标题容器
@@ -896,7 +1132,7 @@
       titleContainer.className = "title-container";
 
       const title = document.createElement("h1");
-      title.textContent = "Cookie Share";
+      title.textContent = t("cookieShareTitle");
 
       const githubLink = document.createElement("a");
       githubLink.href = "https://github.com/fangyuan99/cookie-share";
@@ -915,11 +1151,11 @@
       const idInput = document.createElement("input");
       idInput.type = "text";
       idInput.className = "cookie-id-input";
-      idInput.placeholder = "Cookie ID";
+      idInput.placeholder = t("placeholderCookieId");
 
       const generateBtn = document.createElement("button");
       generateBtn.className = "generate-btn";
-      generateBtn.textContent = "Generate ID";
+      generateBtn.textContent = t("generateIdButton");
       generateBtn.onclick = () => {
         idInput.value = utils.generateId();
       };
@@ -928,7 +1164,7 @@
       const serverInput = document.createElement("input");
       serverInput.type = "text";
       serverInput.className = "cookie-id-input";
-      serverInput.placeholder = "Server Address (e.g., https://example.com)";
+      serverInput.placeholder = t("placeholderServerAddress");
       serverInput.value = GM_getValue(STORAGE_KEYS.CUSTOM_URL, "");
 
       // 创建服务器地址输入容器
@@ -938,7 +1174,7 @@
       // 创建显示 cookie list 的按钮
       const showListBtn = document.createElement("button");
       showListBtn.className = "generate-btn";
-      showListBtn.textContent = "Show List";
+      showListBtn.textContent = t("showListButton");
       showListBtn.style.width = "120px";
       showListBtn.onclick = () => ui.showCookieList();
 
@@ -946,21 +1182,70 @@
       serverContainer.appendChild(serverInput);
       serverContainer.appendChild(showListBtn);
 
+      // 创建密码输入容器
+      const passwordContainer = document.createElement("div");
+      passwordContainer.className = "id-input-container";
+
+      const passwordInput = document.createElement("input");
+      passwordInput.type = "password";
+      passwordInput.id = "cookieSharePassword";
+      passwordInput.className = "cookie-id-input";
+      passwordInput.placeholder = t("placeholderAdminPassword");
+      passwordInput.value = GM_getValue(STORAGE_KEYS.ADMIN_PASSWORD, "");
+
+      // Add event listener to save password when it changes
+      passwordInput.addEventListener("input", function () {
+        GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, this.value);
+      });
+
+      // Create toggle button for password visibility
+      const togglePasswordBtn = document.createElement("button");
+      togglePasswordBtn.className = "generate-btn";
+      togglePasswordBtn.style.width = "120px";
+
+      // Use eye icons instead of text for better i18n
+      const eyeOpenSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="fill: currentColor;">
+          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+        </svg>
+      `;
+
+      const eyeClosedSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="fill: currentColor;">
+          <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+        </svg>
+      `;
+
+      togglePasswordBtn.innerHTML = eyeOpenSvg;
+      togglePasswordBtn.onclick = () => {
+        if (passwordInput.type === "password") {
+          passwordInput.type = "text";
+          togglePasswordBtn.innerHTML = eyeClosedSvg;
+        } else {
+          passwordInput.type = "password";
+          togglePasswordBtn.innerHTML = eyeOpenSvg;
+        }
+      };
+
+      // Assemble password container
+      passwordContainer.appendChild(passwordInput);
+      passwordContainer.appendChild(togglePasswordBtn);
+
       // 操作按钮容器
       const actionButtons = document.createElement("div");
       actionButtons.className = "action-buttons";
 
       const sendBtn = document.createElement("button");
       sendBtn.className = "action-btn send-btn";
-      sendBtn.textContent = "Send Cookie";
+      sendBtn.textContent = t("sendCookieButton");
 
       const receiveBtn = document.createElement("button");
       receiveBtn.className = "action-btn receive-btn";
-      receiveBtn.textContent = "Receive Cookie";
+      receiveBtn.textContent = t("receiveCookieButton");
 
       const clearBtn = document.createElement("button");
       clearBtn.className = "clear-btn";
-      clearBtn.textContent = "Clear All Cookies of This Page";
+      clearBtn.textContent = t("clearAllCookiesButton");
 
       // 组装 DOM
       githubLink.appendChild(githubImg);
@@ -977,6 +1262,7 @@
       container.appendChild(titleContainer);
       container.appendChild(idContainer);
       container.appendChild(serverContainer);
+      container.appendChild(passwordContainer);
       container.appendChild(actionButtons);
       container.appendChild(clearBtn);
 
@@ -987,38 +1273,75 @@
       // 添加事件监听器
       sendBtn.onclick = async () => {
         try {
-          if (!serverInput.value.trim()) {
-            notification.show("Please enter the server address", "error");
+          const saveLocally = GM_getValue(STORAGE_KEYS.SAVE_LOCALLY, false);
+          const cookieId = idInput.value.trim();
+          const serverUrl = serverInput.value.trim();
+
+          if (!cookieId) {
+            notification.show(t("notificationEnterCookieId"), "error");
             return;
           }
 
-          if (!idInput.value.trim()) {
-            notification.show("Please enter or generate a Cookie ID", "error");
-            return;
+          if (saveLocally) {
+            // Save locally
+            const cookies = await cookieManager.getAll();
+            if (!cookies.length) {
+              notification.show(t("notificationNoCookiesToSave"), "error");
+              return;
+            }
+            const data = {
+              id: cookieId,
+              url: window.location.href, // Store current URL for context
+              cookies: cookies,
+            };
+            const localKey = `cookie_share_local_${data.id}`;
+            await GM_setValue(localKey, JSON.stringify(data));
+            notification.show(t("notificationSavedLocally"), "success");
+          } else {
+            // Send to server (existing logic)
+            if (!serverUrl) {
+              notification.show(t("notificationEnterServer"), "error");
+              return;
+            }
+            const result = await api.sendCookies(cookieId, serverUrl);
+            notification.show(
+              result.message || t("notificationSentSuccess"),
+              result.success ? "success" : "error"
+            );
           }
-
-          const result = await api.sendCookies(
-            idInput.value.trim(),
-            serverInput.value.trim()
-          );
-          notification.show(
-            result.message || "Sent successfully",
-            result.success ? "success" : "error"
-          );
         } catch (error) {
-          notification.show("Send failed: " + error.message, "error");
+          let errorMessage = error.message;
+          if (error.message.includes("No cookies to send")) {
+            errorMessage = t("apiErrorNoCookiesToSend");
+          } else if (error.message.startsWith("Server returned error:")) {
+            errorMessage = t("apiErrorServerReturn", {
+              status: error.status || "?",
+              text: error.responseText || error.message,
+            });
+          } else if (error.message === "Network request failed") {
+            errorMessage = t("apiErrorNetwork");
+          } else if (error.message === "Request timeout") {
+            errorMessage = t("apiErrorTimeout");
+          }
+          const actionKey = GM_getValue(STORAGE_KEYS.SAVE_LOCALLY, false)
+            ? "settingsSaveLocally"
+            : "sendCookieButton";
+          notification.show(
+            `${t(actionKey)} ${t("failed")}: ${errorMessage}`,
+            "error"
+          );
         }
       };
 
       receiveBtn.onclick = async () => {
         try {
           if (!serverInput.value.trim()) {
-            notification.show("Please enter the server address", "error");
+            notification.show(t("notificationEnterServer"), "error");
             return;
           }
 
           if (!idInput.value.trim()) {
-            notification.show("Please enter a Cookie ID", "error");
+            notification.show(t("notificationEnterCookieId"), "error");
             return;
           }
 
@@ -1027,21 +1350,36 @@
             serverInput.value.trim()
           );
           notification.show(
-            result.message || "Received successfully",
+            result.message || t("notificationReceivedSuccess"),
             "success"
           );
         } catch (error) {
-          notification.show("Receive failed: " + error.message, "error");
+          let errorMessage = error.message;
+          if (error.message === "Request failed") {
+            errorMessage = t("apiErrorNetwork");
+          } else if (error.message === "Request timeout") {
+            errorMessage = t("apiErrorTimeout");
+          } else if (error.message === "Invalid data format") {
+            errorMessage = t("apiErrorInvalidData");
+          } else if (
+            error.message === "No cookies were successfully imported"
+          ) {
+            errorMessage = t("apiErrorNoImport");
+          }
+          notification.show(
+            t("notificationReceiveFailed", {
+              source: t("sourceCloud"),
+              message: errorMessage,
+            }),
+            "error"
+          );
         }
       };
 
       clearBtn.onclick = async () => {
         if (await this.confirmDelete()) {
           await cookieManager.clearAll();
-          notification.show(
-            "Cookies have been cleared, the page will refresh shortly",
-            "success"
-          );
+          notification.show(t("notificationClearedSuccess"), "success");
           setTimeout(() => {
             window.location.reload();
           }, 500);
@@ -1104,16 +1442,16 @@
       modal.className = "cookie-share-modal cookie-list-modal";
       modal.innerHTML = `
         <div class="cookie-share-container">
-          <button class="close-btn" onclick="return false;">×</button>
-          <h1>Cookies List</h1>
-          <div id="cookieSharePasswordContainer" class="password-container hidden">
-            <input type="password" 
-              id="cookieSharePassword" 
-              placeholder="Enter admin password" 
-              class="cookie-share-input"
-            />
-          </div>
+          <button class="close-btn" onclick="return false;">${t(
+            "closeButton"
+          )}</button>
+          <h1>${t("cookiesListTitle")}</h1>
           <div id="cookieShareList" class="cookie-list-container"></div>
+          <div style="display: flex; justify-content: center;">
+            <button id="cookieShareGoToMainBtn" class="generate-btn" style="width: 120px;">${t(
+              "showPanelButton"
+            )}</button>
+          </div>
         </div>
       `;
 
@@ -1127,6 +1465,7 @@
           margin-top: 20px !important;
           max-height: 400px !important;
           overflow-y: auto !important;
+          margin-bottom: 16px !important;
         }
 
         .cookie-share-item {
@@ -1205,10 +1544,6 @@
           text-align: center !important;
         }
 
-        .password-container.hidden {
-          display: none !important;
-        }
-
         .cookie-share-input {
           width: 100% !important;
           max-width: 300px !important;
@@ -1222,6 +1557,13 @@
       `);
 
       modal.querySelector(".close-btn").onclick = () => this.hideCookieList();
+
+      // Add click handler for the new "Go to Cookie Share" button
+      const mainBtn = modal.querySelector("#cookieShareGoToMainBtn");
+      mainBtn.onclick = () => {
+        this.hideCookieList();
+        this.showModal();
+      };
 
       overlay.appendChild(modal);
       document.body.appendChild(overlay);
@@ -1241,11 +1583,7 @@
       modal.classList.add("visible");
 
       const cookiesList = modal.querySelector("#cookieShareList");
-      const passwordContainer = modal.querySelector(
-        "#cookieSharePasswordContainer"
-      );
-
-      this.initializeCookieList(cookiesList, passwordContainer);
+      this.initializeCookieList(cookiesList);
     },
 
     hideCookieList() {
@@ -1260,110 +1598,252 @@
       }
     },
 
-    async initializeCookieList(cookiesList, passwordContainer) {
+    async initializeCookieList(cookiesList) {
       try {
         const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
-        if (!customUrl) {
-          cookiesList.innerHTML = `<div class="cookie-share-error">Please set server URL first</div>`;
-          return;
-        }
+        // We need customUrl only if we need to fetch cloud cookies or delete them
+        // We always need to check for local cookies
+
+        cookiesList.innerHTML = ""; // Clear previous content
 
         const savedPassword = GM_getValue(STORAGE_KEYS.ADMIN_PASSWORD);
-        if (savedPassword) {
-          await this.loadCookiesList(cookiesList, customUrl, savedPassword);
-        } else {
-          passwordContainer.classList.remove("hidden");
-          const passwordInput = passwordContainer.querySelector(
-            "#cookieSharePassword"
-          );
 
-          passwordInput.onkeydown = async (e) => {
-            if (e.key === "Enter") {
-              const password = passwordInput.value.trim();
-              if (password) {
-                try {
-                  await this.loadCookiesList(cookiesList, customUrl, password);
-                  GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, password);
-                  passwordContainer.classList.add("hidden");
-                } catch (error) {
-                  passwordInput.value = "";
-                  cookiesList.innerHTML = `<div class="cookie-share-error">${error.message}</div>`;
-                }
-              }
-            }
-          };
-        }
+        // Try loading with the existing password, or without password for local-only
+        await this.loadCombinedCookieList(
+          cookiesList,
+          customUrl,
+          savedPassword
+        );
       } catch (error) {
-        console.error("Error loading cookies:", error);
-        cookiesList.innerHTML = `<div class="cookie-share-error">Failed to load cookies: ${error.message}</div>`;
+        console.error("Error initializing cookies list:", error);
+        cookiesList.innerHTML = `<div class="cookie-share-error">${t(
+          "notificationListInitFailed",
+          { message: error.message }
+        )}</div>`;
       }
     },
 
-    async loadCookiesList(cookiesList, customUrl, password) {
+    async loadCombinedCookieList(
+      cookiesList,
+      customUrl,
+      password,
+      loadOnlyLocal = false
+    ) {
       cookiesList.innerHTML = `
-        <div class="cookie-share-loading">
-          <div class="cookie-share-spinner"></div>
-          <span>Loading cookies...</span>
-        </div>
-      `;
+          <div class="cookie-share-loading">
+            <div class="cookie-share-spinner"></div>
+            <span>${t("loadingCookies")}</span>
+          </div>
+        `;
 
+      let combinedCookies = [];
       const currentHost = window.location.hostname;
+      let cloudError = null;
 
-      return new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-          method: "GET",
-          url: `${customUrl}/admin/list-cookies-by-host/${encodeURIComponent(
-            currentHost
-          )}`,
-          headers: {
-            "Content-Type": "application/json",
-            "X-Admin-Password": password,
-          },
-          onload: (response) => {
-            try {
-              const data = JSON.parse(response.responseText);
+      // 1. Fetch Local Cookies
+      try {
+        const allKeys = await GM_listValues();
+        const localKeys = allKeys.filter((key) =>
+          key.startsWith("cookie_share_local_")
+        );
+        console.log("Local keys found:", localKeys); // Debug log
 
-              if (response.status !== 200) {
-                if (response.status === 401) {
-                  // Password error, clear saved password
-                  GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, "");
-                  throw new Error("Invalid password");
-                }
-                throw new Error(data.message || "Failed to load cookies");
+        for (const key of localKeys) {
+          try {
+            const rawData = await GM_getValue(key);
+            if (rawData) {
+              const cookieData = JSON.parse(rawData);
+              // Check if the cookie's URL matches the current host
+              let cookieHost = "";
+              try {
+                cookieHost = new URL(cookieData.url).hostname;
+              } catch (e) {
+                console.warn(
+                  `Invalid URL stored for local cookie ID ${cookieData.id}: ${cookieData.url}`
+                );
+                // Decide how to handle: skip, or assume match? Let's skip for now.
+                continue;
               }
 
-              if (data.success && Array.isArray(data.cookies)) {
-                if (data.cookies.length === 0) {
-                  cookiesList.innerHTML = `<div class="cookie-share-empty">No cookies found for ${currentHost}</div>`;
-                } else {
-                  cookiesList.innerHTML = data.cookies
-                    .map(
-                      (cookie) => `
-                    <div class="cookie-share-item">
-                      <span class="cookie-id">ID: ${cookie.id}</span>
-                      <div class="cookie-share-buttons">
-                        <button class="cookie-share-receive" data-id="${cookie.id}">Receive</button>
-                        <button class="cookie-share-delete" data-id="${cookie.id}">Delete</button>
-                      </div>
-                    </div>
-                  `
-                    )
-                    .join("");
-                  this.attachButtonListeners(cookiesList);
-                }
-              } else {
-                throw new Error(data.message || "Failed to load cookies");
+              if (cookieHost === currentHost) {
+                console.log(`Adding local cookie: ${cookieData.id}`); // Debug log
+                combinedCookies.push({
+                  id: cookieData.id,
+                  source: "local",
+                  // Keep full data for local receive
+                  url: cookieData.url,
+                  cookies: cookieData.cookies,
+                });
               }
-              resolve();
-            } catch (error) {
-              reject(error);
             }
-          },
-          onerror: (error) => {
-            reject(new Error("Network request failed"));
-          },
+          } catch (parseError) {
+            console.error(
+              `Failed to parse local cookie data for key ${key}:`,
+              parseError
+            );
+          }
+        }
+        console.log("Local cookies processed:", combinedCookies); // Debug log
+      } catch (error) {
+        console.error("Error fetching local cookies:", error);
+        // Optionally display an error message for local fetch failure
+        cookiesList.innerHTML = `<div class="cookie-share-error">${t(
+          "notificationLoadLocalFailed",
+          { message: error.message }
+        )}</div>`;
+      }
+
+      // 2. Fetch Cloud Cookies (if applicable)
+      if (!loadOnlyLocal && customUrl) {
+        console.log("Fetching cloud cookies from:", customUrl); // Debug log
+        try {
+          // Requires password for cloud operations
+          if (!password) {
+            // This case is handled by initializeCookieList showing the password prompt
+            // We just skip fetching cloud cookies here if no password provided yet.
+            console.log("No password provided, skipping cloud fetch for now.");
+          } else {
+            const response = await new Promise((resolve, reject) => {
+              GM_xmlhttpRequest({
+                method: "GET",
+                url: `${customUrl}/admin/list-cookies-by-host/${encodeURIComponent(
+                  currentHost
+                )}`,
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Admin-Password": password,
+                },
+                responseType: "text", // Get raw text to handle JSON parsing manually
+                timeout: 10000,
+                onload: (res) => {
+                  if (res.status >= 200 && res.status < 300) {
+                    resolve(res);
+                  } else {
+                    reject({
+                      status: res.status,
+                      responseText: res.responseText,
+                    });
+                  }
+                },
+                onerror: (error) =>
+                  reject({ status: 0, responseText: t("apiErrorNetwork") }),
+                ontimeout: () =>
+                  reject({ status: 0, responseText: t("apiErrorTimeout") }),
+              });
+            });
+
+            const data = JSON.parse(response.responseText);
+            console.log("Cloud response data:", data); // Debug log
+
+            if (data.success && Array.isArray(data.cookies)) {
+              data.cookies.forEach((cookie) => {
+                // Avoid adding duplicates if ID already exists from local storage
+                if (
+                  !combinedCookies.some(
+                    (c) => c.id === cookie.id && c.source === "cloud"
+                  )
+                ) {
+                  console.log(`Adding cloud cookie: ${cookie.id}`); // Debug log
+                  combinedCookies.push({
+                    id: cookie.id,
+                    source: "cloud",
+                    // Store URL if provided by API, needed for context/potential future use
+                    url: cookie.url || null,
+                  });
+                }
+              });
+            } else {
+              throw new Error(
+                data.message || "Failed to parse cloud cookie data"
+              );
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching cloud cookies:", error);
+          cloudError = error; // Store error to display later
+          // Handle password error specifically
+          if (error.status === 401) {
+            GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, ""); // Clear incorrect password
+            cloudError = new Error(t("notificationInvalidPassword"));
+            // Re-initialize to show password prompt again
+            // Be careful not to cause infinite loop. Maybe just show error.
+            // Let's just show the error message in the list for now.
+          }
+        }
+      } else if (!customUrl && !loadOnlyLocal) {
+        console.log("Custom URL not set, skipping cloud fetch.");
+      }
+
+      // 3. Render List
+      console.log("Final combined cookies:", combinedCookies); // Debug log
+
+      // Clear loading indicator
+      const loadingIndicator = cookiesList.querySelector(
+        ".cookie-share-loading"
+      );
+      if (loadingIndicator) loadingIndicator.remove();
+
+      // Prepend cloud error if exists
+      if (cloudError) {
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "cookie-share-error";
+        errorDiv.textContent = t("notificationLoadCloudFailed", {
+          message: cloudError.message,
         });
-      });
+        cookiesList.prepend(errorDiv);
+      }
+
+      if (combinedCookies.length === 0) {
+        // If there was no cloud error, show empty message. If there was, the error is already shown.
+        const hasErrors = cloudError || localError;
+        const hasItems = cookiesList.querySelector(".cookie-share-item"); // Check if items were added despite errors
+        if (!hasItems) {
+          const emptyDiv = document.createElement("div");
+          emptyDiv.className = "cookie-share-empty";
+          if (loadOnlyLocal || (!customUrl && !cloudError)) {
+            emptyDiv.textContent = t("listEmptyLocalOnly", {
+              host: currentHost,
+            });
+          } else {
+            emptyDiv.textContent = t("listEmpty", { host: currentHost });
+          }
+          cookiesList.appendChild(emptyDiv);
+        }
+      } else {
+        // Ensure list container is empty before appending items (if errors were prepended)
+        const existingItems = cookiesList.querySelectorAll(
+          ".cookie-share-item, .cookie-share-empty"
+        );
+        existingItems.forEach((item) => item.remove());
+
+        combinedCookies.forEach((cookie) => {
+          const item = document.createElement("div");
+          item.className = "cookie-share-item";
+          const sourceText = t(
+            cookie.source === "local" ? "sourceLocal" : "sourceCloud"
+          );
+          item.innerHTML = `
+                   <span class="cookie-id">ID: ${
+                     cookie.id
+                   } (${sourceText})</span>
+                   <div class="cookie-share-buttons">
+                     <button class="cookie-share-receive" data-id="${
+                       cookie.id
+                     }" data-source="${cookie.source}">${t(
+            "receiveButton"
+          )}</button>
+                     <button class="cookie-share-delete" data-id="${
+                       cookie.id
+                     }" data-source="${cookie.source}">${t(
+            "deleteButton"
+          )}</button>
+                   </div>
+                 `;
+          cookiesList.appendChild(item);
+        });
+
+        this.attachButtonListeners(cookiesList); // Attach listeners after rendering
+      }
     },
 
     attachButtonListeners(container) {
@@ -1371,18 +1851,59 @@
       container.querySelectorAll(".cookie-share-receive").forEach((button) => {
         button.onclick = async () => {
           const cookieId = button.dataset.id;
-          const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
+          const source = button.dataset.source;
+          const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL); // Needed for cloud receive
+          const sourceText = t(
+            source === "local" ? "sourceLocal" : "sourceCloud"
+          );
 
           try {
-            const result = await api.receiveCookies(cookieId, customUrl);
-            notification.show(
-              result.message || "Received successfully",
-              "success"
-            );
-            this.hideCookieList();
+            if (source === "local") {
+              const localKey = `cookie_share_local_${cookieId}`;
+              const rawData = await GM_getValue(localKey);
+              if (!rawData) throw new Error(t("notificationLocalDataNotFound"));
+
+              const cookieData = JSON.parse(rawData);
+              if (!Array.isArray(cookieData.cookies))
+                throw new Error(t("notificationLocalDataInvalid"));
+
+              await cookieManager.clearAll(); // Clear existing cookies first
+
+              let importedCount = 0;
+              for (const cookie of cookieData.cookies) {
+                if (cookie?.name && cookie?.value) {
+                  await cookieManager.set(cookie);
+                  importedCount++;
+                }
+              }
+              if (importedCount === 0)
+                throw new Error(t("notificationLocalImportFailed"));
+
+              notification.show(
+                t("notificationImportSuccess", { count: importedCount }),
+                "success"
+              );
+              setTimeout(() => window.location.reload(), 500);
+              this.hideCookieList();
+            } else {
+              // source === 'cloud'
+              if (!customUrl) {
+                notification.show(t("notificationNeedServerAddress"), "error");
+                return;
+              }
+              const result = await api.receiveCookies(cookieId, customUrl);
+              notification.show(
+                result.message || t("notificationReceivedSuccess"),
+                "success"
+              );
+              this.hideCookieList(); // Hide modal immediately
+            }
           } catch (error) {
             notification.show(
-              "Failed to receive cookies: " + error.message,
+              t("notificationReceiveFailed", {
+                source: sourceText,
+                message: error.message,
+              }),
               "error"
             );
           }
@@ -1393,46 +1914,113 @@
       container.querySelectorAll(".cookie-share-delete").forEach((button) => {
         button.onclick = async () => {
           const cookieId = button.dataset.id;
-          if (await this.confirmDelete()) {
-            try {
-              const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
-              const password = GM_getValue(STORAGE_KEYS.ADMIN_PASSWORD);
+          const source = button.dataset.source;
+          const sourceText = t(
+            source === "local" ? "sourceLocal" : "sourceCloud"
+          );
 
-              await new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                  method: "DELETE",
-                  url: `${customUrl}/admin/delete?key=${encodeURIComponent(
-                    cookieId
-                  )}`,
-                  headers: {
-                    "Content-Type": "application/json",
-                    "X-Admin-Password": password,
-                  },
-                  onload: async (response) => {
-                    try {
-                      const data = JSON.parse(response.responseText);
-                      if (data.success) {
-                        await this.showCookieList(); // Refresh the list
-                        notification.show(
-                          "Cookie deleted successfully",
-                          "success"
-                        );
-                        resolve();
-                      } else {
+          if (await this.confirmDelete()) {
+            // Use existing confirmDelete UI
+            try {
+              if (source === "local") {
+                const localKey = `cookie_share_local_${cookieId}`;
+                await GM_deleteValue(localKey);
+                notification.show(t("notificationLocalDeleted"), "success");
+                // Refresh the list by re-calling showCookieList which triggers initialization
+                this.showCookieList(); // Re-initialize and show the list
+              } else {
+                // source === 'cloud'
+                const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
+                const password = GM_getValue(STORAGE_KEYS.ADMIN_PASSWORD);
+
+                if (!customUrl || !password) {
+                  notification.show(t("notificationNeedAdminCreds"), "error");
+                  return;
+                }
+
+                await new Promise((resolve, reject) => {
+                  GM_xmlhttpRequest({
+                    method: "DELETE",
+                    url: `${customUrl}/admin/delete?key=${encodeURIComponent(
+                      cookieId
+                    )}`,
+                    headers: {
+                      "Content-Type": "application/json",
+                      "X-Admin-Password": password,
+                    },
+                    responseType: "text", // Get raw text
+                    onload: (response) => {
+                      try {
+                        // Check for non-JSON success or failure messages if API behaves differently
+                        if (
+                          response.status === 200 ||
+                          response.status === 204
+                        ) {
+                          // Assume success on 200/204, even without JSON body
+                          // Attempt to parse JSON if available
+                          let data = { success: true };
+                          try {
+                            if (response.responseText)
+                              data = JSON.parse(response.responseText);
+                          } catch (e) {
+                            /* Ignore parsing error if body is not JSON */
+                          }
+
+                          if (data.success) {
+                            resolve();
+                          } else {
+                            reject(
+                              new Error(
+                                data.message ||
+                                  t("notificationServerDeleteFailed")
+                              )
+                            );
+                          }
+                        } else if (response.status === 401) {
+                          GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, ""); // Clear bad password
+                          reject(new Error(t("notificationAdminPermission")));
+                        } else {
+                          let errorMsg = "Failed to delete cookie";
+                          try {
+                            const errData = JSON.parse(response.responseText);
+                            errorMsg =
+                              errData.message ||
+                              `服务器错误: ${response.status}`;
+                          } catch (e) {
+                            errorMsg = `服务器错误: ${response.status}`;
+                          }
+                          reject(new Error(errorMsg));
+                        }
+                      } catch (error) {
+                        // Catch JSON parsing errors on success/failure cases
                         reject(
-                          new Error(data.message || "Failed to delete cookie")
+                          new Error(
+                            t("notificationResponseError", {
+                              message: error.message,
+                            })
+                          )
                         );
                       }
-                    } catch (error) {
-                      reject(error);
-                    }
-                  },
-                  onerror: () => reject(new Error("Network request failed")),
+                    },
+                    onerror: () =>
+                      reject(new Error(t("notificationNetworkError"))),
+                    ontimeout: () =>
+                      reject(new Error(t("notificationRequestTimeout"))),
+                  });
                 });
-              });
+
+                notification.show(t("notificationCloudDeleted"), "success");
+                // Refresh the list
+                this.showCookieList();
+              }
             } catch (error) {
+              const action =
+                source === "local" ? t("sourceLocal") : t("sourceCloud");
               notification.show(
-                "Failed to delete cookie: " + error.message,
+                t("notificationDeleteFailed", {
+                  source: action,
+                  message: error.message,
+                }),
                 "error"
               );
             }
@@ -1444,6 +2032,7 @@
 
   // ===================== Initialize =====================
   function init() {
+    detectLanguage(); // Call language detection first
     ui.injectStyles();
     ui.createFloatingButton();
 
@@ -1495,14 +2084,26 @@
     });
 
     // Register menu command, click to show Cookie Share
-    GM_registerMenuCommand("Show Cookie Share(Alt + Shift + C)", () =>
-      ui.showModal()
-    );
+    GM_registerMenuCommand(t("menuShowShare"), () => ui.showModal());
+    GM_registerMenuCommand(t("menuShowList"), () => ui.showCookieList());
+    GM_registerMenuCommand(t("menuSwitchLanguage"), switchLanguage); // Added
   }
 
   // Start the application
   init();
+
+  // Function to handle manual language switching
+  function switchLanguage() {
+    const newLanguage =
+      currentLanguage === LANGUAGES.EN ? LANGUAGES.ZH : LANGUAGES.EN;
+    GM_setValue(STORAGE_KEYS.LANGUAGE_PREFERENCE, newLanguage);
+    currentLanguage = newLanguage; // Update current session variable
+    // Show notification - use the new language for the notification itself
+    notification.show(t("menuSwitchLanguage"), "success");
+    // Note: A page refresh is required for the UI elements to fully update.
+  }
 })();
+
 // 首先添加一个通知系统的样式
 GM_addStyle(`
   .cookie-share-notification {

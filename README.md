@@ -22,7 +22,7 @@ Cookie-share is a Chrome/Edge/Firefox extension (also available as a Tampermonke
 
 
 
-[Tampermonkey Script One-Click Install (Recommended)](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Mirror](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Extension Download](https://github.com/fangyuan99/cookie-share/releases)
+[Tampermonkey Script One-Click Install (Recommended)](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Extension Download (Not Recommended, No Maintenance)](https://github.com/fangyuan99/cookie-share/releases)
 
 ### Effects and Use Cases
 **Many websites don't support multiple account switching, don't want to log out and log in again?**
@@ -59,11 +59,10 @@ Tested websites:
 1. Install [Tampermonkey](https://www.crxsoso.com/webstore/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) or other script managers
 2. [One-Click Install](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Mirror](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
 3. If you encounter cookie permission issues, please enable it in Tampermonkey settings
-![1](https://linux.do/uploads/default/optimized/4X/5/3/8/538542cf5469125cfb2f2c3a38f7a8aaba1bd586_2_963x750.png)
-![2](https://linux.do/uploads/default/optimized/4X/5/3/8/538542cf5469125cfb2f2c3a38f7a8aaba1bd586_2_963x750.png)
-4. Send Cookie from logged-in browser page
-5. Accept Cookie on non-logged-in browser page
-6. Note: Don't add `/` after the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
+![tm](./images/tm.png)
+1. Send Cookie from logged-in browser page
+2. Accept Cookie on non-logged-in browser page
+3. Note: Don't add `/` after the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
 
 ### Extension Usage
 1. Enable browser developer mode:

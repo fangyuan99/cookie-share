@@ -1,8 +1,11 @@
 # Cookie-share Chrome/Edge/Firefox Extension/Tampermonkey Script
 
-*Note: For learning and communication purposes only. Commercial use is strictly prohibited. Please delete within 24 hours. Do not spread on social platforms. If this project is helpful to you, please give it a star, it helps me a lot, thank you!*
+*Note: For learning and communication purposes only. Commercial use is strictly prohibited. Please delete within 24 hours. Distribution on social platforms is forbidden. If you find this project helpful, please give it a star. It helps a lot, thank you!*
 
-**Please check [issues](https://github.com/fangyuan99/cookie-share/issues) | [discussions](https://github.com/fangyuan99/cookie-share/discussions) first if you have questions**
+[![GitHub Stars](https://img.shields.io/github/stars/fangyuan99/cookie-share?style=social)](https://github.com/fangyuan99/cookie-share)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black) ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white) ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white) ![Tampermonkey](https://img.shields.io/badge/Tampermonkey-333333?style=flat-square&logo=tampermonkey&logoColor=white)
+
+**If you have questions, please check [issues](https://github.com/fangyuan99/cookie-share/issues) | [discussions](https://github.com/fangyuan99/cookie-share/discussions) first.**
 
 [English](./README.md) | [简体中文](./README_CN.md) | [Update Log](./update.md)
 

@@ -91,7 +91,11 @@ For sharing cookies between different devices or browsers, you'll still need to 
 
 ### Backend Deployment Guide
 
+
 #### Option 1: Cloudflare Worker (Recommended)
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/fangyuan99/cookie-share&env=ADMIN_PASSWORD&env=PATH_SECRET&kv=COOKIE_STORE)
+
 
 1. [Register](https://dash.cloudflare.com/sign-up) Cloudflare account and create a Worker
 2. Copy contents of [_worker.js](./_worker.js) to newly created Worker

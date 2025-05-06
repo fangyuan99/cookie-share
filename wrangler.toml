@@ -1,0 +1,14 @@
+name = "cookie-share"
+main = "_worker.js"
+compatibility_date = "2024-03-18"
+account_id = "" # 请用户替换成他们的 Cloudflare Account ID
+
+# Environment variables
+[vars]
+ADMIN_PASSWORD = "" # 用户部署时在 Cloudflare UI 中设置
+PATH_SECRET = ""    # 用户部署时在 Cloudflare UI 中设置
+
+# KV namespace binding
+kv_namespaces = [
+  { binding = "COOKIE_STORE", preview_id="", id = "" } # 用户部署时在 Cloudflare UI 中创建和绑定
+] 

@@ -24,9 +24,22 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // Load the saved URL from storage
-  chrome.storage.sync.get(["customUrl"], (result) => {
+  chrome.storage.sync.get(["customUrl"]).then((result) => {
     if (result.customUrl) {
       customUrlInput.value = result.customUrl;
+    }
+  });
+
+  // 检测当前页面是否为720yun，自动勾选localStorage选项
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (tabs[0] && tabs[0].url) {
+      const url = new URL(tabs[0].url);
+      const includeStorageCheckbox = document.getElementById("includeStorage");
+      if (url.hostname.includes('720yun')) {
+        includeStorageCheckbox.checked = true;
+        // 显示提示信息
+        showMessage("Detected 720yun website - localStorage option auto-enabled");
+      }
     }
   });
 
@@ -73,6 +86,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function handleSendCookies() {
     const cookieId = cookieIdInput.value.trim();
     const customUrl = customUrlInput.value.trim();
+    const includeStorage = document.getElementById("includeStorage")?.checked || false;
+    
     if (!cookieId) {
       showError("Please enter a cookie ID");
       return;
@@ -85,12 +100,19 @@ document.addEventListener("DOMContentLoaded", function () {
       showError("Please enter a custom URL");
       return;
     }
-    sendCookies(cookieId, customUrl);
+    
+    if (includeStorage) {
+      sendCookiesAndStorage(cookieId, customUrl);
+    } else {
+      sendCookies(cookieId, customUrl);
+    }
   }
 
   function handleReceiveCookies() {
     const cookieId = cookieIdInput.value.trim();
     const customUrl = customUrlInput.value.trim();
+    const includeStorage = document.getElementById("includeStorage")?.checked || false;
+    
     if (!cookieId) {
       showError("Please enter a cookie ID");
       return;
@@ -103,7 +125,12 @@ document.addEventListener("DOMContentLoaded", function () {
       showError("Please enter a custom URL");
       return;
     }
-    receiveCookies(cookieId, customUrl);
+    
+    if (includeStorage) {
+      receiveCookiesAndStorage(cookieId, customUrl);
+    } else {
+      receiveCookies(cookieId, customUrl);
+    }
   }
 
   function handleGenerateId() {
@@ -155,6 +182,38 @@ document.addEventListener("DOMContentLoaded", function () {
           showMessage("Cookies received and set successfully!");
         } else {
           showError(response.message || "Error receiving cookies");
+        }
+      });
+    });
+  }
+
+  function sendCookiesAndStorage(cookieId, customUrl) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      chrome.runtime.sendMessage({
+        action: "sendCookiesAndStorage",
+        cookieId,
+        customUrl
+      }, response => {
+        if (response.success) {
+          showMessage("Cookies and localStorage sent successfully!");
+        } else {
+          showError(response.message || "Error sending cookies and storage");
+        }
+      });
+    });
+  }
+
+  function receiveCookiesAndStorage(cookieId, customUrl) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      chrome.runtime.sendMessage({
+        action: "receiveCookiesAndStorage",
+        cookieId,
+        customUrl
+      }, response => {
+        if (response.success) {
+          showMessage("Cookies and localStorage received and set successfully!");
+        } else {
+          showError(response.message || "Error receiving cookies and storage");
         }
       });
     });
@@ -237,7 +296,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelector('.container').appendChild(settingsDiv);
 
   // 加载设置
-  chrome.runtime.sendMessage({ action: "getSettings" }, function(settings) {
+  chrome.runtime.sendMessage({ action: "getSettings" }).then(function(settings) {
     if (settings) {
       document.getElementById('showFloatButton').checked = settings.showFloatButton;
       document.getElementById('autoHideFullscreen').checked = settings.autoHideFullscreen;

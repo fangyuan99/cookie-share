@@ -217,5 +217,3 @@ Contributions welcome! Feel free to submit Pull Requests.
 ## License
 
 MIT
-
-[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")

@@ -33,6 +33,8 @@ function isValidId(id) {
 // 定义路由表
 const routes = {
   [`POST:/${PATH_SECRET}/send-cookies`]: handleSendCookies,
+  [`POST:/${PATH_SECRET}/send-cookies-storage`]: handleSendCookiesAndStorage,
+  [`GET:/${PATH_SECRET}/receive-cookies-storage`]: handleReceiveCookiesAndStorage,
   [`GET:/${PATH_SECRET}/admin`]: handleAdminPage,
   [`GET:/${PATH_SECRET}/admin/list-cookies`]: handleListCookies,
   [`GET:/${PATH_SECRET}/admin/list-cookies-by-host`]: handleListCookiesByHost,
@@ -122,7 +124,9 @@ async function handleAdminPage(request) {
           <input type="text" id="createId" placeholder="ID" required>
           <input type="url" id="createUrl" placeholder="URL" required>
           <textarea id="createCookies" placeholder="Cookies (JSON 格式)" rows="3" required></textarea>
-          <button type="submit">创建</button>
+          <textarea id="createLocalStorage" placeholder="LocalStorage (JSON 格式，可选)" rows="3"></textarea>
+          <button type="submit">创建 Cookie</button>
+          <button type="button" onclick="createCookieWithStorage(event)">创建 Cookie + LocalStorage</button>
         </form>
       </div>
   
@@ -135,6 +139,7 @@ async function handleAdminPage(request) {
             <tr>
               <th>ID</th>
               <th>URL</th>
+              <th>类型</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -205,7 +210,7 @@ async function handleAdminPage(request) {
         loadCookies();
       }
   
-      async function loadCookies() {
+            async function loadCookies() {
         const response = await fetch(API_BASE + '/admin/list-cookies', {
           method: 'GET',
           headers: {
@@ -213,18 +218,20 @@ async function handleAdminPage(request) {
             'X-Admin-Password': adminPassword
           }
         });
-  
+
         if (response.ok) {
           const data = await response.json();
           const list = data.cookies;
           const tbody = document.getElementById('cookieList');
           tbody.innerHTML = '';
-  
+
           list.forEach(cookie => {
             const tr = document.createElement('tr');
+            const hasLocalStorage = cookie.hasLocalStorage ? 'Cookie + LocalStorage' : 'Cookie Only';
             tr.innerHTML = \`
               <td>\${cookie.id}</td>
               <td>\${new URL(cookie.url).hostname}</td>
+              <td>\${hasLocalStorage}</td>
               <td>
                 <button onclick="deleteCookieById('\${cookie.id}')">删除</button>
               </td>
@@ -236,7 +243,7 @@ async function handleAdminPage(request) {
         }
       }
   
-      async function createCookie(event) {
+            async function createCookie(event) {
         event.preventDefault();
         const id = document.getElementById('createId').value;
         const url = document.getElementById('createUrl').value;
@@ -247,7 +254,7 @@ async function handleAdminPage(request) {
           alert('Cookies 必须是有效的 JSON');
           return;
         }
-  
+
         const response = await fetch(API_BASE + '/send-cookies', {
           method: 'POST',
           headers: { 
@@ -256,7 +263,37 @@ async function handleAdminPage(request) {
           },
           body: JSON.stringify({ id, url, cookies })
         });
-  
+
+        const result = await response.json();
+        alert(result.message);
+        if (response.ok) {
+          loadCookies();
+          document.getElementById('createForm').reset();
+        }
+      }
+
+      async function createCookieWithStorage(event) {
+        event.preventDefault();
+        const id = document.getElementById('createId').value;
+        const url = document.getElementById('createUrl').value;
+        let cookies, localStorage;
+        try {
+          cookies = JSON.parse(document.getElementById('createCookies').value);
+          localStorage = JSON.parse(document.getElementById('createLocalStorage').value || '{}');
+        } catch {
+          alert('Cookies 和 localStorage 必须是有效的 JSON');
+          return;
+        }
+
+        const response = await fetch(API_BASE + '/send-cookies-storage', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Admin-Password': adminPassword
+          },
+          body: JSON.stringify({ id, url, cookies, localStorage })
+        });
+
         const result = await response.json();
         alert(result.message);
         if (response.ok) {
@@ -366,6 +403,9 @@ async function handleRequest(request) {
   if (path.includes("/receive-cookies/")) {
     return handleReceiveCookies(request, path);
   }
+  if (path.includes("/receive-cookies-storage/")) {
+    return handleReceiveCookiesAndStorage(request, path);
+  }
   if (path.includes("/admin/list-cookies-by-host/")) {
     return handleListCookiesByHost(request, path);
   }
@@ -466,6 +506,72 @@ async function handleSendCookies(request) {
   });
 }
 
+async function handleSendCookiesAndStorage(request) {
+  const { id, url, cookies, localStorage } = await request.json();
+
+  if (!isValidId(id)) {
+    return createJsonResponse(400, {
+      success: false,
+      message: "Invalid ID. Only letters and numbers are allowed.",
+    });
+  }
+
+  // 验证 cookies 格式
+  if (!Array.isArray(cookies) || !cookies.every(cookie => 
+    cookie.name && 
+    cookie.value && 
+    cookie.domain && 
+    typeof cookie.httpOnly === 'boolean' &&
+    typeof cookie.secure === 'boolean' &&
+    cookie.sameSite
+  )) {
+    return createJsonResponse(400, {
+      success: false,
+      message: "Invalid cookie format",
+    });
+  }
+
+  // 验证 localStorage 格式
+  if (!localStorage || typeof localStorage !== 'object') {
+    return createJsonResponse(400, {
+      success: false,
+      message: "Invalid localStorage format",
+    });
+  }
+
+  // 处理 URL 格式：如果不是完整的 URL，则添加 https:// 前缀
+  const processedUrl = url.includes('://') ? url : `https://${url}`;
+
+  // 存储数据，确保域名不带点前缀
+  await COOKIE_STORE.put(id, JSON.stringify({
+    id,
+    url: processedUrl,
+    cookies: cookies.map(cookie => {
+      // 如果域名以点开头，去掉点
+      const domain = cookie.domain.startsWith('.') ? cookie.domain.slice(1) : cookie.domain;
+      return {
+        domain: domain,
+        expirationDate: cookie.expirationDate,
+        hostOnly: true,
+        httpOnly: cookie.httpOnly,
+        name: cookie.name,
+        path: cookie.path || "/",
+        sameSite: cookie.sameSite.toLowerCase(),
+        secure: cookie.secure,
+        session: cookie.session || false,
+        storeId: null,
+        value: cookie.value
+      };
+    }),
+    localStorage: localStorage
+  }));
+
+  return createJsonResponse(200, {
+    success: true,
+    message: "Cookies and localStorage saved successfully",
+  });
+}
+
 async function handleReceiveCookies(request, path) {
   const cookieId = path.split("/").pop();
 
@@ -503,6 +609,46 @@ async function handleReceiveCookies(request, path) {
   });
 }
 
+async function handleReceiveCookiesAndStorage(request, path) {
+  const cookieId = path.split("/").pop();
+
+  if (!isValidId(cookieId)) {
+    return createJsonResponse(400, {
+      success: false,
+      message: "Invalid cookie ID",
+    });
+  }
+
+  const data = await COOKIE_STORE.get(cookieId);
+  if (!data) {
+    return createJsonResponse(404, {
+      success: false,
+      message: "Cookies and localStorage not found",
+    });
+  }
+
+  const parsedData = JSON.parse(data);
+  const { cookies, localStorage } = parsedData;
+  
+  return createJsonResponse(200, {
+    success: true,
+    cookies: cookies.map(cookie => ({
+      domain: cookie.domain,
+      expirationDate: cookie.expirationDate,
+      hostOnly: cookie.hostOnly,
+      httpOnly: cookie.httpOnly,
+      name: cookie.name,
+      path: cookie.path || "/",
+      sameSite: cookie.sameSite,
+      secure: cookie.secure,
+      session: false,
+      storeId: null,
+      value: cookie.value
+    })),
+    localStorage: localStorage || {}
+  });
+}
+
 async function handleDelete(request) {
   const url = new URL(request.url);
   const key = url.searchParams.get("key");
@@ -528,8 +674,13 @@ async function handleListCookies(request) {
       const data = await COOKIE_STORE.get(key.name);
       if (data) {
         try {
-          const { id, url } = JSON.parse(data);
-          return { id, url };
+          const parsedData = JSON.parse(data);
+          const { id, url, localStorage } = parsedData;
+          return { 
+            id, 
+            url,
+            hasLocalStorage: !!localStorage
+          };
         } catch (e) {
           console.error(`Error parsing data for key ${key.name}:`, e);
           return null;

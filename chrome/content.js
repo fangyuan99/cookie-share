@@ -16,14 +16,9 @@ async function updateFloatButtonVisibility() {
   if (!floatButton) return;
 
   try {
-    const settings = await new Promise((resolve) => {
-      chrome.storage.sync.get(
-        {
-          showFloatButton: true,
-          autoHideFullscreen: true,
-        },
-        resolve
-      );
+    const settings = await chrome.storage.sync.get({
+      showFloatButton: true,
+      autoHideFullscreen: true,
     });
 
     floatButton.style.display =
@@ -128,9 +123,7 @@ async function checkPasswordAndLoadCookies() {
 
   try {
     // 从 storage 获取密码
-    const result = await new Promise((resolve) => {
-      chrome.storage.sync.get(["customUrl"], resolve);
-    });
+    const result = await chrome.storage.sync.get(["customUrl"]);
 
     if (!result.customUrl) {
       cookiesList.innerHTML = `<div class="cookie-share-error">Please set custom URL in extension popup first</div>`;
@@ -138,9 +131,7 @@ async function checkPasswordAndLoadCookies() {
     }
 
     // 从 storage 获取密码
-    const passwordResult = await new Promise((resolve) => {
-      chrome.storage.local.get("adminPassword", resolve);
-    });
+    const passwordResult = await chrome.storage.local.get("adminPassword");
 
     if (!passwordResult.adminPassword) {
       // 如果没有密码，显示密码输入框
@@ -219,9 +210,7 @@ async function loadCookies(password) {
   );
 
   try {
-    const result = await new Promise((resolve) => {
-      chrome.storage.sync.get(["customUrl"], resolve);
-    });
+    const result = await chrome.storage.sync.get(["customUrl"]);
 
     if (!result.customUrl) {
       cookiesList.innerHTML = `<div class="cookie-share-error">Please set custom URL in extension popup first</div>`;
@@ -290,17 +279,19 @@ function attachButtonListeners() {
     button.addEventListener("click", async (e) => {
       const cookieId = e.target.dataset.id;
       try {
-        const result = await new Promise((resolve) => {
-          chrome.storage.sync.get(["customUrl"], resolve);
-        });
+        const result = await chrome.storage.sync.get(["customUrl"]);
 
         if (!result.customUrl) {
           throw new Error("Please set custom URL in extension popup first");
         }
 
+        // 检测是否为720yun网站，自动使用包含localStorage的功能
+        const is720yun = window.location.hostname.includes('720yun');
+        const action = is720yun ? "contentReceiveCookiesAndStorage" : "contentReceiveCookies";
+        
         chrome.runtime.sendMessage(
           {
-            action: "contentReceiveCookies",
+            action: action,
             cookieId,
             customUrl: result.customUrl,
           },
@@ -329,12 +320,8 @@ function attachButtonListeners() {
       if (confirm("Are you sure you want to delete this cookie?")) {
         try {
           const [passwordResult, urlResult] = await Promise.all([
-            new Promise((resolve) =>
-              chrome.storage.local.get("adminPassword", resolve)
-            ),
-            new Promise((resolve) =>
-              chrome.storage.sync.get(["customUrl"], resolve)
-            ),
+            chrome.storage.local.get("adminPassword"),
+            chrome.storage.sync.get(["customUrl"]),
           ]);
 
           if (!passwordResult.adminPassword) {

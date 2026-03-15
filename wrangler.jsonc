@@ -22,7 +22,7 @@
 			"binding": "COOKIE_DB",
 			"database_name": "cookie-share-db",
 			"migrations_dir": "./migrations",
-			"database_id": "61406c80-70cb-4de1-87f6-b83263a57bb9"
+			"database_id": ""
 		}
 	]
 }

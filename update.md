@@ -6,6 +6,12 @@
   - Updated the userscript to store and use `TRANSPORT_SECRET` for cloud operations
   - Split credential usage so the userscript only needs `TRANSPORT_SECRET`, while the admin page only needs `ADMIN_PASSWORD`
   - Updated deployment docs, local dev defaults, and version metadata
+  - Added userscript config export/import for script-only settings such as backend URL, transport secret, language preference, and UI toggles
+  - Exported config is encoded as Base64 and copied to the clipboard automatically
+  - Moved the userscript config transfer panel to the bottom of the main modal
+  - 为油猴脚本新增配置导出 / 导入功能，仅处理脚本自身配置，例如后端地址、传输密钥、语言偏好和界面开关
+  - 导出配置时会编码为 Base64，并自动复制到剪贴板
+  - 将油猴脚本的配置传输面板移动到主弹窗底部
   - 新增 `TRANSPORT_SECRET`，用于 Worker JSON API 传输加密
   - 将 `send/receive/admin` 的 JSON 请求与响应统一切换为共享密钥加密信封
   - 为 Worker 管理页新增全量导出 / 导入能力

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.1.0
+// @version      0.2.0
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*

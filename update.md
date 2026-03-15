@@ -1,3 +1,17 @@
+- v0.2.0:
+  - Reworked the Cloudflare Worker storage layer from KV to D1
+  - Added `wrangler.jsonc`, D1 migrations, and standardized deploy scripts
+  - Updated Cloudflare deployment docs for D1 binding and one-click deployment flow
+  - Added localhost fallback defaults for `wrangler dev` when `.dev.vars` is missing
+  - Fixed Worker admin page rendering issues and stricter request validation
+  - Fixed userscript empty-list crash and switched ID generation to Web Crypto
+  - 将 Cloudflare Worker 存储层从 KV 重构为 D1
+  - 新增 `wrangler.jsonc`、D1 migration 和标准化部署脚本
+  - 更新 Cloudflare D1 绑定与一键部署文档说明
+  - 为缺少 `.dev.vars` 的 `wrangler dev` 增加 localhost 默认值回退
+  - 修复 Worker 管理页渲染问题并加强请求校验
+  - 修复油猴脚本空列表崩溃，并将 ID 生成改为 Web Crypto
+
 - Tampermonkey Script v0.1.0 / 油猴脚本版v0.1.0
   - 新增保存到本地选项框
   - 在 Cookie List 中区分本地与云端数据

@@ -613,7 +613,7 @@
 
   const transportCrypto = {
     version: 1,
-    iterations: 310000,
+    iterations: 100000,
     encoder: new TextEncoder(),
     decoder: new TextDecoder(),
 

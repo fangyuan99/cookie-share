@@ -80,21 +80,31 @@ For sharing cookies between different devices or browsers, you'll still need to 
 ### Backend Deployment Guide
 
 
-#### Option 1: Cloudflare Worker (Recommended)
+#### Option 1: Cloudflare Worker + D1 (Recommended)
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/fangyuan99/cookie-share&env=ADMIN_PASSWORD&env=PATH_SECRET&kv=COOKIE_STORE)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/fangyuan99/cookie-share&env=ADMIN_PASSWORD&env=PATH_SECRET&d1=COOKIE_DB)
 
+Deploy to Cloudflare (one click):
 
-1. [Register](https://dash.cloudflare.com/sign-up) Cloudflare account and create a Worker
-2. Copy contents of [_worker.js](./_worker.js) to newly created Worker
-3. Add following environment variables in Cloudflare Worker settings:
-   - `ADMIN_PASSWORD`: Set a strong password for accessing admin endpoints
-   - `PATH_SECRET`: Set a strong string to prevent brute force attacks
-   - `COOKIE_STORE`: Create a KV namespace for storing cookie data
-4. Bind KV namespace in Worker settings:
-   - Variable name: `COOKIE_STORE`
-   - KV namespace: Select your created KV namespace
-5. Save and deploy Worker
+1. Click the Deploy button above and authorize Cloudflare
+2. Fill in `ADMIN_PASSWORD` and `PATH_SECRET` in the deploy form
+3. Complete deployment. Cloudflare will automatically create and bind the D1 database as `COOKIE_DB`
+4. No manual KV or D1 setup is required. The Worker will create the required tables automatically on the first storage request
+5. Use `https://your-worker-domain/{PATH_SECRET}` as the backend address in the userscript
+
+Deploy locally with Wrangler:
+
+1. Install dependencies with `npm install`
+2. Run `npx wrangler login`
+3. Copy `.dev.vars.example` to `.dev.vars` for local development
+   - If `.dev.vars` is missing, `wrangler dev` falls back to `PATH_SECRET=dev` and `ADMIN_PASSWORD=dev-password` on localhost only
+4. Before production deploy, set remote secrets:
+   - `npx wrangler secret put ADMIN_PASSWORD`
+   - `npx wrangler secret put PATH_SECRET`
+5. Deploy with `npm run deploy`
+6. Optional: run `npm run db:migrate` after the first deploy if you want Wrangler-managed migration metadata applied immediately
+
+The repository now declares the D1 binding in [wrangler.jsonc](./wrangler.jsonc), so Cloudflare can provision and bind the database automatically during deployment.
 
 If you need higher performance or more control over data storage, you can deploy a standalone Node.js server:
 
@@ -124,14 +134,14 @@ The Node.js server implementation offers these advantages:
 
 - Ensure `ADMIN_PASSWORD` is set to a strong password and changed regularly
 - Don't hardcode `ADMIN_PASSWORD` in code, always use environment variables
-- Regularly review stored data, delete unnecessary cookie data
+- Regularly review stored data in D1 and delete unnecessary cookie data
 - Consider setting expiration times for cookie data to reduce risk of storing sensitive information long-term
 - Use `PATH_SECRET` in worker config to prevent brute force attacks
 - Set complex project names and disable built-in workers.dev domain
 
 ## Backend API Endpoints
 
-**If `/{PATH_SECRET}/admin/*` endpoints have issues, check if X-Admin-Password is added or use CF official KV management page**
+**If `/{PATH_SECRET}/admin/*` endpoints have issues, verify that `X-Admin-Password` is present and your Worker variables are configured correctly**
 
 Both backend implementations provide the following endpoints:
 
@@ -155,23 +165,27 @@ curl --location --request DELETE 'https://your-backend-address/{PATH_SECRET}/adm
 
 Available endpoints:
 - `POST /{PATH_SECRET}/send-cookies`: Store cookies associated with unique ID
-- `GET /{PATH_SECRET}/admin`: Access admin management page
+- `GET /{PATH_SECRET}/admin`: Open the admin UI shell
 - `GET /{PATH_SECRET}/admin/list-cookies`: List all stored cookie IDs and URLs
 - `GET /{PATH_SECRET}/admin/list-cookies-by-host`: List cookies filtered by hostname
 - `DELETE /{PATH_SECRET}/admin/delete`: Delete data for given key
 - `PUT /{PATH_SECRET}/admin/update`: Update data for given key
 - `OPTIONS /{PATH_SECRET}/`: Handle CORS preflight requests
 
-Admin management page provides user-friendly interface for managing cookies and other data. Includes viewing all stored cookies, creating new cookie entries, updating existing cookies, and deleting individual cookies or all stored data.
+Admin management page provides a user-friendly interface for managing cookies and other data. It includes viewing all stored cookies, creating new cookie entries, updating existing cookies, and deleting individual cookie records.
 
-To access admin page, navigate to `https://your-backend-address/{PATH_SECRET}/admin` in browser. Admin password required before accessing management interface.
+To access the admin page, navigate to `https://your-backend-address/{PATH_SECRET}/admin` in the browser. The page itself is directly reachable, but all `/admin/*` data APIs require `X-Admin-Password`.
 
-**Admin endpoints require authentication using admin password.**
+**All `/admin/*` API endpoints require authentication using the admin password.**
 
 ## File Structure
 
 - `tampermonkey/cookie-share.user.js`: Tampermonkey script
 - `_worker.js`: Cloudflare Worker script for backend operations
+- `wrangler.jsonc`: Cloudflare Worker and D1 configuration
+- `migrations/0001_init.sql`: Initial D1 schema
+- `.dev.vars.example`: Example local development variables
+- `package.json`: Wrangler helper scripts
 
 ## Development
 
@@ -182,8 +196,17 @@ Modifying script:
 
 Modifying backend:
 
-1. For Cloudflare Worker: Edit `_worker.js` file and deploy updated Worker to Cloudflare
-2. For Node.js server: Edit files in the cookie-share-server repository
+1. For Cloudflare Worker: Edit `_worker.js`, validate with `npm run check`, and deploy with `npm run deploy`
+2. Optional: run `npm run db:migrate` after the Worker exists if you want to apply the tracked SQL migration explicitly
+3. For Node.js server: Edit files in the cookie-share-server repository
+
+## Smoke Checklist
+
+- Deploy through the Cloudflare button and confirm the D1 database is created and bound automatically
+- Run `POST /send-cookies -> GET /receive-cookies/{id} -> GET /admin/list-cookies -> GET /admin/list-cookies-by-host/{host} -> PUT /admin/update -> DELETE /admin/delete`
+- Verify invalid IDs, missing keys, invalid URLs, malformed cookie payloads, and wrong admin passwords all return the expected 4xx responses
+- Open `/{PATH_SECRET}/admin` and confirm the table renders correctly and refresh/delete actions work
+- Confirm the userscript still shows combined local/cloud data and no longer crashes on an empty list state
 
 ## Contributions
 

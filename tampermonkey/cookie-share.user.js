@@ -364,8 +364,10 @@
     generateId(length = 10) {
       const chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-      return Array.from({ length }, () =>
-        chars.charAt(Math.floor(Math.random() * chars.length))
+      const bytes = new Uint8Array(length);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (byte) =>
+        chars.charAt(byte % chars.length)
       ).join("");
     },
   };
@@ -1646,7 +1648,6 @@
         const localKeys = allKeys.filter((key) =>
           key.startsWith("cookie_share_local_")
         );
-        console.log("Local keys found:", localKeys); // Debug log
 
         for (const key of localKeys) {
           try {
@@ -1666,7 +1667,6 @@
               }
 
               if (cookieHost === currentHost) {
-                console.log(`Adding local cookie: ${cookieData.id}`); // Debug log
                 combinedCookies.push({
                   id: cookieData.id,
                   source: "local",
@@ -1683,7 +1683,6 @@
             );
           }
         }
-        console.log("Local cookies processed:", combinedCookies); // Debug log
       } catch (error) {
         console.error("Error fetching local cookies:", error);
         // Optionally display an error message for local fetch failure
@@ -1695,13 +1694,11 @@
 
       // 2. Fetch Cloud Cookies (if applicable)
       if (!loadOnlyLocal && customUrl) {
-        console.log("Fetching cloud cookies from:", customUrl); // Debug log
         try {
           // Requires password for cloud operations
           if (!password) {
             // This case is handled by initializeCookieList showing the password prompt
             // We just skip fetching cloud cookies here if no password provided yet.
-            console.log("No password provided, skipping cloud fetch for now.");
           } else {
             const response = await new Promise((resolve, reject) => {
               GM_xmlhttpRequest({
@@ -1733,7 +1730,6 @@
             });
 
             const data = JSON.parse(response.responseText);
-            console.log("Cloud response data:", data); // Debug log
 
             if (data.success && Array.isArray(data.cookies)) {
               data.cookies.forEach((cookie) => {
@@ -1743,7 +1739,6 @@
                     (c) => c.id === cookie.id && c.source === "cloud"
                   )
                 ) {
-                  console.log(`Adding cloud cookie: ${cookie.id}`); // Debug log
                   combinedCookies.push({
                     id: cookie.id,
                     source: "cloud",
@@ -1770,13 +1765,9 @@
             // Let's just show the error message in the list for now.
           }
         }
-      } else if (!customUrl && !loadOnlyLocal) {
-        console.log("Custom URL not set, skipping cloud fetch.");
       }
 
       // 3. Render List
-      console.log("Final combined cookies:", combinedCookies); // Debug log
-
       // Clear loading indicator
       const loadingIndicator = cookiesList.querySelector(
         ".cookie-share-loading"
@@ -1794,8 +1785,6 @@
       }
 
       if (combinedCookies.length === 0) {
-        // If there was no cloud error, show empty message. If there was, the error is already shown.
-        const hasErrors = cloudError || localError;
         const hasItems = cookiesList.querySelector(".cookie-share-item"); // Check if items were added despite errors
         if (!hasItems) {
           const emptyDiv = document.createElement("div");

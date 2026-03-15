@@ -9,6 +9,7 @@ build/
 
 # Node modules
 node_modules/
+.wrangler/
 
 # IDE files
 .vscode/
@@ -25,3 +26,6 @@ Thumbs.db
 
 # Logs
 *.log 
+
+# Local environment files
+.dev.vars

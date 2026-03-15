@@ -39,6 +39,14 @@
   };
 
   let currentLanguage = LANGUAGES.EN; // Default language
+  const isMacOS = /Mac|iPhone|iPad|iPod/i.test(navigator.platform);
+
+  function getShortcutLabel(actionKey) {
+    const normalizedKey = actionKey.toUpperCase();
+    return isMacOS
+      ? `Command+Shift+${normalizedKey} / Option+Shift+${normalizedKey}`
+      : `Alt+Shift+${normalizedKey}`;
+  }
 
   // Detect browser language, prioritizing saved preference
   function detectLanguage() {
@@ -90,15 +98,15 @@
       placeholderTransportSecret: "Enter transport secret",
 
       // Settings
-      settingsShowFloatingButton: "Show Floating Button (Alt+Shift+L)",
+      settingsShowFloatingButton: `Show Floating Button (${getShortcutLabel("L")})`,
       settingsAutoHideFullscreen:
         "Auto Hide in Fullscreen (Not Available For Safari)",
       settingsSaveLocally:
         "Prefer Local Save ('Send' will only save locally if checked)",
 
       // Menu Commands
-      menuShowShare: "Show Cookie Share (Alt+Shift+C)",
-      menuShowList: "Show Cookie List (Alt+Shift+L)",
+      menuShowShare: `Show Cookie Share (${getShortcutLabel("C")})`,
+      menuShowList: `Show Cookie List (${getShortcutLabel("L")})`,
       menuSwitchLanguage: "Switch Language (Refresh Required)", // Added
 
       // Notifications & Messages
@@ -180,13 +188,13 @@
       placeholderTransportSecret: "输入传输密钥",
 
       // Settings
-      settingsShowFloatingButton: "显示悬浮按钮 (Alt+Shift+L)",
+      settingsShowFloatingButton: `显示悬浮按钮 (${getShortcutLabel("L")})`,
       settingsAutoHideFullscreen: "全屏时自动隐藏 (Safari 不可用)",
       settingsSaveLocally: "优先本地保存 (勾选后'发送'将仅保存本地)", // Fixed quotes
 
       // Menu Commands
-      menuShowShare: "显示 Cookie 分享面板 (Alt+Shift+C)",
-      menuShowList: "显示 Cookie 列表 (Alt+Shift+L)",
+      menuShowShare: `显示 Cookie 分享面板 (${getShortcutLabel("C")})`,
+      menuShowList: `显示 Cookie 列表 (${getShortcutLabel("L")})`,
       menuSwitchLanguage: "切换语言 (需刷新页面)", // Added
 
       // Notifications & Messages
@@ -2176,9 +2184,24 @@
     );
 
     // Add keyboard shortcuts
+    const matchesShortcut = (event, actionKey) => {
+      const key = event.key.toLowerCase();
+      const expectedKey = actionKey.toLowerCase();
+      if (key !== expectedKey || !event.shiftKey) {
+        return false;
+      }
+
+      const hasMacShortcut =
+        isMacOS && !event.ctrlKey && (event.metaKey || event.altKey);
+      const hasDefaultShortcut =
+        !isMacOS && !event.ctrlKey && !event.metaKey && event.altKey;
+
+      return hasMacShortcut || hasDefaultShortcut;
+    };
+
     const handleKeyboardShortcuts = (e) => {
-      // Alt + Shift + L for cookie list
-      if (e.altKey && e.shiftKey && e.key.toLowerCase() === "l") {
+      // Alt + Shift + L on Windows/Linux, Command/Option + Shift + L on macOS
+      if (matchesShortcut(e, "l")) {
         e.preventDefault();
         e.stopPropagation();
         const overlay = document.querySelector(".cookie-share-overlay");
@@ -2190,8 +2213,8 @@
         }
         return false;
       }
-      // Alt + Shift + C for cookie share panel
-      if (e.altKey && e.shiftKey && e.key.toLowerCase() === "c") {
+      // Alt + Shift + C on Windows/Linux, Command/Option + Shift + C on macOS
+      if (matchesShortcut(e, "c")) {
         e.preventDefault();
         e.stopPropagation();
         const overlay = document.querySelector(".cookie-share-overlay");

@@ -15,12 +15,6 @@
 
 Cookie-share is a Tampermonkey script that allows users to send and receive cookies between different devices or browsers. It can be used for **multiple account switching, video membership sharing, community subscription sharing**, and other scenarios. The backend uses self-hosted Cloudflare Worker or Node.js server to ensure data security.
 
-## Latest Update
-
-- `v0.3.0` switches the Worker JSON API to encrypted transport with `TRANSPORT_SECRET`
-- Added full export/import support to the Worker admin page
-- The admin UI now uses Pico CSS to reduce embedded styling code
-
 ![image](./images/cs1.png)
 
 ---
@@ -66,13 +60,14 @@ Tested websites:
 ### Tampermonkey Script Usage
 
 1. Install [Tampermonkey](https://www.crxsoso.com/webstore/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) or other script managers
-2. [One-Click Install](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Mirror](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
+2. [One-Click Install](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
 3. If you encounter cookie permission issues, please enable it in Tampermonkey settings
 ![tm](./images/tm.png)
 1. Send Cookie from logged-in browser page
 2. Accept Cookie on non-logged-in browser page
 3. Note: Don't add `/` after the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
 4. If you use a Cloudflare Worker backend, the userscript only needs `Transport Secret`. `send/receive`, cloud list, and cloud delete all use `TRANSPORT_SECRET`
+5. Management panel access `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin`
 
 ### Local Use Without Backend
 

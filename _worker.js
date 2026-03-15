@@ -3,7 +3,7 @@ const CORS_HEADERS = "Content-Type, X-Admin-Password";
 const ID_PATTERN = /^[A-Za-z0-9]{1,64}$/;
 const SAME_SITE_VALUES = new Set(["lax", "strict", "none"]);
 const ENCRYPTION_VERSION = 1;
-const PBKDF2_ITERATIONS = 310000;
+const PBKDF2_ITERATIONS = 100000;
 const AES_KEY_LENGTH = 256;
 const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
@@ -34,27 +34,25 @@ class HttpError extends Error {
 
 export default {
   async fetch(request, env) {
-    validateDatabaseBinding(env);
-
-    let runtimeConfig;
     try {
-      runtimeConfig = resolveRuntimeConfig(env, request.url);
-    } catch (error) {
-      return handleTopLevelError(error);
-    }
+      validateDatabaseBinding(env);
 
-    const url = new URL(request.url);
-    const path = url.pathname;
-    const basePath = `/${runtimeConfig.pathSecret}`;
-    const isHtmlRoute = request.method === "GET" && path === `${basePath}/admin`;
-    const isOptions = request.method === "OPTIONS";
-    const useEncryptedResponse = !isHtmlRoute && !isOptions;
-    const routeSecret = resolveRouteSecret(path, basePath, runtimeConfig);
+      const runtimeConfig = resolveRuntimeConfig(env, request.url);
+      const url = new URL(request.url);
+      const path = url.pathname;
+      const basePath = `/${runtimeConfig.pathSecret}`;
+      const isHtmlRoute = request.method === "GET" && path === `${basePath}/admin`;
+      const isOptions = request.method === "OPTIONS";
+      const useEncryptedResponse = !isHtmlRoute && !isOptions;
+      const routeSecret = resolveRouteSecret(path, basePath, runtimeConfig);
 
-    try {
-      return await handleRequest(request, env, runtimeConfig, url, path, basePath);
+      try {
+        return await handleRequest(request, env, runtimeConfig, url, path, basePath);
+      } catch (error) {
+        return await handleRequestError(error, routeSecret, useEncryptedResponse);
+      }
     } catch (error) {
-      return await handleRequestError(error, routeSecret, useEncryptedResponse);
+      return handleTopLevelError(error, request);
     }
   },
 };
@@ -73,6 +71,118 @@ function validateDatabaseBinding(env) {
       error: "Missing required bindings: COOKIE_DB",
     }, { plain: true });
   }
+}
+
+function shouldReturnHtmlError(request) {
+  if (!request || typeof request !== "object") {
+    return false;
+  }
+
+  if (request.method !== "GET") {
+    return false;
+  }
+
+  const accept = request.headers.get("Accept") || "";
+  return accept.includes("text/html");
+}
+
+function renderTopLevelErrorPage(message) {
+  const safeMessage = escapeHtml(message || "Internal Server Error");
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cookie Share Error</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f6f7fb;
+        color: #191919;
+      }
+      main {
+        max-width: 720px;
+        margin: 48px auto;
+        padding: 0 20px;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+      }
+      h1 {
+        margin-top: 0;
+        margin-bottom: 12px;
+        font-size: 24px;
+      }
+      p {
+        line-height: 1.6;
+        margin: 0 0 16px;
+      }
+      code {
+        display: block;
+        padding: 12px;
+        border-radius: 12px;
+        background: #111827;
+        color: #f9fafb;
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>Cookie Share deployment error</h1>
+        <p>The Worker started, but request handling failed before a normal response could be generated.</p>
+        <p>Check the message below and then review your Worker bindings, secrets, or crypto settings.</p>
+        <code>${safeMessage}</code>
+      </article>
+    </main>
+  </body>
+</html>`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function handleTopLevelError(error, request) {
+  if (error instanceof HttpError) {
+    if (shouldReturnHtmlError(request)) {
+      return createResponse(renderTopLevelErrorPage(error.message), {
+        status: error.status,
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
+      });
+    }
+
+    return jsonResponse(error.status, error.payload || { success: false, message: error.message });
+  }
+
+  console.error("Unhandled worker error", error);
+
+  const message = error instanceof Error ? error.message : "Internal Server Error";
+  if (shouldReturnHtmlError(request)) {
+    return createResponse(renderTopLevelErrorPage(message), {
+      status: 500,
+      headers: { "Content-Type": "text/html; charset=UTF-8" },
+    });
+  }
+
+  return jsonResponse(500, {
+    success: false,
+    error: message,
+  });
 }
 
 function resolveRuntimeConfig(env, requestUrl) {
@@ -788,18 +898,6 @@ async function handleRequestError(error, routeSecret, useEncryptedResponse) {
     error.payload || { success: false, message: error.message },
     routeSecret
   );
-}
-
-function handleTopLevelError(error) {
-  if (error instanceof HttpError) {
-    return jsonResponse(error.status, error.payload || { success: false, message: error.message });
-  }
-
-  console.error("Unhandled worker error", error);
-  return jsonResponse(500, {
-    success: false,
-    error: error instanceof Error ? error.message : "Internal Server Error",
-  });
 }
 
 function handleAdminPage(basePath, runtimeConfig) {

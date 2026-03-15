@@ -103,6 +103,11 @@
         "Auto Hide in Fullscreen (Not Available For Safari)",
       settingsSaveLocally:
         "Prefer Local Save ('Send' will only save locally if checked)",
+      settingsConfigTransferTitle: "Import / Export Config",
+      settingsConfigTransferHint:
+        "Only userscript settings are included. Local cookie records are excluded.",
+      settingsExportConfigButton: "Export Config",
+      settingsImportConfigButton: "Import Config",
 
       // Menu Commands
       menuShowShare: `Show Cookie Share (${getShortcutLabel("C")})`,
@@ -149,6 +154,12 @@
       notificationDecryptFailed: "Failed to decrypt server response",
       notificationInvalidTransportSecret:
         "Invalid transport secret or corrupted payload",
+      notificationConfigExported: "Config exported to the text box",
+      notificationConfigCopied: "Config exported and copied to clipboard",
+      notificationConfigCopyFailed: "Config exported, but clipboard copy failed",
+      notificationConfigImported: "Config imported successfully",
+      notificationConfigEmpty: "Please enter a Base64 config",
+      notificationConfigInvalid: "Invalid config payload",
       confirmDeleteMessage: "Are you sure you want to delete this cookie?",
       listEmpty: "No local or cloud cookies found related to {{host}}",
       listEmptyLocalOnly: "No local cookies found related to {{host}}",
@@ -191,6 +202,11 @@
       settingsShowFloatingButton: `显示悬浮按钮 (${getShortcutLabel("L")})`,
       settingsAutoHideFullscreen: "全屏时自动隐藏 (Safari 不可用)",
       settingsSaveLocally: "优先本地保存 (勾选后'发送'将仅保存本地)", // Fixed quotes
+      settingsConfigTransferTitle: "导入 / 导出配置",
+      settingsConfigTransferHint:
+        "仅包含脚本自身配置，不包含本地 Cookie 记录。",
+      settingsExportConfigButton: "导出配置",
+      settingsImportConfigButton: "导入配置",
 
       // Menu Commands
       menuShowShare: `显示 Cookie 分享面板 (${getShortcutLabel("C")})`,
@@ -229,6 +245,12 @@
       notificationEncryptFailed: "加密请求失败",
       notificationDecryptFailed: "解密服务器响应失败",
       notificationInvalidTransportSecret: "传输密钥错误或数据已损坏",
+      notificationConfigExported: "配置已导出到输入框",
+      notificationConfigCopied: "配置已导出并复制到剪贴板",
+      notificationConfigCopyFailed: "配置已导出，但复制到剪贴板失败",
+      notificationConfigImported: "配置导入成功",
+      notificationConfigEmpty: "请输入 Base64 配置",
+      notificationConfigInvalid: "配置内容无效",
       confirmDeleteMessage: "您确定要删除此 Cookie 吗？",
       listEmpty: "未找到与 {{host}} 相关的本地或云端 Cookie",
       listEmptyLocalOnly: "未找到与 {{host}} 相关的本地 Cookie",
@@ -269,6 +291,23 @@
     sendModal: null,
     receiveModal: null,
     settingsModal: null,
+  };
+
+  const CONFIG_NORMALIZERS = {
+    [STORAGE_KEYS.CUSTOM_URL]: (value) =>
+      typeof value === "string" ? value.replace(/\/+$/, "") : "",
+    [STORAGE_KEYS.ADMIN_PASSWORD]: (value) =>
+      typeof value === "string" ? value : "",
+    [STORAGE_KEYS.TRANSPORT_SECRET]: (value) =>
+      typeof value === "string" ? value : "",
+    [STORAGE_KEYS.SHOW_FLOATING_BUTTON]: (value) =>
+      typeof value === "boolean" ? value : true,
+    [STORAGE_KEYS.AUTO_HIDE_FULLSCREEN]: (value) =>
+      typeof value === "boolean" ? value : true,
+    [STORAGE_KEYS.SAVE_LOCALLY]: (value) =>
+      typeof value === "boolean" ? value : false,
+    [STORAGE_KEYS.LANGUAGE_PREFERENCE]: (value) =>
+      value === LANGUAGES.EN || value === LANGUAGES.ZH ? value : null,
   };
   // ===================== Fullscreen Handlers =====================
   const fullscreenManager = {
@@ -447,6 +486,128 @@
         return "lax";
       }
       return undefined;
+    },
+
+    encodeBase64(value) {
+      const bytes = new TextEncoder().encode(value);
+      let binary = "";
+      for (const byte of bytes) {
+        binary += String.fromCharCode(byte);
+      }
+      return btoa(binary);
+    },
+
+    decodeBase64(value) {
+      const binary = atob(value.replace(/\s+/g, ""));
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      return new TextDecoder().decode(bytes);
+    },
+
+    async copyToClipboard(value, inputElement = null) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+      }
+
+      const fallbackInput =
+        inputElement ||
+        Object.assign(document.createElement("textarea"), {
+          value,
+        });
+      const shouldCleanup = !inputElement;
+
+      if (shouldCleanup) {
+        fallbackInput.style.position = "fixed";
+        fallbackInput.style.opacity = "0";
+        document.body.appendChild(fallbackInput);
+      } else {
+        fallbackInput.value = value;
+      }
+
+      fallbackInput.focus();
+      fallbackInput.select();
+
+      const copied = document.execCommand("copy");
+
+      if (shouldCleanup) {
+        fallbackInput.remove();
+      }
+
+      if (!copied) {
+        throw new Error(t("notificationConfigCopyFailed"));
+      }
+    },
+  };
+
+  const configManager = {
+    version: 1,
+    exportKeys: Object.keys(CONFIG_NORMALIZERS),
+
+    normalizeValue(storageKey, value) {
+      const normalizer = CONFIG_NORMALIZERS[storageKey];
+      return normalizer ? normalizer(value) : value;
+    },
+
+    collectConfig() {
+      const values = {};
+      this.exportKeys.forEach((storageKey) => {
+        values[storageKey] = this.normalizeValue(
+          storageKey,
+          GM_getValue(storageKey, undefined)
+        );
+      });
+
+      return {
+        version: this.version,
+        values,
+      };
+    },
+
+    exportToBase64() {
+      return utils.encodeBase64(JSON.stringify(this.collectConfig()));
+    },
+
+    async importFromBase64(encodedConfig) {
+      const normalizedConfig = encodedConfig.trim();
+      if (!normalizedConfig) {
+        throw new Error(t("notificationConfigEmpty"));
+      }
+
+      let parsedConfig;
+      try {
+        parsedConfig = JSON.parse(utils.decodeBase64(normalizedConfig));
+      } catch (error) {
+        throw new Error(t("notificationConfigInvalid"));
+      }
+
+      if (!parsedConfig || typeof parsedConfig !== "object") {
+        throw new Error(t("notificationConfigInvalid"));
+      }
+
+      const values =
+        parsedConfig.values && typeof parsedConfig.values === "object"
+          ? parsedConfig.values
+          : parsedConfig;
+
+      let appliedCount = 0;
+      for (const storageKey of this.exportKeys) {
+        if (!Object.prototype.hasOwnProperty.call(values, storageKey)) {
+          continue;
+        }
+
+        await GM_setValue(
+          storageKey,
+          this.normalizeValue(storageKey, values[storageKey])
+        );
+        appliedCount += 1;
+      }
+
+      if (appliedCount === 0) {
+        throw new Error(t("notificationConfigInvalid"));
+      }
     },
   };
 
@@ -1167,6 +1328,127 @@
       fullscreenManager.updateFloatingButtonVisibility();
     },
 
+    refreshFloatingButton() {
+      const existingBtn = document.querySelector(".cookie-share-floating-btn");
+      if (existingBtn) {
+        existingBtn.remove();
+      }
+      state.floatingButton = null;
+
+      if (GM_getValue(STORAGE_KEYS.SHOW_FLOATING_BUTTON, true)) {
+        this.createFloatingButton();
+      } else {
+        fullscreenManager.updateFloatingButtonVisibility();
+      }
+    },
+
+    createConfigTransferView(context = {}) {
+      const { idInput, options = {} } = context;
+      const transferContainer = document.createElement("details");
+      transferContainer.className = "cookie-share-config-transfer";
+      transferContainer.open = Boolean(options.openConfigTransfer);
+      transferContainer.style.cssText = `
+                margin-bottom: 16px;
+                padding: 12px 16px;
+                background: #f5f5f5;
+                border-radius: 8px;
+            `;
+
+      const summary = document.createElement("summary");
+      summary.textContent = t("settingsConfigTransferTitle");
+      summary.style.cssText = `
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                color: #333;
+                user-select: none;
+            `;
+
+      const hint = document.createElement("div");
+      hint.textContent = t("settingsConfigTransferHint");
+      hint.style.cssText = `
+                margin: 12px 0 8px;
+                font-size: 12px;
+                line-height: 1.5;
+                color: #666;
+            `;
+
+      const transferInput = document.createElement("textarea");
+      transferInput.className = "cookie-share-config-textarea";
+      transferInput.value = options.configTransferValue || "";
+      transferInput.spellcheck = false;
+      transferInput.style.cssText = `
+                width: 100%;
+                min-height: 96px;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                resize: vertical;
+                box-sizing: border-box;
+                font-size: 13px;
+                line-height: 1.5;
+                font-family: Consolas, Monaco, monospace;
+                background: rgba(255, 255, 255, 0.95);
+                color: #333;
+            `;
+
+      const buttonRow = document.createElement("div");
+      buttonRow.style.cssText = `
+                display: flex;
+                gap: 12px;
+                margin-top: 12px;
+            `;
+
+      const exportBtn = document.createElement("button");
+      exportBtn.className = "generate-btn";
+      exportBtn.textContent = t("settingsExportConfigButton");
+      exportBtn.style.width = "auto";
+      exportBtn.style.padding = "0 16px";
+      exportBtn.onclick = async () => {
+        const exportedConfig = configManager.exportToBase64();
+        transferInput.value = exportedConfig;
+        transferContainer.open = true;
+
+        try {
+          await utils.copyToClipboard(exportedConfig, transferInput);
+          notification.show(t("notificationConfigCopied"), "success");
+        } catch (error) {
+          notification.show(error.message, "error");
+        }
+      };
+
+      const importBtn = document.createElement("button");
+      importBtn.className = "generate-btn";
+      importBtn.textContent = t("settingsImportConfigButton");
+      importBtn.style.width = "auto";
+      importBtn.style.padding = "0 16px";
+      importBtn.onclick = async () => {
+        try {
+          await configManager.importFromBase64(transferInput.value);
+          detectLanguage();
+          this.refreshFloatingButton();
+          this.showModal({
+            cookieId: idInput?.value || "",
+            openConfigTransfer: true,
+            configTransferValue: transferInput.value.trim(),
+          });
+          notification.show(t("notificationConfigImported"), "success");
+        } catch (error) {
+          notification.show(error.message, "error");
+        }
+      };
+
+      buttonRow.appendChild(exportBtn);
+      buttonRow.appendChild(importBtn);
+
+      transferContainer.appendChild(summary);
+      transferContainer.appendChild(hint);
+      transferContainer.appendChild(transferInput);
+      transferContainer.appendChild(buttonRow);
+
+      return transferContainer;
+    },
+
     createSettingsView(container) {
       const settingsContainer = document.createElement("div");
       settingsContainer.className = "settings-container";
@@ -1291,16 +1573,8 @@
       const floatingBtnToggle = createToggle(
         "settingsShowFloatingButton",
         STORAGE_KEYS.SHOW_FLOATING_BUTTON,
-        (newState) => {
-          const existingBtn = document.querySelector(
-            ".cookie-share-floating-btn"
-          );
-          if (existingBtn) {
-            existingBtn.remove();
-          }
-          if (newState) {
-            ui.createFloatingButton();
-          }
+        () => {
+          ui.refreshFloatingButton();
         }
       );
 
@@ -1327,7 +1601,7 @@
       container.appendChild(settingsContainer);
     },
 
-    createMainView() {
+    createMainView(options = {}) {
       const overlay = document.createElement("div");
       overlay.className = "cookie-share-overlay";
       overlay.onclick = (e) => {
@@ -1372,6 +1646,7 @@
       idInput.type = "text";
       idInput.className = "cookie-id-input";
       idInput.placeholder = t("placeholderCookieId");
+      idInput.value = options.cookieId || "";
 
       const generateBtn = document.createElement("button");
       generateBtn.className = "generate-btn";
@@ -1627,9 +1902,14 @@
       });
 
       ui.createSettingsView(container);
+      const configTransferView = this.createConfigTransferView({
+        idInput,
+        options,
+      });
+      container.appendChild(configTransferView);
     },
 
-    showModal() {
+    showModal(options = {}) {
       // Ensure any existing Cookie Share elements are removed
       const existingOverlay = document.querySelector(".cookie-share-overlay");
       if (existingOverlay) {
@@ -1637,7 +1917,7 @@
       }
 
       // Create and display the Cookie Share modal
-      this.createMainView();
+      this.createMainView(options);
       const overlay = document.querySelector(".cookie-share-overlay");
       const modal = document.querySelector(".cookie-share-modal");
 

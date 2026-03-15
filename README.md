@@ -1,4 +1,4 @@
-# Cookie-share Chrome/Edge/Firefox Extension/Tampermonkey Script
+# Cookie-share Tampermonkey Script
 
 *Note: For learning and communication purposes only. Commercial use is strictly prohibited. Please delete within 24 hours. Distribution on social platforms is forbidden. If you find this project helpful, please give it a star. It helps a lot, thank you!*
 
@@ -13,7 +13,7 @@
 
 ## Overview
 
-Cookie-share is a Chrome/Edge/Firefox extension (also available as a Tampermonkey script) that allows users to send and receive cookies between different devices or browsers. It can be used for **multiple account switching, video membership sharing, community subscription sharing**, and other scenarios. The backend uses self-hosted Cloudflare Worker or Node.js server to ensure data security.
+Cookie-share is a Tampermonkey script that allows users to send and receive cookies between different devices or browsers. It can be used for **multiple account switching, video membership sharing, community subscription sharing**, and other scenarios. The backend uses self-hosted Cloudflare Worker or Node.js server to ensure data security.
 
 ![image](./images/cs1.png)
 
@@ -25,7 +25,7 @@ Cookie-share is a Chrome/Edge/Firefox extension (also available as a Tampermonke
 
 
 
-[Tampermonkey Script One-Click Install (Recommended)](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Extension Download (Not Recommended, No Maintenance)](https://github.com/fangyuan99/cookie-share/releases)
+[Tampermonkey Script One-Click Install](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
 
 ### Effects and Use Cases
 **Many websites don't support multiple account switching, don't want to log out and log in again?**
@@ -37,8 +37,8 @@ Cookie-share is a Chrome/Edge/Firefox extension (also available as a Tampermonke
 **Simply too lazy to take out your phone or enter passwords when switching devices?**
 
 1. Go to the homepage of a logged-in website (any address with cookies works)
-2. Click the extension icon, customize an ID (only letters and numbers supported), send the cookie
-3. On devices without login, visit the login page, use the ID you just created to get cookies, wait for the extension to show successful cookie retrieval and setup, then refresh the page
+2. Use the Tampermonkey menu command, customize an ID (only letters and numbers supported), then send the cookie
+3. On devices without login, visit the login page, use the ID you just created to get cookies, wait for the script to show successful cookie retrieval and setup, then refresh the page
 
 Tested websites:
 1. Certain community platforms
@@ -53,11 +53,11 @@ Tested websites:
 - Save cookies locally without backend (added in v0.1.0)
 - Manage cookies with Cookie List (local and cloud data)
 - Admin features for managing stored cookies
-- Due to greater extension permissions, can support `HTTPOnly` cookies that JS cannot access
+- Can support `HTTPOnly` cookies that ordinary page JS cannot access
 
 ## Usage Instructions
 
-### Tampermonkey Script Usage (Recommended)
+### Tampermonkey Script Usage
 
 1. Install [Tampermonkey](https://www.crxsoso.com/webstore/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) or other script managers
 2. [One-Click Install](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [Mirror](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
@@ -67,21 +67,9 @@ Tested websites:
 2. Accept Cookie on non-logged-in browser page
 3. Note: Don't add `/` after the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
 
-### Extension Usage
-1. Enable browser developer mode:
-   - Chrome/Edge: Visit `chrome://extensions/`
-   - Firefox: Visit `about:debugging#/runtime/this-firefox`
-2. Load extension:
-   - Chrome/Edge: Drag `cookie-share.zip` directly into browser
-   - Firefox: Temporarily load `cookie-share.xpi` file or install from Firefox Add-ons
-3. Click Cookie-share icon in browser toolbar
-4. Send Cookie from logged-in browser page
-5. Accept Cookie on non-logged-in browser page
-6. Note: Don't add `/` after the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
-
 ### Local Use Without Backend
 
-As of v0.1.0, Cookie-share now supports local storage functionality. This means you can use the extension without setting up a backend server:
+As of v0.1.0, Cookie-share now supports local storage functionality. This means you can use the script without setting up a backend server:
 
 - Enable the "Save to local" checkbox to store cookies locally
 - The Cookie List now distinguishes between local and cloud data
@@ -182,27 +170,20 @@ To access admin page, navigate to `https://your-backend-address/{PATH_SECRET}/ad
 
 ## File Structure
 
-- `manifest.json`: Extension configuration file
-- `popup.html`: HTML structure for extension popup
-- `popup.js`: JavaScript for handling user interactions and cookie operations
-- `style.css`: CSS styles for popup
+- `tampermonkey/cookie-share.user.js`: Tampermonkey script
 - `_worker.js`: Cloudflare Worker script for backend operations
 
 ## Development
 
-Modifying extension:
+Modifying script:
 
-1. Edit relevant files (`popup.html`, `popup.js`, `style.css`)
-2. Reload extension in Chrome to see changes
+1. Edit `tampermonkey/cookie-share.user.js`
+2. Reinstall or refresh the script in Tampermonkey to verify changes
 
 Modifying backend:
 
 1. For Cloudflare Worker: Edit `_worker.js` file and deploy updated Worker to Cloudflare
 2. For Node.js server: Edit files in the cookie-share-server repository
-
-## Future Development Plans
-
-- Future updates will focus on Tampermonkey script, extension temporarily not updated
 
 ## Contributions
 

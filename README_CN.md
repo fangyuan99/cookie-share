@@ -1,4 +1,4 @@
-# Cookie-share Chrome/Edge/Firefox 扩展/油猴脚本
+# Cookie-share 油猴脚本
 
 *注：仅供学习交流，严禁用于商业用途，请于24小时内删除，禁止在社交平台传播。如果本项目对你有用麻烦点个 star 这对我很有帮助，谢谢！*
 
@@ -13,7 +13,7 @@
 
 ## 概述
 
-Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚本)，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于**多账号切换、视频会员共享、星球合租**等场景。后端支持自建 Cloudflare Worker 或 Node.js 服务器，保障数据安全。
+Cookie-share 是一个 Tampermonkey 油猴脚本，允许用户在不同设备或浏览器之间发送和接收 cookies，可以用于**多账号切换、视频会员共享、星球合租**等场景。后端支持自建 Cloudflare Worker 或 Node.js 服务器，保障数据安全。
 
 ![image](./images/cs1.png)
 
@@ -25,7 +25,7 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 
 
 
- [油猴脚本一键安装（推荐）](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [镜像加速](https://fastly.jsdelivr.net/gh/https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [插件下载（不推荐，不再维护）](https://github.com/fangyuan99/cookie-share/releases)
+ [油猴脚本一键安装](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [镜像加速](https://fastly.jsdelivr.net/gh/https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
 
 ### 效果与应用场景
 **很多网站不支持多账号切换，不想退出重登？**
@@ -37,8 +37,8 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 **单纯懒得掏出手机或者输密码换设备登录？**
 
 1. 进入已登录网站的主页（任何含有 Cookie 的地址都可以）
-2. 点击插件图标，自定义一个 ID（仅支持字母和数字），发送 Cookie
-3. 没有登录的设备访问登录页，用刚刚的 ID 获取 Cookie，等待插件显示 Cookie 获取并设置成功后刷新网页即可
+2. 使用油猴菜单命令，自定义一个 ID（仅支持字母和数字），发送 Cookie
+3. 没有登录的设备访问登录页，用刚刚的 ID 获取 Cookie，等待脚本显示 Cookie 获取并设置成功后刷新网页即可
 
 已测试的网站:
 1. 某星球
@@ -53,11 +53,11 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 - 在本地保存 cookies，无需后端（v0.1.0 新增）
 - 通过 Cookie List 管理 cookies（区分本地与云端数据）
 - 管理员功能，用于管理存储的 cookies
-- 由于插件的权限更大，可以支持 JS 无法访问的 `HTTPOnly` Cookie
+- 可以支持普通页面 JS 无法访问的 `HTTPOnly` Cookie
 
 ## 使用方法
 
-### 油猴脚本使用方法（推荐）
+### 油猴脚本使用方法
 
 1. 安装 [油猴](https://www.crxsoso.com/webstore/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) 或者其他脚本管理器:
 2. [一键安装](https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js) | [镜像加速](https://github.site/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js)
@@ -66,18 +66,6 @@ Cookie-share 是一个 Chrome/Edge/Firefox 扩展 (同时也有 Tampermonkey 脚
 1. 在已登录的浏览器页面发送 Cookie
 2. 在未登录的浏览器页面接受 Cookie
 3. 注意地址后面不要加 `/`，示例: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
-
-### 插件使用方法
-1. 开启浏览器的开发者模式：
-   - Chrome/Edge：访问 `chrome://extensions/`
-   - Firefox：访问 `about:debugging#/runtime/this-firefox`
-2. 加载扩展：
-   - Chrome/Edge：将 `cookie-share.zip` 直接拖动到浏览器中
-   - Firefox：临时加载 `cookie-share.xpi` 文件或从 Firefox 附加组件安装
-3. 点击浏览器工具栏中的 Cookie-share 图标
-4. 在已登录的浏览器页面发送 Cookie
-5. 在未登录的浏览器页面接受 Cookie
-6. 注意地址后面不要加 `/`，示例: `
 
 ### 后端部署指南
 
@@ -121,7 +109,7 @@ Node.js 服务器实现具有以下优势：
 
 ### 无后端本地使用
 
-从 v0.1.0 版本开始，Cookie-share 现在支持本地存储功能。这意味着您可以在不设置后端服务器的情况下使用该扩展：
+从 v0.1.0 版本开始，Cookie-share 现在支持本地存储功能。这意味着您可以在不设置后端服务器的情况下使用该脚本：
 
 - 勾选"保存到本地"复选框以将 Cookie 存储在本地
 - Cookie 列表现在区分本地数据和云端数据
@@ -179,27 +167,20 @@ curl --location --request DELETE 'https://your-backend-address/{PATH_SECRET}/adm
 
 ## 文件结构
 
-- `manifest.json`：扩展配置文件
-- `popup.html`：扩展弹出窗口的 HTML 结构
-- `popup.js`：用于处理用户交互和 Cookie 操作的 JavaScript
-- `style.css`：弹出窗口的 CSS 样式
+- `tampermonkey/cookie-share.user.js`：油猴脚本
 - `_worker.js`：用于后端操作的 Cloudflare Worker 脚本
 
 ## 开发
 
-修改扩展：
+修改脚本：
 
-1. 编辑相关文件（`popup.html`、`popup.js`、`style.css`）
-2. 在 Chrome 中重新加载扩展以查看更改
+1. 编辑 `tampermonkey/cookie-share.user.js`
+2. 在 Tampermonkey 中重新安装或刷新脚本以验证更改
 
 修改后端：
 
 1. 对于 Cloudflare Worker：编辑 `_worker.js` 文件并将更新后的 Worker 部署到 Cloudflare
 2. 对于 Node.js 服务器：编辑 cookie-share-server 代码仓库中的文件
-
-## 未来开发计划
-
-- 未来更新将重点放在油猴脚本上，扩展暂时不更新
 
 ## 贡献
 

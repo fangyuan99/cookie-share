@@ -1,3 +1,17 @@
+- v0.3.1:
+  - Added userscript config export/import for script-only settings such as backend URL, transport secret, language preference, and UI toggles
+  - Exported config is encoded as Base64 and copied to the clipboard automatically
+  - Moved the userscript config transfer panel to the bottom of the main modal
+  - Replaced the external GitHub icon asset in the userscript with an inline SVG
+  - Reduced Worker PBKDF2 iterations to `100000` for Cloudflare Workers compatibility
+  - Added top-level Worker error handling so browser requests show a readable error page instead of only `Error 1101`
+  - 为油猴脚本新增配置导出 / 导入功能，仅处理脚本自身配置，例如后端地址、传输密钥、语言偏好和界面开关
+  - 导出配置时会编码为 Base64，并自动复制到剪贴板
+  - 将油猴脚本的配置传输面板移动到主弹窗底部
+  - 将油猴脚本中的外部 GitHub 图标资源替换为内联 SVG
+  - 将 Worker 的 PBKDF2 迭代次数调整为 `100000`，兼容 Cloudflare Workers 限制
+  - 为 Worker 增加顶层异常处理，浏览器访问时会显示可读错误页，而不是只看到 `Error 1101`
+
 - v0.3.0:
   - Added `TRANSPORT_SECRET` for encrypted Worker JSON API transport
   - Encrypted `send/receive/admin` JSON request and response bodies with a shared secret envelope

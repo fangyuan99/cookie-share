@@ -1,0 +1,28 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "cookie-share",
+	"main": "_worker.js",
+	"compatibility_date": "2026-03-15",
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true,
+			"head_sampling_rate": 1,
+			"persist": true
+		},
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"persist": true
+		}
+	},
+	"d1_databases": [
+		{
+			"binding": "COOKIE_DB",
+			"database_name": "cookie-share-db",
+			"migrations_dir": "./migrations",
+			"database_id": "61406c80-70cb-4de1-87f6-b83263a57bb9"
+		}
+	]
+}

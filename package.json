@@ -1,0 +1,16 @@
+{
+  "name": "cookie-share",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Cookie-share Cloudflare Worker deployment tooling",
+  "scripts": {
+    "dev": "wrangler dev",
+    "check": "wrangler deploy --dry-run",
+    "deploy:dry": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply COOKIE_DB --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.73.0"
+  }
+}

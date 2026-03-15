@@ -3,13 +3,13 @@
   - 在 Cookie List 中区分本地与云端数据
   - 在油猴插件中新增 Cookie List 的打开项
   - 新增 updateURL 用于更新脚本
-  - 停用明文传输，改为加密后传输
+  - 优化云端数据传输流程
   - 新增语言选择，当前支持中文和英文
   - Added local storage option checkbox
   - Distinguished between local and cloud data in Cookie List
   - Added Cookie List opening option in Tampermonkey plugin
   - Added updateURL for script updates
-  - Disabled plaintext transmission, switched to encrypted transmission
+  - Improved the cloud data transmission flow
   - Added language selection, currently supports Chinese and English
 
 - Node.js Server v0.0.1 / Node.js 服务器版v0.0.1

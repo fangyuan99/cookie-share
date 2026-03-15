@@ -1,3 +1,19 @@
+- v0.3.0:
+  - Added `TRANSPORT_SECRET` for encrypted Worker JSON API transport
+  - Encrypted `send/receive/admin` JSON request and response bodies with a shared secret envelope
+  - Added full export/import support in the Worker admin page
+  - Switched the Worker admin UI to Pico CSS to reduce embedded style code
+  - Updated the userscript to store and use `TRANSPORT_SECRET` for cloud operations
+  - Split credential usage so the userscript only needs `TRANSPORT_SECRET`, while the admin page only needs `ADMIN_PASSWORD`
+  - Updated deployment docs, local dev defaults, and version metadata
+  - 新增 `TRANSPORT_SECRET`，用于 Worker JSON API 传输加密
+  - 将 `send/receive/admin` 的 JSON 请求与响应统一切换为共享密钥加密信封
+  - 为 Worker 管理页新增全量导出 / 导入能力
+  - 将 Worker 管理页 UI 切换为 Pico CSS，减少内嵌样式代码
+  - 更新油猴脚本，支持保存并使用 `TRANSPORT_SECRET` 完成云端操作
+  - 拆分凭据使用方式：油猴脚本只需要 `TRANSPORT_SECRET`，管理页只需要 `ADMIN_PASSWORD`
+  - 更新部署文档、本地开发默认值和版本元数据
+
 - v0.2.0:
   - Reworked the Cloudflare Worker storage layer from KV to D1
   - Added `wrangler.jsonc`, D1 migrations, and standardized deploy scripts

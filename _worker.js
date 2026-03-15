@@ -2,6 +2,13 @@ const CORS_METHODS = "GET, POST, PUT, DELETE, OPTIONS";
 const CORS_HEADERS = "Content-Type, X-Admin-Password";
 const ID_PATTERN = /^[A-Za-z0-9]{1,64}$/;
 const SAME_SITE_VALUES = new Set(["lax", "strict", "none"]);
+const ENCRYPTION_VERSION = 1;
+const PBKDF2_ITERATIONS = 310000;
+const AES_KEY_LENGTH = 256;
+const IV_LENGTH = 12;
+const SALT_LENGTH = 16;
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS cookie_records (
     id TEXT PRIMARY KEY,
@@ -16,33 +23,38 @@ const SCHEMA_STATEMENTS = [
 ];
 
 class HttpError extends Error {
-  constructor(status, message, payload) {
+  constructor(status, message, payload, options = {}) {
     super(message);
     this.name = "HttpError";
     this.status = status;
     this.payload = payload;
+    this.plain = Boolean(options.plain);
   }
 }
 
 export default {
   async fetch(request, env) {
-    try {
-      validateDatabaseBinding(env);
-      const runtimeConfig = resolveRuntimeConfig(env, request.url);
-      return await handleRequest(request, env, runtimeConfig);
-    } catch (error) {
-      if (error instanceof HttpError) {
-        return jsonResponse(
-          error.status,
-          error.payload || { success: false, message: error.message }
-        );
-      }
+    validateDatabaseBinding(env);
 
-      console.error("Unhandled worker error", error);
-      return jsonResponse(500, {
-        success: false,
-        error: error instanceof Error ? error.message : "Internal Server Error",
-      });
+    let runtimeConfig;
+    try {
+      runtimeConfig = resolveRuntimeConfig(env, request.url);
+    } catch (error) {
+      return handleTopLevelError(error);
+    }
+
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const basePath = `/${runtimeConfig.pathSecret}`;
+    const isHtmlRoute = request.method === "GET" && path === `${basePath}/admin`;
+    const isOptions = request.method === "OPTIONS";
+    const useEncryptedResponse = !isHtmlRoute && !isOptions;
+    const routeSecret = resolveRouteSecret(path, basePath, runtimeConfig);
+
+    try {
+      return await handleRequest(request, env, runtimeConfig, url, path, basePath);
+    } catch (error) {
+      return await handleRequestError(error, routeSecret, useEncryptedResponse);
     }
   },
 };
@@ -52,18 +64,14 @@ function validateDatabaseBinding(env) {
     throw new HttpError(500, "Missing environment bindings", {
       success: false,
       error: "Missing environment bindings",
-    });
+    }, { plain: true });
   }
 
   if (!env.COOKIE_DB || typeof env.COOKIE_DB.prepare !== "function") {
-    throw new HttpError(
-      500,
-      "Missing required bindings: COOKIE_DB",
-      {
-        success: false,
-        error: "Missing required bindings: COOKIE_DB",
-      }
-    );
+    throw new HttpError(500, "Missing required bindings: COOKIE_DB", {
+      success: false,
+      error: "Missing required bindings: COOKIE_DB",
+    }, { plain: true });
   }
 }
 
@@ -88,6 +96,13 @@ function resolveRuntimeConfig(env, requestUrl) {
         ? "dev-password"
         : null;
 
+  const transportSecret =
+    typeof env.TRANSPORT_SECRET === "string" && env.TRANSPORT_SECRET
+      ? env.TRANSPORT_SECRET
+      : isLocalDevHost
+        ? "dev-transport-secret"
+        : null;
+
   const missing = [];
   if (!adminPassword) {
     missing.push("ADMIN_PASSWORD");
@@ -95,35 +110,38 @@ function resolveRuntimeConfig(env, requestUrl) {
   if (!pathSecret) {
     missing.push("PATH_SECRET");
   }
+  if (!transportSecret) {
+    missing.push("TRANSPORT_SECRET");
+  }
 
   if (missing.length > 0) {
     throw new HttpError(
       500,
       `Missing required bindings: ${missing.join(", ")}`,
-      {
-        success: false,
-        error: `Missing required bindings: ${missing.join(", ")}`,
-      }
+      { success: false, error: `Missing required bindings: ${missing.join(", ")}` },
+      { plain: true }
     );
   }
 
   return {
     adminPassword,
     pathSecret,
+    transportSecret,
     isLocalDevFallback:
       isLocalDevHost &&
-      (!(typeof env.ADMIN_PASSWORD === "string" && env.ADMIN_PASSWORD) ||
-        !(typeof env.PATH_SECRET === "string" && env.PATH_SECRET.trim())),
+      (
+        !(typeof env.ADMIN_PASSWORD === "string" && env.ADMIN_PASSWORD) ||
+        !(typeof env.PATH_SECRET === "string" && env.PATH_SECRET.trim()) ||
+        !(typeof env.TRANSPORT_SECRET === "string" && env.TRANSPORT_SECRET)
+      ),
   };
 }
 
-async function handleRequest(request, env, runtimeConfig) {
-  const url = new URL(request.url);
-  const path = url.pathname;
-  const basePath = `/${runtimeConfig.pathSecret}`;
+async function handleRequest(request, env, runtimeConfig, url, path, basePath) {
+  const routeSecret = resolveRouteSecret(path, basePath, runtimeConfig);
 
   if (path !== basePath && !path.startsWith(`${basePath}/`)) {
-    return jsonResponse(404, { success: false, message: "Not Found" });
+    return await encryptedJsonResponse(404, { success: false, message: "Not Found" }, routeSecret);
   }
 
   if (request.method === "OPTIONS") {
@@ -139,40 +157,65 @@ async function handleRequest(request, env, runtimeConfig) {
   }
 
   if (request.method === "POST" && path === `${basePath}/send-cookies`) {
-    return handleSendCookies(request, env);
+    return await handleSendCookies(request, env, runtimeConfig.transportSecret);
   }
 
   const receivePrefix = `${basePath}/receive-cookies/`;
   if (request.method === "GET" && path.startsWith(receivePrefix)) {
-    return handleReceiveCookies(path.slice(receivePrefix.length), env);
+    return await handleReceiveCookies(path.slice(receivePrefix.length), env, runtimeConfig.transportSecret);
+  }
+
+  const publicHostPrefix = `${basePath}/list-cookies-by-host/`;
+  if (request.method === "GET" && path.startsWith(publicHostPrefix)) {
+    return await handleListCookiesByHost(path.slice(publicHostPrefix.length), env, runtimeConfig.transportSecret);
+  }
+
+  if (request.method === "DELETE" && path === `${basePath}/delete`) {
+    return await handleDelete(url, env, runtimeConfig.transportSecret);
   }
 
   if (request.method === "GET" && path === `${basePath}/admin/list-cookies`) {
-    return handleListCookies(env);
+    return await handleListCookies(env, runtimeConfig.adminPassword);
   }
 
   const hostPrefix = `${basePath}/admin/list-cookies-by-host/`;
   if (request.method === "GET" && path.startsWith(hostPrefix)) {
-    return handleListCookiesByHost(path.slice(hostPrefix.length), env);
+    return await handleListCookiesByHost(path.slice(hostPrefix.length), env, runtimeConfig.adminPassword);
   }
 
-  if (request.method === "DELETE" && path === `${basePath}/admin/delete`) {
-    return handleDelete(url, env);
+  if (request.method === "POST" && path === `${basePath}/admin/create`) {
+    return await handleSendCookies(request, env, runtimeConfig.adminPassword);
   }
 
   if (request.method === "PUT" && path === `${basePath}/admin/update`) {
-    return handleUpdate(request, env);
+    return await handleUpdate(request, env, runtimeConfig.adminPassword);
   }
 
-  return jsonResponse(404, { success: false, message: "Not Found" });
+  if (request.method === "DELETE" && path === `${basePath}/admin/delete`) {
+    return await handleDelete(url, env, runtimeConfig.adminPassword);
+  }
+
+  if (request.method === "GET" && path === `${basePath}/admin/export-all`) {
+    return await handleExportAll(env, runtimeConfig.adminPassword);
+  }
+
+  if (request.method === "POST" && path === `${basePath}/admin/import-all`) {
+    return await handleImportAll(request, env, runtimeConfig.adminPassword);
+  }
+
+  return await encryptedJsonResponse(404, { success: false, message: "Not Found" }, routeSecret);
+}
+
+function resolveRouteSecret(path, basePath, runtimeConfig) {
+  if (path.startsWith(`${basePath}/admin/`)) {
+    return runtimeConfig.adminPassword;
+  }
+  return runtimeConfig.transportSecret;
 }
 
 function ensureAdminPassword(request, runtimeConfig) {
   const providedPassword = request.headers.get("X-Admin-Password");
-  if (
-    !providedPassword ||
-    !timingSafeEqual(providedPassword, runtimeConfig.adminPassword)
-  ) {
+  if (!providedPassword || !timingSafeEqual(providedPassword, runtimeConfig.adminPassword)) {
     throw new HttpError(401, "Unauthorized", {
       success: false,
       message: "Unauthorized",
@@ -185,10 +228,8 @@ function timingSafeEqual(left, right) {
     return false;
   }
 
-  const encoder = new TextEncoder();
   const leftBytes = encoder.encode(left);
   const rightBytes = encoder.encode(right);
-
   if (leftBytes.length !== rightBytes.length) {
     return false;
   }
@@ -197,12 +238,11 @@ function timingSafeEqual(left, right) {
   for (let index = 0; index < leftBytes.length; index += 1) {
     diff |= leftBytes[index] ^ rightBytes[index];
   }
-
   return diff === 0;
 }
 
-async function handleSendCookies(request, env) {
-  const body = await readJson(request);
+async function handleSendCookies(request, env, encryptionSecret) {
+  const body = await readEncryptedRequestBody(request, encryptionSecret);
   const id = validateId(body?.id, "Invalid ID. Only letters and numbers are allowed.");
   const normalizedUrl = normalizeUrl(body?.url);
   const cookies = normalizeCookies(body?.cookies);
@@ -215,76 +255,67 @@ async function handleSendCookies(request, env) {
     cookies,
   });
 
-  return jsonResponse(200, {
+  return await encryptedJsonResponse(200, {
     success: true,
     message: "Cookies saved successfully",
-  });
+  }, encryptionSecret);
 }
 
-async function handleReceiveCookies(cookieId, env) {
+async function handleReceiveCookies(cookieId, env, encryptionSecret) {
   const id = validateId(cookieId, "Invalid cookie ID");
-
   await ensureSchema(env.COOKIE_DB);
   const record = await getCookieRecord(env.COOKIE_DB, id);
 
   if (!record) {
-    return jsonResponse(404, {
+    return await encryptedJsonResponse(404, {
       success: false,
       message: "Cookies not found",
-    });
+    }, encryptionSecret);
   }
 
-  return jsonResponse(200, {
+  return await encryptedJsonResponse(200, {
     success: true,
     cookies: record.cookies.map((cookie) => formatCookieForResponse(cookie)),
-  });
+  }, encryptionSecret);
 }
 
-async function handleDelete(url, env) {
-  const key = validateId(
-    url.searchParams.get("key"),
-    "Invalid key. Only letters and numbers are allowed."
-  );
-
+async function handleListCookies(env, encryptionSecret) {
   await ensureSchema(env.COOKIE_DB);
-  await deleteCookieRecord(env.COOKIE_DB, key);
-
-  return jsonResponse(200, {
+  return await encryptedJsonResponse(200, {
     success: true,
-    message: "Data deleted successfully",
-  });
+    cookies: (await listCookieRecordsWithPayload(env.COOKIE_DB)).map((record) => ({
+      id: record.id,
+      url: record.url,
+      host: record.host,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+      cookies: record.cookies,
+      cookiesJson: JSON.stringify(record.cookies, null, 2),
+    })),
+  }, encryptionSecret);
 }
 
-async function handleListCookies(env) {
-  await ensureSchema(env.COOKIE_DB);
-  const cookies = await listCookieRecords(env.COOKIE_DB);
-  return jsonResponse(200, { success: true, cookies });
-}
-
-async function handleListCookiesByHost(encodedHost, env) {
+async function handleListCookiesByHost(encodedHost, env, encryptionSecret) {
   const host = normalizeHostParameter(encodedHost);
-
   await ensureSchema(env.COOKIE_DB);
-  const cookies = await listCookieRecordsByHost(env.COOKIE_DB, host);
-  return jsonResponse(200, { success: true, cookies });
+  return await encryptedJsonResponse(200, {
+    success: true,
+    cookies: await listCookieRecordsByHost(env.COOKIE_DB, host),
+  }, encryptionSecret);
 }
 
-async function handleUpdate(request, env) {
-  const body = await readJson(request);
-  const key = validateId(
-    body?.key,
-    "Invalid key. Only letters and numbers are allowed."
-  );
+async function handleUpdate(request, env, encryptionSecret) {
+  const body = await readEncryptedRequestBody(request, encryptionSecret);
+  const key = validateId(body?.key, "Invalid key. Only letters and numbers are allowed.");
   const cookies = normalizeCookies(body?.value);
 
   await ensureSchema(env.COOKIE_DB);
   const existingRecord = await getCookieRecord(env.COOKIE_DB, key);
-
   if (!existingRecord) {
-    return jsonResponse(404, {
+    return await encryptedJsonResponse(404, {
       success: false,
       message: "Cookie not found",
-    });
+    }, encryptionSecret);
   }
 
   const nextUrl =
@@ -299,10 +330,50 @@ async function handleUpdate(request, env) {
     cookies,
   });
 
-  return jsonResponse(200, {
+  return await encryptedJsonResponse(200, {
     success: true,
     message: "Cookies and URL updated successfully",
-  });
+  }, encryptionSecret);
+}
+
+async function handleDelete(url, env, encryptionSecret) {
+  const key = validateId(url.searchParams.get("key"), "Invalid key. Only letters and numbers are allowed.");
+  await ensureSchema(env.COOKIE_DB);
+  await deleteCookieRecord(env.COOKIE_DB, key);
+  return await encryptedJsonResponse(200, {
+    success: true,
+    message: "Data deleted successfully",
+  }, encryptionSecret);
+}
+
+async function handleExportAll(env, encryptionSecret) {
+  await ensureSchema(env.COOKIE_DB);
+  return await encryptedJsonResponse(200, {
+    version: ENCRYPTION_VERSION,
+    exportedAt: new Date().toISOString(),
+    records: await listCookieRecordsWithPayload(env.COOKIE_DB),
+  }, encryptionSecret);
+}
+
+async function handleImportAll(request, env, encryptionSecret) {
+  const body = await readEncryptedRequestBody(request, encryptionSecret);
+  if (!Array.isArray(body?.records)) {
+    throw new HttpError(400, "Invalid import payload", {
+      success: false,
+      message: "Invalid import payload",
+    });
+  }
+
+  const records = body.records.map((record) => normalizeImportRecord(record));
+  await ensureSchema(env.COOKIE_DB);
+  await upsertCookieRecords(env.COOKIE_DB, records);
+
+  return await encryptedJsonResponse(200, {
+    success: true,
+    message: "Import completed",
+    total: body.records.length,
+    imported: records.length,
+  }, encryptionSecret);
 }
 
 async function ensureSchema(database) {
@@ -311,37 +382,36 @@ async function ensureSchema(database) {
 
 async function upsertCookieRecord(database, record) {
   const now = new Date().toISOString();
+  await database.prepare(
+    `INSERT INTO cookie_records (id, url, host, cookies_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       url = excluded.url,
+       host = excluded.host,
+       cookies_json = excluded.cookies_json,
+       updated_at = excluded.updated_at`
+  ).bind(
+    record.id,
+    record.url,
+    record.host,
+    JSON.stringify(record.cookies),
+    record.createdAt || now,
+    record.updatedAt || now
+  ).run();
+}
 
-  await database
-    .prepare(
-      `INSERT INTO cookie_records (id, url, host, cookies_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         url = excluded.url,
-         host = excluded.host,
-         cookies_json = excluded.cookies_json,
-         updated_at = excluded.updated_at`
-    )
-    .bind(
-      record.id,
-      record.url,
-      record.host,
-      JSON.stringify(record.cookies),
-      now,
-      now
-    )
-    .run();
+async function upsertCookieRecords(database, records) {
+  for (const record of records) {
+    await upsertCookieRecord(database, record);
+  }
 }
 
 async function getCookieRecord(database, id) {
-  const row = await database
-    .prepare(
-      `SELECT id, url, host, cookies_json, created_at, updated_at
-       FROM cookie_records
-       WHERE id = ?`
-    )
-    .bind(id)
-    .first();
+  const row = await database.prepare(
+    `SELECT id, url, host, cookies_json, created_at, updated_at
+     FROM cookie_records
+     WHERE id = ?`
+  ).bind(id).first();
 
   if (!row) {
     return null;
@@ -358,39 +428,63 @@ async function getCookieRecord(database, id) {
 }
 
 async function listCookieRecords(database) {
-  const { results } = await database
-    .prepare(
-      `SELECT id, url
-       FROM cookie_records
-       ORDER BY updated_at DESC`
-    )
-    .all();
+  const { results } = await database.prepare(
+    `SELECT id, url FROM cookie_records ORDER BY updated_at DESC`
+  ).all();
 
-  return results.map((row) => ({
-    id: row.id,
-    url: row.url,
-  }));
+  return results.map((row) => ({ id: row.id, url: row.url }));
 }
 
 async function listCookieRecordsByHost(database, host) {
-  const { results } = await database
-    .prepare(
-      `SELECT id, url
-       FROM cookie_records
-       WHERE host = ?
-       ORDER BY updated_at DESC`
-    )
-    .bind(host)
-    .all();
+  const { results } = await database.prepare(
+    `SELECT id, url FROM cookie_records WHERE host = ? ORDER BY updated_at DESC`
+  ).bind(host).all();
+
+  return results.map((row) => ({ id: row.id, url: row.url }));
+}
+
+async function listCookieRecordsWithPayload(database) {
+  const { results } = await database.prepare(
+    `SELECT id, url, host, cookies_json, created_at, updated_at
+     FROM cookie_records
+     ORDER BY updated_at DESC`
+  ).all();
 
   return results.map((row) => ({
     id: row.id,
     url: row.url,
+    host: row.host,
+    cookies: parseStoredCookies(row.cookies_json, row.id),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }));
 }
 
 async function deleteCookieRecord(database, id) {
   await database.prepare("DELETE FROM cookie_records WHERE id = ?").bind(id).run();
+}
+
+function normalizeImportRecord(record) {
+  const id = validateId(record?.id, "Invalid ID. Only letters and numbers are allowed.");
+  const url = normalizeUrl(record?.url);
+  const cookies = normalizeCookies(record?.cookies);
+  return {
+    id,
+    url,
+    host: extractHost(url),
+    cookies,
+    createdAt: normalizeTimestamp(record?.createdAt),
+    updatedAt: normalizeTimestamp(record?.updatedAt),
+  };
+}
+
+function normalizeTimestamp(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const timestamp = new Date(value);
+  return Number.isNaN(timestamp.getTime()) ? null : timestamp.toISOString();
 }
 
 function parseStoredCookies(rawCookies, recordId) {
@@ -405,7 +499,6 @@ function parseStoredCookies(rawCookies, recordId) {
       recordId,
       error: error instanceof Error ? error.message : String(error),
     });
-
     throw new HttpError(500, "Stored cookie data is invalid", {
       success: false,
       message: "Stored cookie data is invalid",
@@ -413,49 +506,24 @@ function parseStoredCookies(rawCookies, recordId) {
   }
 }
 
-async function readJson(request) {
-  try {
-    return await request.json();
-  } catch {
-    throw new HttpError(400, "Invalid JSON body", {
-      success: false,
-      message: "Invalid JSON body",
-    });
-  }
-}
-
 function validateId(value, message) {
   if (typeof value !== "string" || !ID_PATTERN.test(value)) {
-    throw new HttpError(400, message, {
-      success: false,
-      message,
-    });
+    throw new HttpError(400, message, { success: false, message });
   }
-
   return value;
 }
 
 function normalizeUrl(value) {
   if (typeof value !== "string" || !value.trim()) {
-    throw new HttpError(400, "Invalid URL", {
-      success: false,
-      message: "Invalid URL",
-    });
+    throw new HttpError(400, "Invalid URL", { success: false, message: "Invalid URL" });
   }
 
   const trimmedValue = value.trim();
-  const candidate = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmedValue)
-    ? trimmedValue
-    : `https://${trimmedValue}`;
-
+  const candidate = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmedValue) ? trimmedValue : `https://${trimmedValue}`;
   try {
-    const parsedUrl = new URL(candidate);
-    return parsedUrl.toString();
+    return new URL(candidate).toString();
   } catch {
-    throw new HttpError(400, "Invalid URL", {
-      success: false,
-      message: "Invalid URL",
-    });
+    throw new HttpError(400, "Invalid URL", { success: false, message: "Invalid URL" });
   }
 }
 
@@ -465,78 +533,45 @@ function extractHost(url) {
 
 function normalizeHostParameter(value) {
   if (typeof value !== "string" || !value) {
-    throw new HttpError(400, "Invalid host", {
-      success: false,
-      message: "Invalid host",
-    });
+    throw new HttpError(400, "Invalid host", { success: false, message: "Invalid host" });
   }
 
-  let decodedValue = "";
+  let decodedValue;
   try {
     decodedValue = decodeURIComponent(value);
   } catch {
-    throw new HttpError(400, "Invalid host", {
-      success: false,
-      message: "Invalid host",
-    });
+    throw new HttpError(400, "Invalid host", { success: false, message: "Invalid host" });
   }
 
   const normalizedHost = decodedValue.trim().toLowerCase();
   if (!normalizedHost) {
-    throw new HttpError(400, "Invalid host", {
-      success: false,
-      message: "Invalid host",
-    });
+    throw new HttpError(400, "Invalid host", { success: false, message: "Invalid host" });
   }
-
   return normalizedHost;
 }
 
 function normalizeCookies(value) {
   if (!Array.isArray(value)) {
-    throw new HttpError(400, "Invalid cookie format", {
-      success: false,
-      message: "Invalid cookie format",
-    });
+    throw new HttpError(400, "Invalid cookie format", { success: false, message: "Invalid cookie format" });
   }
-
   return value.map((cookie) => normalizeCookie(cookie));
 }
 
 function normalizeCookie(cookie) {
   if (!cookie || typeof cookie !== "object") {
-    throw new HttpError(400, "Invalid cookie format", {
-      success: false,
-      message: "Invalid cookie format",
-    });
+    throw invalidCookieError();
   }
-
   if (typeof cookie.name !== "string" || !cookie.name) {
-    throw new HttpError(400, "Invalid cookie format", {
-      success: false,
-      message: "Invalid cookie format",
-    });
+    throw invalidCookieError();
   }
-
   if (typeof cookie.value !== "string") {
-    throw new HttpError(400, "Invalid cookie format", {
-      success: false,
-      message: "Invalid cookie format",
-    });
+    throw invalidCookieError();
   }
-
   if (typeof cookie.domain !== "string" || !cookie.domain.trim()) {
-    throw new HttpError(400, "Invalid cookie format", {
-      success: false,
-      message: "Invalid cookie format",
-    });
+    throw invalidCookieError();
   }
-
   if (typeof cookie.httpOnly !== "boolean" || typeof cookie.secure !== "boolean") {
-    throw new HttpError(400, "Invalid cookie format", {
-      success: false,
-      message: "Invalid cookie format",
-    });
+    throw invalidCookieError();
   }
 
   const sameSite = normalizeSameSite(cookie.sameSite);
@@ -547,17 +582,13 @@ function normalizeCookie(cookie) {
       : Number(cookie.expirationDate);
 
   if (expirationDate !== undefined && !Number.isFinite(expirationDate)) {
-    throw new HttpError(400, "Invalid cookie format", {
-      success: false,
-      message: "Invalid cookie format",
-    });
+    throw invalidCookieError();
   }
 
   return {
     domain: cookie.domain.trim().replace(/^\./, "").toLowerCase(),
     expirationDate,
-    hostOnly:
-      typeof cookie.hostOnly === "boolean" ? cookie.hostOnly : !hasLeadingDot,
+    hostOnly: typeof cookie.hostOnly === "boolean" ? cookie.hostOnly : !hasLeadingDot,
     httpOnly: cookie.httpOnly,
     name: cookie.name,
     path: typeof cookie.path === "string" && cookie.path ? cookie.path : "/",
@@ -571,21 +602,21 @@ function normalizeCookie(cookie) {
 
 function normalizeSameSite(value) {
   if (typeof value !== "string" || !value.trim()) {
-    throw new HttpError(400, "Invalid cookie format", {
-      success: false,
-      message: "Invalid cookie format",
-    });
+    throw invalidCookieError();
   }
 
   const normalizedValue = value.trim().toLowerCase();
   if (!SAME_SITE_VALUES.has(normalizedValue)) {
-    throw new HttpError(400, "Invalid cookie format", {
-      success: false,
-      message: "Invalid cookie format",
-    });
+    throw invalidCookieError();
   }
-
   return normalizedValue;
+}
+
+function invalidCookieError() {
+  return new HttpError(400, "Invalid cookie format", {
+    success: false,
+    message: "Invalid cookie format",
+  });
 }
 
 function formatCookieForResponse(cookie) {
@@ -605,353 +636,382 @@ function formatCookieForResponse(cookie) {
   if (cookie.expirationDate !== undefined) {
     responseCookie.expirationDate = cookie.expirationDate;
   }
-
   return responseCookie;
+}
+
+async function readEncryptedRequestBody(request, secret) {
+  let rawText;
+  try {
+    rawText = await request.text();
+  } catch {
+    throw new HttpError(400, "Invalid encrypted payload", {
+      success: false,
+      message: "Invalid encrypted payload",
+    });
+  }
+
+  if (!rawText) {
+    throw new HttpError(400, "Invalid encrypted payload", {
+      success: false,
+      message: "Invalid encrypted payload",
+    });
+  }
+
+  let envelope;
+  try {
+    envelope = JSON.parse(rawText);
+  } catch {
+    throw new HttpError(400, "Invalid encrypted payload", {
+      success: false,
+      message: "Invalid encrypted payload",
+    });
+  }
+
+  return await decryptPayload(secret, envelope);
+}
+
+async function encryptPayload(secret, data) {
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const key = await deriveAesKey(secret, salt);
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      key,
+      encoder.encode(JSON.stringify(data))
+    )
+  );
+
+  return {
+    version: ENCRYPTION_VERSION,
+    salt: base64UrlEncode(salt),
+    iv: base64UrlEncode(iv),
+    payload: base64UrlEncode(ciphertext),
+  };
+}
+
+async function decryptPayload(secret, envelope) {
+  if (!isEncryptedEnvelope(envelope)) {
+    throw new HttpError(400, "Invalid encrypted payload", {
+      success: false,
+      message: "Invalid encrypted payload",
+    });
+  }
+
+  try {
+    const salt = base64UrlDecode(envelope.salt);
+    const iv = base64UrlDecode(envelope.iv);
+    const payload = base64UrlDecode(envelope.payload);
+    const key = await deriveAesKey(secret, salt);
+    const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, payload);
+    return JSON.parse(decoder.decode(plaintext));
+  } catch {
+    throw new HttpError(400, "Transport secret mismatch or corrupted payload", {
+      success: false,
+      message: "Transport secret mismatch or corrupted payload",
+    });
+  }
+}
+
+function isEncryptedEnvelope(value) {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    value.version === ENCRYPTION_VERSION &&
+    typeof value.salt === "string" &&
+    typeof value.iv === "string" &&
+    typeof value.payload === "string"
+  );
+}
+
+async function deriveAesKey(secret, salt) {
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+
+  return await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt,
+      iterations: PBKDF2_ITERATIONS,
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: AES_KEY_LENGTH },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+function base64UrlEncode(bytes) {
+  let binary = "";
+  for (const value of bytes) {
+    binary += String.fromCharCode(value);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function base64UrlDecode(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+async function encryptedJsonResponse(status, body, secret) {
+  return jsonResponse(status, await encryptPayload(secret, body));
+}
+
+async function handleRequestError(error, routeSecret, useEncryptedResponse) {
+  if (!(error instanceof HttpError)) {
+    console.error("Unhandled worker error", error);
+    error = new HttpError(500, "Internal Server Error", {
+      success: false,
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+
+  if (!useEncryptedResponse || error.plain) {
+    return jsonResponse(error.status, error.payload || { success: false, message: error.message });
+  }
+
+  return await encryptedJsonResponse(
+    error.status,
+    error.payload || { success: false, message: error.message },
+    routeSecret
+  );
+}
+
+function handleTopLevelError(error) {
+  if (error instanceof HttpError) {
+    return jsonResponse(error.status, error.payload || { success: false, message: error.message });
+  }
+
+  console.error("Unhandled worker error", error);
+  return jsonResponse(500, {
+    success: false,
+    error: error instanceof Error ? error.message : "Internal Server Error",
+  });
 }
 
 function handleAdminPage(basePath, runtimeConfig) {
   const devHint = runtimeConfig.isLocalDevFallback
-    ? '<div class="status" style="margin-top: 0; margin-bottom: 16px;">本地 dev 模式正在使用默认凭据：PATH_SECRET = <code>dev</code>，管理员密码 = <code>dev-password</code>。如需自定义，请创建 <code>.dev.vars</code>。</div>'
+    ? "<p><small>localhost dev 默认值：<code>PATH_SECRET=dev</code>、<code>ADMIN_PASSWORD=dev-password</code>、<code>TRANSPORT_SECRET=dev-transport-secret</code>。</small></p>"
     : "";
 
-  return htmlResponse(`<!DOCTYPE html>
+  return htmlResponse(`<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Cookie 管理器</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --bg: linear-gradient(135deg, #f3f7ff 0%, #eef8f3 100%);
-        --card: rgba(255, 255, 255, 0.88);
-        --border: rgba(15, 23, 42, 0.08);
-        --text: #122033;
-        --muted: #526275;
-        --primary: #0b63ce;
-        --primary-dark: #0a56b2;
-        --danger: #c93c37;
-        --danger-dark: #a92e2a;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: "Segoe UI", sans-serif;
-        background: var(--bg);
-        color: var(--text);
-      }
-
-      .page {
-        width: min(1080px, calc(100vw - 32px));
-        margin: 24px auto;
-        padding: 24px;
-        border: 1px solid var(--border);
-        border-radius: 24px;
-        background: var(--card);
-        backdrop-filter: blur(18px);
-        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
-      }
-
-      .hero {
-        display: grid;
-        gap: 12px;
-        margin-bottom: 24px;
-      }
-
-      .hero h1 {
-        margin: 0;
-        font-size: clamp(30px, 4vw, 42px);
-      }
-
-      .hero p {
-        margin: 0;
-        color: var(--muted);
-      }
-
-      .grid {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      }
-
-      .card {
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 18px;
-        background: rgba(255, 255, 255, 0.8);
-      }
-
-      .card h2 {
-        margin-top: 0;
-        margin-bottom: 12px;
-        font-size: 20px;
-      }
-
-      label {
-        display: block;
-        font-size: 14px;
-        color: var(--muted);
-        margin-bottom: 8px;
-      }
-
-      input,
-      textarea,
-      button {
-        font: inherit;
-      }
-
-      input,
-      textarea {
-        width: 100%;
-        border: 1px solid rgba(15, 23, 42, 0.12);
-        border-radius: 12px;
-        padding: 12px 14px;
-        background: rgba(255, 255, 255, 0.92);
-        color: var(--text);
-      }
-
-      textarea {
-        min-height: 120px;
-        resize: vertical;
-      }
-
-      button {
-        border: 0;
-        border-radius: 12px;
-        padding: 12px 16px;
-        cursor: pointer;
-        font-weight: 600;
-      }
-
-      .primary {
-        background: var(--primary);
-        color: #fff;
-      }
-
-      .primary:hover {
-        background: var(--primary-dark);
-      }
-
-      .danger {
-        background: var(--danger);
-        color: #fff;
-      }
-
-      .danger:hover {
-        background: var(--danger-dark);
-      }
-
-      .ghost {
-        background: rgba(11, 99, 206, 0.08);
-        color: var(--primary);
-      }
-
-      .row {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-      }
-
-      .row > * {
-        flex: 1;
-      }
-
-      .hidden {
-        display: none;
-      }
-
-      .toolbar {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        align-items: center;
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      th,
-      td {
-        padding: 12px;
-        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-        text-align: left;
-        vertical-align: top;
-      }
-
-      th {
-        color: var(--muted);
-        font-weight: 600;
-      }
-
-      .muted {
-        color: var(--muted);
-        font-size: 14px;
-      }
-
-      .status {
-        min-height: 20px;
-        color: var(--muted);
-        margin-top: 12px;
-      }
-
-      .table-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      @media (max-width: 640px) {
-        .page {
-          width: calc(100vw - 20px);
-          margin: 10px auto;
-          padding: 16px;
-        }
-
-        .row {
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        th:nth-child(2),
-        td:nth-child(2) {
-          display: none;
-        }
-      }
-    </style>
+    <title>Cookie Share Admin</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    >
   </head>
   <body>
-    <main class="page">
-      <section class="hero">
-        <h1>Cookie 管理器</h1>
-        <p>管理 Cloudflare Worker 中保存的 Cookie 数据。页面本身可直接打开，真正的增删改查仍然需要管理员密码。</p>
-      </section>
-      ${devHint}
+    <main class="container">
+      <header>
+        <h1>Cookie Share 管理页</h1>
+        <p>管理页 HTML 明文返回，所有 <code>/admin/*</code> JSON API 都使用 <code>ADMIN_PASSWORD</code> 做鉴权与加密。</p>
+        ${devHint}
+      </header>
 
-      <section class="card">
-        <h2>管理员密码</h2>
-        <div class="row">
-          <div>
-            <label for="adminPassword">X-Admin-Password</label>
-            <input id="adminPassword" type="password" placeholder="输入管理员密码">
-          </div>
-          <div>
-            <label>&nbsp;</label>
-            <button id="savePassword" type="button" class="primary">保存并加载</button>
-          </div>
+      <section>
+        <h2>凭据</h2>
+        <label>
+          管理员密码
+          <input id="adminPassword" type="password" placeholder="X-Admin-Password">
+        </label>
+        <button id="saveCredentials" type="button">保存并加载</button>
+        <p id="status" role="status"></p>
+      </section>
+
+      <section id="panels" hidden>
+        <div class="grid">
+          <article>
+            <h3>创建</h3>
+            <form id="createForm">
+              <label>
+                ID
+                <input id="createId" required>
+              </label>
+              <label>
+                URL
+                <input id="createUrl" required>
+              </label>
+              <label>
+                Cookies JSON
+                <textarea id="createCookies" required></textarea>
+              </label>
+              <button type="submit">创建</button>
+            </form>
+          </article>
+
+          <article>
+            <h3>更新</h3>
+            <form id="updateForm">
+              <label>
+                ID
+                <input id="updateId" required>
+              </label>
+              <label>
+                URL
+                <input id="updateUrl" placeholder="留空则保留原值">
+              </label>
+              <label>
+                Cookies JSON
+                <textarea id="updateCookies" required></textarea>
+              </label>
+              <button type="submit">更新</button>
+            </form>
+          </article>
+
+          <article>
+            <h3>删除</h3>
+            <form id="deleteForm">
+              <label>
+                ID
+                <input id="deleteId" required>
+              </label>
+              <button type="submit" class="contrast">删除</button>
+            </form>
+          </article>
         </div>
-        <div id="status" class="status"></div>
+
+        <article>
+          <h3>导入 / 导出</h3>
+          <div class="grid">
+            <button id="exportAll" type="button" class="secondary">导出全部数据</button>
+            <input id="importFile" type="file" accept=".json,application/json">
+            <button id="importAll" type="button">导入全部数据</button>
+          </div>
+          <p><small>导出文件为加密 JSON；导入策略为按 ID 覆盖合并，不会清空现有数据。</small></p>
+        </article>
+
+        <article>
+          <div class="grid">
+            <div>
+              <h3>已存储记录</h3>
+              <p><small>按最近更新时间倒序排列。</small></p>
+            </div>
+            <div>
+              <button id="refreshList" type="button" class="secondary">刷新列表</button>
+            </div>
+          </div>
+          <figure>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">URL</th>
+                  <th scope="col">Cookie 原文</th>
+                  <th scope="col">操作</th>
+                </tr>
+              </thead>
+              <tbody id="cookieTableBody"></tbody>
+            </table>
+          </figure>
+        </article>
       </section>
 
-      <div id="managementPanels" class="grid hidden">
-        <section class="card">
-          <h2>创建 Cookie</h2>
-          <form id="createForm">
-            <label for="createId">ID</label>
-            <input id="createId" type="text" required>
-            <label for="createUrl">URL</label>
-            <input id="createUrl" type="url" required>
-            <label for="createCookies">Cookies (JSON 数组)</label>
-            <textarea id="createCookies" required></textarea>
-            <button type="submit" class="primary">创建</button>
-          </form>
-        </section>
-
-        <section class="card">
-          <h2>更新 Cookie</h2>
-          <form id="updateForm">
-            <label for="updateId">ID</label>
-            <input id="updateId" type="text" required>
-            <label for="updateUrl">URL (留空则保持原值)</label>
-            <input id="updateUrl" type="text">
-            <label for="updateCookies">Cookies (JSON 数组)</label>
-            <textarea id="updateCookies" required></textarea>
-            <button type="submit" class="primary">更新</button>
-          </form>
-        </section>
-
-        <section class="card">
-          <h2>删除 Cookie</h2>
-          <form id="deleteForm">
-            <label for="deleteId">ID</label>
-            <input id="deleteId" type="text" required>
-            <button type="submit" class="danger">删除</button>
-          </form>
-        </section>
-
-        <section id="cookieListSection" class="card" style="grid-column: 1 / -1;">
-          <div class="toolbar">
-            <div>
-              <h2 style="margin: 0;">已存储的 Cookies</h2>
-              <div class="muted">列表按最近更新时间倒序排列。</div>
-            </div>
-            <button id="refreshList" type="button" class="ghost">刷新列表</button>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>URL</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody id="cookieTableBody"></tbody>
-          </table>
-        </section>
-      </div>
+      <dialog id="cookieRawDialog">
+        <article style="width:min(1200px, 92vw); max-width:1200px;">
+          <header>
+            <button id="closeRawDialog" aria-label="Close" rel="prev"></button>
+            <h3 id="cookieRawTitle">Cookie 原文</h3>
+          </header>
+          <p>
+            <button id="copyRawDialog" type="button" class="secondary">复制原文</button>
+          </p>
+          <pre id="cookieRawContent"></pre>
+        </article>
+      </dialog>
     </main>
 
     <script>
       const API_BASE = ${JSON.stringify(basePath)};
       const PASSWORD_KEY = "cookie-share-admin-password";
+      const VERSION = ${JSON.stringify(ENCRYPTION_VERSION)};
+      const ITERATIONS = ${JSON.stringify(PBKDF2_ITERATIONS)};
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
       let adminPassword = "";
+      let rawDialog;
+      let rawTitle;
+      let rawContent;
 
-      document.addEventListener("DOMContentLoaded", function () {
+      document.addEventListener("DOMContentLoaded", () => {
         adminPassword = localStorage.getItem(PASSWORD_KEY) || "";
-        if (adminPassword) {
-          document.getElementById("adminPassword").value = adminPassword;
-          showPanels();
-          loadCookies().catch(showError);
-        }
-
-        document.getElementById("savePassword").addEventListener("click", savePassword);
+        rawDialog = document.getElementById("cookieRawDialog");
+        rawTitle = document.getElementById("cookieRawTitle");
+        rawContent = document.getElementById("cookieRawContent");
+        document.getElementById("adminPassword").value = adminPassword;
+        document.getElementById("saveCredentials").addEventListener("click", saveCredentials);
+        document.getElementById("closeRawDialog").addEventListener("click", () => {
+          rawDialog.close();
+        });
+        document.getElementById("copyRawDialog").addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(rawContent.textContent || "");
+            setStatus("原文已复制。");
+          } catch {
+            setStatus("复制失败，请手动复制。", true);
+          }
+        });
         document.getElementById("createForm").addEventListener("submit", createCookie);
         document.getElementById("updateForm").addEventListener("submit", updateCookie);
         document.getElementById("deleteForm").addEventListener("submit", deleteCookie);
-        document.getElementById("refreshList").addEventListener("click", function () {
+        document.getElementById("refreshList").addEventListener("click", () => loadCookies().catch(showError));
+        document.getElementById("exportAll").addEventListener("click", () => exportAll().catch(showError));
+        document.getElementById("importAll").addEventListener("click", () => importAll().catch(showError));
+
+        if (adminPassword) {
+          showPanels();
           loadCookies().catch(showError);
-        });
+        }
       });
 
+      function setStatus(message, isError = false) {
+        const node = document.getElementById("status");
+        node.textContent = message || "";
+        node.dataset.state = isError ? "error" : "ok";
+      }
+
+      function showError(error) {
+        setStatus(error && error.message ? error.message : "请求失败", true);
+      }
+
       function showPanels() {
-        document.getElementById("managementPanels").classList.remove("hidden");
+        document.getElementById("panels").hidden = false;
       }
 
-      function setStatus(message, isError) {
-        const status = document.getElementById("status");
-        status.textContent = message || "";
-        status.style.color = isError ? "#c93c37" : "#526275";
+      function ensureCredentials() {
+        if (!adminPassword) {
+          throw new Error("请先输入管理员密码。");
+        }
       }
 
-      function savePassword() {
+      function saveCredentials() {
         const password = document.getElementById("adminPassword").value.trim();
         if (!password) {
-          setStatus("请输入有效的管理员密码。", true);
+          setStatus("管理员密码不能为空。", true);
           return;
         }
 
         adminPassword = password;
         localStorage.setItem(PASSWORD_KEY, password);
         showPanels();
-        setStatus("管理员密码已保存，正在加载列表。", false);
+        setStatus("凭据已保存，正在加载列表。");
         loadCookies().catch(showError);
       }
 
@@ -962,168 +1022,329 @@ function handleAdminPage(basePath, runtimeConfig) {
         };
       }
 
-      async function requestJson(path, options) {
-        const response = await fetch(API_BASE + path, options || {});
-        const responseText = await response.text();
-        let payload = {};
+      function base64UrlEncode(bytes) {
+        let binary = "";
+        for (const value of bytes) {
+          binary += String.fromCharCode(value);
+        }
+        return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+      }
 
-        if (responseText) {
-          try {
-            payload = JSON.parse(responseText);
-          } catch {
-            payload = { message: responseText };
-          }
+      function base64UrlDecode(value) {
+        const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+        const binary = atob(padded);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+          bytes[index] = binary.charCodeAt(index);
+        }
+        return bytes;
+      }
+
+      function isEnvelope(value) {
+        return Boolean(
+          value &&
+          typeof value === "object" &&
+          value.version === VERSION &&
+          typeof value.salt === "string" &&
+          typeof value.iv === "string" &&
+          typeof value.payload === "string"
+        );
+      }
+
+      async function deriveKey(secret, salt) {
+        const material = await crypto.subtle.importKey(
+          "raw",
+          encoder.encode(secret),
+          "PBKDF2",
+          false,
+          ["deriveKey"]
+        );
+
+        return await crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            hash: "SHA-256",
+            salt,
+            iterations: ITERATIONS,
+          },
+          material,
+          {
+            name: "AES-GCM",
+            length: 256,
+          },
+          false,
+          ["encrypt", "decrypt"]
+        );
+      }
+
+      async function encryptClientPayload(secret, data) {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveKey(secret, salt);
+        const payload = new Uint8Array(
+          await crypto.subtle.encrypt(
+            { name: "AES-GCM", iv },
+            key,
+            encoder.encode(JSON.stringify(data))
+          )
+        );
+
+        return {
+          version: VERSION,
+          salt: base64UrlEncode(salt),
+          iv: base64UrlEncode(iv),
+          payload: base64UrlEncode(payload),
+        };
+      }
+
+      async function decryptClientPayload(secret, envelope) {
+        if (!isEnvelope(envelope)) {
+          throw new Error("Invalid encrypted payload");
+        }
+
+        try {
+          const key = await deriveKey(secret, base64UrlDecode(envelope.salt));
+          const plaintext = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: base64UrlDecode(envelope.iv) },
+            key,
+            base64UrlDecode(envelope.payload)
+          );
+          return JSON.parse(decoder.decode(plaintext));
+        } catch {
+          throw new Error("Transport secret mismatch or corrupted payload");
+        }
+      }
+
+      async function requestEncryptedJson(path, options = {}) {
+        ensureCredentials();
+
+        const init = {
+          method: options.method || "GET",
+          headers: adminHeaders(),
+        };
+
+        if (options.body !== undefined) {
+          init.body = JSON.stringify(await encryptClientPayload(adminPassword, options.body));
+        }
+
+        const response = await fetch(API_BASE + path, init);
+        const responseText = await response.text();
+        let payload;
+
+        try {
+          payload = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          throw new Error(responseText || "响应不是合法 JSON");
         }
 
         if (!response.ok) {
+          if (isEnvelope(payload)) {
+            const decryptedError = await decryptClientPayload(adminPassword, payload);
+            throw new Error(decryptedError.message || decryptedError.error || "请求失败");
+          }
           throw new Error(payload.message || payload.error || "请求失败");
         }
 
-        return payload;
+        return await decryptClientPayload(adminPassword, payload);
+      }
+
+      function parseCookieJson(id) {
+        try {
+          return JSON.parse(document.getElementById(id).value);
+        } catch {
+          throw new Error("Cookies 必须是合法 JSON 数组。");
+        }
+      }
+
+      function showRawCookie(id, cookiesJson) {
+        rawTitle.textContent = "Cookie 原文: " + id;
+        rawContent.textContent = cookiesJson || "[]";
+        rawDialog.showModal();
       }
 
       async function loadCookies() {
-        if (!adminPassword) {
-          setStatus("请先输入管理员密码。", true);
+        const data = await requestEncryptedJson("/admin/list-cookies");
+        const tbody = document.getElementById("cookieTableBody");
+        tbody.replaceChildren();
+        const rows = Array.isArray(data.cookies) ? data.cookies : [];
+
+        if (rows.length === 0) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 4;
+          cell.textContent = "暂无数据";
+          row.appendChild(cell);
+          tbody.appendChild(row);
+          setStatus("列表已刷新。");
           return;
         }
 
-        const tableBody = document.getElementById("cookieTableBody");
-        tableBody.replaceChildren();
+        for (const cookie of rows) {
+          const row = document.createElement("tr");
+          const idCell = document.createElement("td");
+          const urlCell = document.createElement("td");
+          const rawCell = document.createElement("td");
+          const actionCell = document.createElement("td");
+          const rawButton = document.createElement("button");
+          const button = document.createElement("button");
 
-        try {
-          const data = await requestJson("/admin/list-cookies", {
-            method: "GET",
-            headers: adminHeaders(),
+          idCell.textContent = cookie.id;
+          urlCell.textContent = cookie.url;
+          rawButton.type = "button";
+          rawButton.className = "secondary";
+          rawButton.textContent = "查看原文";
+          rawButton.addEventListener("click", () => {
+            showRawCookie(cookie.id, cookie.cookiesJson);
           });
-
-          if (!Array.isArray(data.cookies) || data.cookies.length === 0) {
-            const row = document.createElement("tr");
-            const cell = document.createElement("td");
-            cell.colSpan = 3;
-            cell.textContent = "暂无数据";
-            row.appendChild(cell);
-            tableBody.appendChild(row);
-            setStatus("列表已刷新。", false);
-            return;
-          }
-
-          data.cookies.forEach(function (cookie) {
-            const row = document.createElement("tr");
-
-            const idCell = document.createElement("td");
-            idCell.textContent = cookie.id;
-            row.appendChild(idCell);
-
-            const urlCell = document.createElement("td");
-            urlCell.textContent = cookie.url;
-            row.appendChild(urlCell);
-
-            const actionCell = document.createElement("td");
-            const actionWrap = document.createElement("div");
-            actionWrap.className = "table-actions";
-
-            const deleteButton = document.createElement("button");
-            deleteButton.type = "button";
-            deleteButton.className = "danger";
-            deleteButton.textContent = "删除";
-            deleteButton.addEventListener("click", function () {
-              deleteCookieById(cookie.id).catch(showError);
-            });
-
-            actionWrap.appendChild(deleteButton);
-            actionCell.appendChild(actionWrap);
-            row.appendChild(actionCell);
-
-            tableBody.appendChild(row);
-          });
-
-          setStatus("列表已刷新。", false);
-        } catch (error) {
-          showError(error);
-          throw error;
+          rawCell.appendChild(rawButton);
+          button.type = "button";
+          button.className = "contrast";
+          button.textContent = "删除";
+          button.addEventListener("click", () => deleteCookieById(cookie.id).catch(showError));
+          actionCell.appendChild(button);
+          row.append(idCell, urlCell, rawCell, actionCell);
+          tbody.appendChild(row);
         }
+
+        setStatus("列表已刷新。");
       }
 
       async function createCookie(event) {
         event.preventDefault();
-
-        const id = document.getElementById("createId").value.trim();
-        const url = document.getElementById("createUrl").value.trim();
-        let cookies;
-
         try {
-          cookies = JSON.parse(document.getElementById("createCookies").value);
-        } catch {
-          setStatus("Cookies 必须是有效的 JSON 数组。", true);
-          return;
+          const result = await requestEncryptedJson("/admin/create", {
+            method: "POST",
+            body: {
+              id: document.getElementById("createId").value.trim(),
+              url: document.getElementById("createUrl").value.trim(),
+              cookies: parseCookieJson("createCookies"),
+            },
+          });
+          document.getElementById("createForm").reset();
+          setStatus("创建成功。");
+          await loadCookies();
+        } catch (error) {
+          showError(error);
         }
-
-        const result = await requestJson("/send-cookies", {
-          method: "POST",
-          headers: adminHeaders(),
-          body: JSON.stringify({ id: id, url: url, cookies: cookies }),
-        });
-
-        document.getElementById("createForm").reset();
-        setStatus(result.message || "创建成功。", false);
-        await loadCookies();
       }
 
       async function updateCookie(event) {
         event.preventDefault();
-
-        const key = document.getElementById("updateId").value.trim();
-        const url = document.getElementById("updateUrl").value.trim();
-        let value;
-
         try {
-          value = JSON.parse(document.getElementById("updateCookies").value);
-        } catch {
-          setStatus("Cookies 必须是有效的 JSON 数组。", true);
-          return;
+          const result = await requestEncryptedJson("/admin/update", {
+            method: "PUT",
+            body: {
+              key: document.getElementById("updateId").value.trim(),
+              url: document.getElementById("updateUrl").value.trim(),
+              value: parseCookieJson("updateCookies"),
+            },
+          });
+          document.getElementById("updateForm").reset();
+          setStatus("更新成功。");
+          await loadCookies();
+        } catch (error) {
+          showError(error);
         }
-
-        const result = await requestJson("/admin/update", {
-          method: "PUT",
-          headers: adminHeaders(),
-          body: JSON.stringify({ key: key, value: value, url: url }),
-        });
-
-        document.getElementById("updateForm").reset();
-        setStatus(result.message || "更新成功。", false);
-        await loadCookies();
       }
 
       async function deleteCookie(event) {
         event.preventDefault();
-        const key = document.getElementById("deleteId").value.trim();
-        await deleteCookieById(key);
+        await deleteCookieById(document.getElementById("deleteId").value.trim());
         document.getElementById("deleteForm").reset();
       }
 
       async function deleteCookieById(id) {
         if (!id) {
-          setStatus("请输入要删除的 ID。", true);
+          throw new Error("请输入要删除的 ID。");
+        }
+        if (!window.confirm("确定删除 " + id + " 吗？")) {
           return;
         }
 
-        if (!window.confirm("确定要删除 ID 为 " + id + " 的 Cookie 吗？")) {
-          return;
-        }
-
-        const result = await requestJson("/admin/delete?key=" + encodeURIComponent(id), {
+        const result = await requestEncryptedJson("/admin/delete?key=" + encodeURIComponent(id), {
           method: "DELETE",
-          headers: adminHeaders(),
         });
-
-        setStatus(result.message || "删除成功。", false);
+        setStatus("删除成功。");
         await loadCookies();
       }
 
-      function showError(error) {
-        const message = error && error.message ? error.message : "请求失败";
-        setStatus(message, true);
+      function exportFilename() {
+        const now = new Date();
+        const pad = (value) => String(value).padStart(2, "0");
+        return "cookie-share-export-" +
+          now.getFullYear() +
+          pad(now.getMonth() + 1) +
+          pad(now.getDate()) +
+          "-" +
+          pad(now.getHours()) +
+          pad(now.getMinutes()) +
+          pad(now.getSeconds()) +
+          ".json";
+      }
+
+      async function exportAll() {
+        ensureCredentials();
+        const response = await fetch(API_BASE + "/admin/export-all", {
+          method: "GET",
+          headers: adminHeaders(),
+        });
+        const responseText = await response.text();
+        let payload;
+
+        try {
+          payload = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          throw new Error("导出响应格式无效");
+        }
+
+        if (!response.ok) {
+          if (isEnvelope(payload)) {
+            const decryptedError = await decryptClientPayload(adminPassword, payload);
+            throw new Error(decryptedError.message || decryptedError.error || "导出失败");
+          }
+          throw new Error(payload.message || payload.error || "导出失败");
+        }
+
+        if (!isEnvelope(payload)) {
+          throw new Error("导出内容不是合法加密文件");
+        }
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = exportFilename();
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(blobUrl);
+        setStatus("导出成功。");
+      }
+
+      async function importAll() {
+        const file = document.getElementById("importFile").files[0];
+        if (!file) {
+          throw new Error("请先选择导入文件。");
+        }
+
+        let payload;
+        try {
+          payload = JSON.parse(await file.text());
+        } catch {
+          throw new Error("导入文件不是合法 JSON。");
+        }
+
+        if (!isEnvelope(payload)) {
+          throw new Error("导入文件不是合法加密信封。");
+        }
+
+        const result = await requestEncryptedJson("/admin/import-all", {
+          method: "POST",
+          body: await decryptClientPayload(adminPassword, payload),
+        });
+        setStatus("导入成功，已导入 " + result.imported + " 条。");
+        await loadCookies();
       }
     </script>
   </body>
@@ -1139,18 +1360,14 @@ function createResponse(body, init = {}) {
 function jsonResponse(status, body) {
   return createResponse(JSON.stringify(body), {
     status,
-    headers: {
-      "Content-Type": "application/json; charset=UTF-8",
-    },
+    headers: { "Content-Type": "application/json; charset=UTF-8" },
   });
 }
 
 function htmlResponse(body) {
   return createResponse(body, {
     status: 200,
-    headers: {
-      "Content-Type": "text/html; charset=UTF-8",
-    },
+    headers: { "Content-Type": "text/html; charset=UTF-8" },
   });
 }
 

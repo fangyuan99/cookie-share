@@ -1,2 +1,3 @@
 ADMIN_PASSWORD=change-me
 PATH_SECRET=change-me
+TRANSPORT_SECRET=change-me

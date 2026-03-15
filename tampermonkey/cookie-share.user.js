@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.2.0
+// @version      0.3.0
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -25,6 +25,7 @@
   const STORAGE_KEYS = {
     CUSTOM_URL: "cookie_share_custom_url",
     ADMIN_PASSWORD: "cookie_share_admin_password",
+    TRANSPORT_SECRET: "cookie_share_transport_secret",
     SHOW_FLOATING_BUTTON: "cookie_share_show_floating_button",
     AUTO_HIDE_FULLSCREEN: "cookie_share_auto_hide_fullscreen",
     SAVE_LOCALLY: "cookie_share_save_locally",
@@ -86,6 +87,7 @@
       placeholderCookieId: "Cookie ID",
       placeholderServerAddress: "Server Address (e.g., https://example.com)",
       placeholderAdminPassword: "Enter admin password",
+      placeholderTransportSecret: "Enter transport secret",
 
       // Settings
       settingsShowFloatingButton: "Show Floating Button (Alt+Shift+L)",
@@ -119,6 +121,8 @@
       notificationLocalDeleted: "Local cookie deleted",
       notificationNeedAdminCreds:
         "Deleting cloud cookies requires server address and admin password",
+      notificationNeedTransportSecret:
+        "Cloud operations require a transport secret",
       notificationCloudDeleted: "Cloud cookie deleted",
       notificationDeleteFailed: "Delete {{source}} cookie failed: {{message}}",
       notificationListInitFailed:
@@ -133,6 +137,10 @@
       notificationNetworkError: "Network request failed",
       notificationRequestTimeout: "Request timed out",
       notificationResponseError: "Error processing response: {{message}}",
+      notificationEncryptFailed: "Failed to encrypt payload",
+      notificationDecryptFailed: "Failed to decrypt server response",
+      notificationInvalidTransportSecret:
+        "Invalid transport secret or corrupted payload",
       confirmDeleteMessage: "Are you sure you want to delete this cookie?",
       listEmpty: "No local or cloud cookies found related to {{host}}",
       listEmptyLocalOnly: "No local cookies found related to {{host}}",
@@ -169,6 +177,7 @@
       placeholderCookieId: "Cookie ID",
       placeholderServerAddress: "服务器地址 (例如 https://example.com)",
       placeholderAdminPassword: "输入管理密码",
+      placeholderTransportSecret: "输入传输密钥",
 
       // Settings
       settingsShowFloatingButton: "显示悬浮按钮 (Alt+Shift+L)",
@@ -196,6 +205,7 @@
       notificationReceiveFailed: "接收 {{source}} Cookie 失败: {{message}}",
       notificationLocalDeleted: "本地 Cookie 已删除",
       notificationNeedAdminCreds: "删除云端 Cookie 需要服务器地址和管理密码",
+      notificationNeedTransportSecret: "云端操作需要传输密钥",
       notificationCloudDeleted: "云端 Cookie 已删除",
       notificationDeleteFailed: "删除 {{source}} Cookie 失败: {{message}}",
       notificationListInitFailed: "初始化 Cookie 列表失败: {{message}}",
@@ -208,6 +218,9 @@
       notificationNetworkError: "网络请求失败",
       notificationRequestTimeout: "请求超时",
       notificationResponseError: "处理响应时出错: {{message}}",
+      notificationEncryptFailed: "加密请求失败",
+      notificationDecryptFailed: "解密服务器响应失败",
+      notificationInvalidTransportSecret: "传输密钥错误或数据已损坏",
       confirmDeleteMessage: "您确定要删除此 Cookie 吗？",
       listEmpty: "未找到与 {{host}} 相关的本地或云端 Cookie",
       listEmptyLocalOnly: "未找到与 {{host}} 相关的本地 Cookie",
@@ -287,7 +300,7 @@
               domain: cookie.domain,
               path: cookie.path || "/",
               secure: cookie.secure,
-              sameSite: "Lax",
+              sameSite: utils.normalizeSameSiteFromBrowser(cookie.sameSite),
               hostOnly: cookie.hostOnly,
               httpOnly: cookie.httpOnly,
               session: cookie.session,
@@ -308,6 +321,7 @@
             path: cookie.path || "/",
             secure: cookie.secure,
             httpOnly: cookie.httpOnly || false,
+            sameSite: utils.normalizeSameSiteForSet(cookie.sameSite),
             expirationDate: cookie.expirationDate || undefined,
           },
           resolve
@@ -370,11 +384,243 @@
         chars.charAt(byte % chars.length)
       ).join("");
     },
+
+    localizeServerMessage(message) {
+      const mapping = {
+        "Cookies saved successfully": t("notificationSentSuccess"),
+        "Cookies saved successfully.": t("notificationSentSuccess"),
+        "Cookies not found": t("notificationReceiveFailed", {
+          source: t("sourceCloud"),
+          message: t("apiErrorInvalidData"),
+        }),
+        "Cookies and URL updated successfully": "更新成功",
+        "Data deleted successfully": t("notificationCloudDeleted"),
+        "Import completed": "导入成功",
+        Unauthorized: t("notificationAdminPermission"),
+        "Invalid encrypted payload": t("notificationDecryptFailed"),
+        "Transport secret mismatch or corrupted payload":
+          t("notificationInvalidTransportSecret"),
+      };
+      return mapping[message] || message;
+    },
+
+    normalizeSameSiteFromBrowser(value) {
+      if (typeof value !== "string") {
+        return "lax";
+      }
+
+      const normalized = value.toLowerCase();
+      if (
+        normalized === "no_restriction" ||
+        normalized === "none" ||
+        normalized === "unspecified"
+      ) {
+        return "none";
+      }
+      if (normalized === "strict") {
+        return "strict";
+      }
+      return "lax";
+    },
+
+    normalizeSameSiteForSet(value) {
+      if (typeof value !== "string") {
+        return undefined;
+      }
+
+      const normalized = value.toLowerCase();
+      if (normalized === "none") {
+        return "no_restriction";
+      }
+      if (normalized === "strict") {
+        return "strict";
+      }
+      if (normalized === "lax") {
+        return "lax";
+      }
+      return undefined;
+    },
+  };
+
+  const transportCrypto = {
+    version: 1,
+    iterations: 310000,
+    encoder: new TextEncoder(),
+    decoder: new TextDecoder(),
+
+    base64UrlEncode(bytes) {
+      let binary = "";
+      for (const value of bytes) {
+        binary += String.fromCharCode(value);
+      }
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    },
+
+    base64UrlDecode(value) {
+      const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      return bytes;
+    },
+
+    isEnvelope(value) {
+      return Boolean(
+        value &&
+          typeof value === "object" &&
+          value.version === this.version &&
+          typeof value.salt === "string" &&
+          typeof value.iv === "string" &&
+          typeof value.payload === "string"
+      );
+    },
+
+    async deriveKey(secret, salt) {
+      const material = await crypto.subtle.importKey(
+        "raw",
+        this.encoder.encode(secret),
+        "PBKDF2",
+        false,
+        ["deriveKey"]
+      );
+
+      return await crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          hash: "SHA-256",
+          salt,
+          iterations: this.iterations,
+        },
+        material,
+        {
+          name: "AES-GCM",
+          length: 256,
+        },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    },
+
+    async encrypt(secret, payload) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await this.deriveKey(secret, salt);
+      const ciphertext = new Uint8Array(
+        await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv },
+          key,
+          this.encoder.encode(JSON.stringify(payload))
+        )
+      );
+
+      return {
+        version: this.version,
+        salt: this.base64UrlEncode(salt),
+        iv: this.base64UrlEncode(iv),
+        payload: this.base64UrlEncode(ciphertext),
+      };
+    },
+
+    async decrypt(secret, envelope) {
+      if (!this.isEnvelope(envelope)) {
+        throw new Error(t("notificationDecryptFailed"));
+      }
+
+      try {
+        const key = await this.deriveKey(
+          secret,
+          this.base64UrlDecode(envelope.salt)
+        );
+        const plaintext = await crypto.subtle.decrypt(
+          {
+            name: "AES-GCM",
+            iv: this.base64UrlDecode(envelope.iv),
+          },
+          key,
+          this.base64UrlDecode(envelope.payload)
+        );
+        return JSON.parse(this.decoder.decode(plaintext));
+      } catch {
+        throw new Error(t("notificationInvalidTransportSecret"));
+      }
+    },
   };
 
   // ===================== API Operations =====================
   const api = {
-    async sendCookies(cookieId, customUrl) {
+    async requestEncryptedJson({ method, url, body, transportSecret, headers }) {
+      if (!transportSecret) {
+        throw new Error(t("notificationNeedTransportSecret"));
+      }
+
+      const requestHeaders = {
+        Accept: "application/json",
+        ...(headers || {}),
+      };
+
+      if (body !== undefined) {
+        requestHeaders["Content-Type"] = "application/json";
+      }
+
+      const requestData =
+        body === undefined
+          ? undefined
+          : JSON.stringify(await transportCrypto.encrypt(transportSecret, body));
+
+      const response = await new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method,
+          url,
+          headers: requestHeaders,
+          data: requestData,
+          responseType: "text",
+          timeout: 10000,
+          onload: resolve,
+          onerror: () => reject(new Error(t("apiErrorNetwork"))),
+          ontimeout: () => reject(new Error(t("apiErrorTimeout"))),
+        });
+      });
+
+      let payload = {};
+      try {
+        payload = response.responseText ? JSON.parse(response.responseText) : {};
+      } catch {
+        throw new Error(t("notificationDecryptFailed"));
+      }
+
+      if (response.status < 200 || response.status >= 300) {
+        if (transportCrypto.isEnvelope(payload)) {
+          const decryptedError = await transportCrypto.decrypt(
+            transportSecret,
+            payload
+          );
+          throw new Error(
+            utils.localizeServerMessage(
+              decryptedError.message || decryptedError.error || ""
+            ) ||
+              t("apiErrorServerReturn", {
+                status: response.status || "?",
+                text: response.responseText || "",
+              })
+          );
+        }
+
+        throw new Error(
+          utils.localizeServerMessage(payload.message || payload.error || "") ||
+            t("apiErrorServerReturn", {
+              status: response.status || "?",
+              text: response.responseText || "",
+            })
+        );
+      }
+
+      return await transportCrypto.decrypt(transportSecret, payload);
+    },
+
+    async sendCookies(cookieId, customUrl, transportSecret) {
       try {
         const cookies = await cookieManager.getAll();
         if (!cookies.length) {
@@ -391,34 +637,11 @@
           cookies: cookies,
         };
 
-        return new Promise((resolve, reject) => {
-          GM_xmlhttpRequest({
-            method: "POST",
-            url: `${formattedUrl}/send-cookies`,
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            data: JSON.stringify(data),
-            responseType: "json",
-            timeout: 10000,
-            onload: (response) => {
-              if (response.status >= 200 && response.status < 300) {
-                resolve(response.response || { success: true });
-              } else {
-                reject(
-                  new Error(
-                    t("apiErrorServerReturn", {
-                      status: response.status || "?",
-                      text: response.responseText || response.message,
-                    })
-                  )
-                );
-              }
-            },
-            onerror: () => reject(new Error(t("apiErrorNetwork"))),
-            ontimeout: () => reject(new Error(t("apiErrorTimeout"))),
-          });
+        return await this.requestEncryptedJson({
+          method: "POST",
+          url: `${formattedUrl}/send-cookies`,
+          body: data,
+          transportSecret,
         });
       } catch (error) {
         console.error("Error sending cookies:", error);
@@ -426,36 +649,23 @@
       }
     },
 
-    async receiveCookies(cookieId, customUrl) {
+    async receiveCookies(cookieId, customUrl, transportSecret) {
       try {
         const formattedUrl = utils.validateUrl(customUrl);
-        const response = await new Promise((resolve, reject) => {
-          GM_xmlhttpRequest({
-            method: "GET",
-            url: `${formattedUrl}/receive-cookies/${cookieId}`,
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            responseType: "json",
-            timeout: 10000,
-            onload: resolve,
-            onerror: () => reject(new Error(t("apiErrorNetwork"))),
-            ontimeout: () => reject(new Error(t("apiErrorTimeout"))),
-          });
+        const response = await this.requestEncryptedJson({
+          method: "GET",
+          url: `${formattedUrl}/receive-cookies/${cookieId}`,
+          transportSecret,
         });
 
-        if (
-          !response?.response?.success ||
-          !Array.isArray(response.response.cookies)
-        ) {
+        if (!response?.success || !Array.isArray(response.cookies)) {
           throw new Error(t("apiErrorInvalidData"));
         }
 
         await cookieManager.clearAll();
 
         let importedCount = 0;
-        for (const cookie of response.response.cookies) {
+        for (const cookie of response.cookies) {
           if (cookie?.name && cookie?.value) {
             await cookieManager.set(cookie);
             importedCount++;
@@ -1184,27 +1394,6 @@
       serverContainer.appendChild(serverInput);
       serverContainer.appendChild(showListBtn);
 
-      // 创建密码输入容器
-      const passwordContainer = document.createElement("div");
-      passwordContainer.className = "id-input-container";
-
-      const passwordInput = document.createElement("input");
-      passwordInput.type = "password";
-      passwordInput.id = "cookieSharePassword";
-      passwordInput.className = "cookie-id-input";
-      passwordInput.placeholder = t("placeholderAdminPassword");
-      passwordInput.value = GM_getValue(STORAGE_KEYS.ADMIN_PASSWORD, "");
-
-      // Add event listener to save password when it changes
-      passwordInput.addEventListener("input", function () {
-        GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, this.value);
-      });
-
-      // Create toggle button for password visibility
-      const togglePasswordBtn = document.createElement("button");
-      togglePasswordBtn.className = "generate-btn";
-      togglePasswordBtn.style.width = "120px";
-
       // Use eye icons instead of text for better i18n
       const eyeOpenSvg = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="fill: currentColor;">
@@ -1218,20 +1407,35 @@
         </svg>
       `;
 
-      togglePasswordBtn.innerHTML = eyeOpenSvg;
-      togglePasswordBtn.onclick = () => {
-        if (passwordInput.type === "password") {
-          passwordInput.type = "text";
-          togglePasswordBtn.innerHTML = eyeClosedSvg;
+      const transportContainer = document.createElement("div");
+      transportContainer.className = "id-input-container";
+
+      const transportInput = document.createElement("input");
+      transportInput.type = "password";
+      transportInput.id = "cookieShareTransportSecret";
+      transportInput.className = "cookie-id-input";
+      transportInput.placeholder = t("placeholderTransportSecret");
+      transportInput.value = GM_getValue(STORAGE_KEYS.TRANSPORT_SECRET, "");
+      transportInput.addEventListener("input", function () {
+        GM_setValue(STORAGE_KEYS.TRANSPORT_SECRET, this.value);
+      });
+
+      const toggleTransportBtn = document.createElement("button");
+      toggleTransportBtn.className = "generate-btn";
+      toggleTransportBtn.style.width = "120px";
+      toggleTransportBtn.innerHTML = eyeOpenSvg;
+      toggleTransportBtn.onclick = () => {
+        if (transportInput.type === "password") {
+          transportInput.type = "text";
+          toggleTransportBtn.innerHTML = eyeClosedSvg;
         } else {
-          passwordInput.type = "password";
-          togglePasswordBtn.innerHTML = eyeOpenSvg;
+          transportInput.type = "password";
+          toggleTransportBtn.innerHTML = eyeOpenSvg;
         }
       };
 
-      // Assemble password container
-      passwordContainer.appendChild(passwordInput);
-      passwordContainer.appendChild(togglePasswordBtn);
+      transportContainer.appendChild(transportInput);
+      transportContainer.appendChild(toggleTransportBtn);
 
       // 操作按钮容器
       const actionButtons = document.createElement("div");
@@ -1264,7 +1468,7 @@
       container.appendChild(titleContainer);
       container.appendChild(idContainer);
       container.appendChild(serverContainer);
-      container.appendChild(passwordContainer);
+      container.appendChild(transportContainer);
       container.appendChild(actionButtons);
       container.appendChild(clearBtn);
 
@@ -1278,6 +1482,7 @@
           const saveLocally = GM_getValue(STORAGE_KEYS.SAVE_LOCALLY, false);
           const cookieId = idInput.value.trim();
           const serverUrl = serverInput.value.trim();
+          const transportSecret = transportInput.value.trim();
 
           if (!cookieId) {
             notification.show(t("notificationEnterCookieId"), "error");
@@ -1305,9 +1510,17 @@
               notification.show(t("notificationEnterServer"), "error");
               return;
             }
-            const result = await api.sendCookies(cookieId, serverUrl);
+            if (!transportSecret) {
+              notification.show(t("notificationNeedTransportSecret"), "error");
+              return;
+            }
+            const result = await api.sendCookies(
+              cookieId,
+              serverUrl,
+              transportSecret
+            );
             notification.show(
-              result.message || t("notificationSentSuccess"),
+              result.success ? t("notificationSentSuccess") : utils.localizeServerMessage(result.message || ""),
               result.success ? "success" : "error"
             );
           }
@@ -1347,14 +1560,17 @@
             return;
           }
 
+          if (!transportInput.value.trim()) {
+            notification.show(t("notificationNeedTransportSecret"), "error");
+            return;
+          }
+
           const result = await api.receiveCookies(
             idInput.value.trim(),
-            serverInput.value.trim()
+            serverInput.value.trim(),
+            transportInput.value.trim()
           );
-          notification.show(
-            result.message || t("notificationReceivedSuccess"),
-            "success"
-          );
+          notification.show(t("notificationReceivedSuccess"), "success");
         } catch (error) {
           let errorMessage = error.message;
           if (error.message === "Request failed") {
@@ -1608,13 +1824,12 @@
 
         cookiesList.innerHTML = ""; // Clear previous content
 
-        const savedPassword = GM_getValue(STORAGE_KEYS.ADMIN_PASSWORD);
+        const transportSecret = GM_getValue(STORAGE_KEYS.TRANSPORT_SECRET);
 
-        // Try loading with the existing password, or without password for local-only
         await this.loadCombinedCookieList(
           cookiesList,
           customUrl,
-          savedPassword
+          transportSecret
         );
       } catch (error) {
         console.error("Error initializing cookies list:", error);
@@ -1628,7 +1843,7 @@
     async loadCombinedCookieList(
       cookiesList,
       customUrl,
-      password,
+      transportSecret,
       loadOnlyLocal = false
     ) {
       cookiesList.innerHTML = `
@@ -1695,41 +1910,16 @@
       // 2. Fetch Cloud Cookies (if applicable)
       if (!loadOnlyLocal && customUrl) {
         try {
-          // Requires password for cloud operations
-          if (!password) {
-            // This case is handled by initializeCookieList showing the password prompt
-            // We just skip fetching cloud cookies here if no password provided yet.
+          if (!transportSecret) {
+            cloudError = new Error(t("notificationNeedTransportSecret"));
           } else {
-            const response = await new Promise((resolve, reject) => {
-              GM_xmlhttpRequest({
-                method: "GET",
-                url: `${customUrl}/admin/list-cookies-by-host/${encodeURIComponent(
-                  currentHost
-                )}`,
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Admin-Password": password,
-                },
-                responseType: "text", // Get raw text to handle JSON parsing manually
-                timeout: 10000,
-                onload: (res) => {
-                  if (res.status >= 200 && res.status < 300) {
-                    resolve(res);
-                  } else {
-                    reject({
-                      status: res.status,
-                      responseText: res.responseText,
-                    });
-                  }
-                },
-                onerror: (error) =>
-                  reject({ status: 0, responseText: t("apiErrorNetwork") }),
-                ontimeout: () =>
-                  reject({ status: 0, responseText: t("apiErrorTimeout") }),
-              });
+            const data = await api.requestEncryptedJson({
+              method: "GET",
+              url: `${customUrl}/list-cookies-by-host/${encodeURIComponent(
+                currentHost
+              )}`,
+              transportSecret,
             });
-
-            const data = JSON.parse(response.responseText);
 
             if (data.success && Array.isArray(data.cookies)) {
               data.cookies.forEach((cookie) => {
@@ -1756,14 +1946,6 @@
         } catch (error) {
           console.error("Error fetching cloud cookies:", error);
           cloudError = error; // Store error to display later
-          // Handle password error specifically
-          if (error.status === 401) {
-            GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, ""); // Clear incorrect password
-            cloudError = new Error(t("notificationInvalidPassword"));
-            // Re-initialize to show password prompt again
-            // Be careful not to cause infinite loop. Maybe just show error.
-            // Let's just show the error message in the list for now.
-          }
         }
       }
 
@@ -1842,6 +2024,7 @@
           const cookieId = button.dataset.id;
           const source = button.dataset.source;
           const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL); // Needed for cloud receive
+          const transportSecret = GM_getValue(STORAGE_KEYS.TRANSPORT_SECRET);
           const sourceText = t(
             source === "local" ? "sourceLocal" : "sourceCloud"
           );
@@ -1880,11 +2063,19 @@
                 notification.show(t("notificationNeedServerAddress"), "error");
                 return;
               }
-              const result = await api.receiveCookies(cookieId, customUrl);
-              notification.show(
-                result.message || t("notificationReceivedSuccess"),
-                "success"
+              if (!transportSecret) {
+                notification.show(
+                  t("notificationNeedTransportSecret"),
+                  "error"
+                );
+                return;
+              }
+              const result = await api.receiveCookies(
+                cookieId,
+                customUrl,
+                transportSecret
               );
+              notification.show(t("notificationReceivedSuccess"), "success");
               this.hideCookieList(); // Hide modal immediately
             }
           } catch (error) {
@@ -1920,83 +2111,34 @@
               } else {
                 // source === 'cloud'
                 const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
-                const password = GM_getValue(STORAGE_KEYS.ADMIN_PASSWORD);
+                const transportSecret = GM_getValue(
+                  STORAGE_KEYS.TRANSPORT_SECRET
+                );
 
-                if (!customUrl || !password) {
-                  notification.show(t("notificationNeedAdminCreds"), "error");
+                if (!customUrl) {
+                  notification.show(t("notificationNeedServerAddress"), "error");
                   return;
                 }
 
-                await new Promise((resolve, reject) => {
-                  GM_xmlhttpRequest({
+                if (!transportSecret) {
+                  notification.show(
+                    t("notificationNeedTransportSecret"),
+                    "error"
+                  );
+                  return;
+                }
+
+                try {
+                  await api.requestEncryptedJson({
                     method: "DELETE",
-                    url: `${customUrl}/admin/delete?key=${encodeURIComponent(
+                    url: `${customUrl}/delete?key=${encodeURIComponent(
                       cookieId
                     )}`,
-                    headers: {
-                      "Content-Type": "application/json",
-                      "X-Admin-Password": password,
-                    },
-                    responseType: "text", // Get raw text
-                    onload: (response) => {
-                      try {
-                        // Check for non-JSON success or failure messages if API behaves differently
-                        if (
-                          response.status === 200 ||
-                          response.status === 204
-                        ) {
-                          // Assume success on 200/204, even without JSON body
-                          // Attempt to parse JSON if available
-                          let data = { success: true };
-                          try {
-                            if (response.responseText)
-                              data = JSON.parse(response.responseText);
-                          } catch (e) {
-                            /* Ignore parsing error if body is not JSON */
-                          }
-
-                          if (data.success) {
-                            resolve();
-                          } else {
-                            reject(
-                              new Error(
-                                data.message ||
-                                  t("notificationServerDeleteFailed")
-                              )
-                            );
-                          }
-                        } else if (response.status === 401) {
-                          GM_setValue(STORAGE_KEYS.ADMIN_PASSWORD, ""); // Clear bad password
-                          reject(new Error(t("notificationAdminPermission")));
-                        } else {
-                          let errorMsg = "Failed to delete cookie";
-                          try {
-                            const errData = JSON.parse(response.responseText);
-                            errorMsg =
-                              errData.message ||
-                              `服务器错误: ${response.status}`;
-                          } catch (e) {
-                            errorMsg = `服务器错误: ${response.status}`;
-                          }
-                          reject(new Error(errorMsg));
-                        }
-                      } catch (error) {
-                        // Catch JSON parsing errors on success/failure cases
-                        reject(
-                          new Error(
-                            t("notificationResponseError", {
-                              message: error.message,
-                            })
-                          )
-                        );
-                      }
-                    },
-                    onerror: () =>
-                      reject(new Error(t("notificationNetworkError"))),
-                    ontimeout: () =>
-                      reject(new Error(t("notificationRequestTimeout"))),
+                    transportSecret,
                   });
-                });
+                } catch (error) {
+                  throw error;
+                }
 
                 notification.show(t("notificationCloudDeleted"), "success");
                 // Refresh the list

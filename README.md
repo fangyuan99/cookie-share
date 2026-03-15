@@ -15,6 +15,12 @@
 
 Cookie-share is a Tampermonkey script that allows users to send and receive cookies between different devices or browsers. It can be used for **multiple account switching, video membership sharing, community subscription sharing**, and other scenarios. The backend uses self-hosted Cloudflare Worker or Node.js server to ensure data security.
 
+## Latest Update
+
+- `v0.3.0` switches the Worker JSON API to encrypted transport with `TRANSPORT_SECRET`
+- Added full export/import support to the Worker admin page
+- The admin UI now uses Pico CSS to reduce embedded styling code
+
 ![image](./images/cs1.png)
 
 ---
@@ -66,6 +72,7 @@ Tested websites:
 1. Send Cookie from logged-in browser page
 2. Accept Cookie on non-logged-in browser page
 3. Note: Don't add `/` after the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
+4. If you use a Cloudflare Worker backend, the userscript only needs `Transport Secret`. `send/receive`, cloud list, and cloud delete all use `TRANSPORT_SECRET`
 
 ### Local Use Without Backend
 
@@ -82,12 +89,12 @@ For sharing cookies between different devices or browsers, you'll still need to 
 
 #### Option 1: Cloudflare Worker + D1 (Recommended)
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/fangyuan99/cookie-share&env=ADMIN_PASSWORD&env=PATH_SECRET&d1=COOKIE_DB)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/fangyuan99/cookie-share&env=ADMIN_PASSWORD&env=PATH_SECRET&env=TRANSPORT_SECRET&d1=COOKIE_DB)
 
 Deploy to Cloudflare (one click):
 
 1. Click the Deploy button above and authorize Cloudflare
-2. Fill in `ADMIN_PASSWORD` and `PATH_SECRET` in the deploy form
+2. Fill in `ADMIN_PASSWORD`, `PATH_SECRET`, and `TRANSPORT_SECRET` in the deploy form
 3. Complete deployment. Cloudflare will automatically create and bind the D1 database as `COOKIE_DB`
 4. No manual KV or D1 setup is required. The Worker will create the required tables automatically on the first storage request
 5. Use `https://your-worker-domain/{PATH_SECRET}` as the backend address in the userscript
@@ -97,10 +104,11 @@ Deploy locally with Wrangler:
 1. Install dependencies with `npm install`
 2. Run `npx wrangler login`
 3. Copy `.dev.vars.example` to `.dev.vars` for local development
-   - If `.dev.vars` is missing, `wrangler dev` falls back to `PATH_SECRET=dev` and `ADMIN_PASSWORD=dev-password` on localhost only
+   - If `.dev.vars` is missing, `wrangler dev` falls back to `PATH_SECRET=dev`, `ADMIN_PASSWORD=dev-password`, and `TRANSPORT_SECRET=dev-transport-secret` on localhost only
 4. Before production deploy, set remote secrets:
    - `npx wrangler secret put ADMIN_PASSWORD`
    - `npx wrangler secret put PATH_SECRET`
+   - `npx wrangler secret put TRANSPORT_SECRET`
 5. Deploy with `npm run deploy`
 6. Optional: run `npm run db:migrate` after the first deploy if you want Wrangler-managed migration metadata applied immediately
 
@@ -133,7 +141,9 @@ The Node.js server implementation offers these advantages:
 ## Security Considerations
 
 - Ensure `ADMIN_PASSWORD` is set to a strong password and changed regularly
+- Ensure `TRANSPORT_SECRET` is long and random, and rotate it independently from the admin password
 - Don't hardcode `ADMIN_PASSWORD` in code, always use environment variables
+- Don't reuse `ADMIN_PASSWORD` as the transport encryption secret
 - Regularly review stored data in D1 and delete unnecessary cookie data
 - Consider setting expiration times for cookie data to reduce risk of storing sensitive information long-term
 - Use `PATH_SECRET` in worker config to prevent brute force attacks
@@ -141,40 +151,35 @@ The Node.js server implementation offers these advantages:
 
 ## Backend API Endpoints
 
-**If `/{PATH_SECRET}/admin/*` endpoints have issues, verify that `X-Admin-Password` is present and your Worker variables are configured correctly**
+**If `/{PATH_SECRET}/admin/*` endpoints have issues, verify that `X-Admin-Password` is present and that `ADMIN_PASSWORD` and `PATH_SECRET` are configured correctly**
 
 Both backend implementations provide the following endpoints:
 
-Note: Add `X-Admin-Password: yourpassword`
-
-Example:
-
-`/{PATH_SECRET}/admin/list-cookies`
-
-```sh
-curl --location --request GET 'https://your-backend-address/{PATH_SECRET}/admin/list-cookies' \
---header 'X-Admin-Password: yourpassword'
-```
-
-`/{PATH_SECRET}/admin/delete`
-
-```sh
-curl --location --request DELETE 'https://your-backend-address/{PATH_SECRET}/admin/delete?key={yourid}' \
---header 'X-Admin-Password: yourpassword'
-```
+Note:
+- `GET /{PATH_SECRET}/admin` is plain HTML
+- `OPTIONS` remains plain CORS preflight
+- Userscript JSON endpoints use an encrypted envelope based on `TRANSPORT_SECRET`
+- Admin page JSON endpoints use `ADMIN_PASSWORD` for both authentication and client-side encryption
+- The userscript and admin page handle encryption automatically; plain `curl` examples are no longer sufficient unless you implement the matching client-side encryption
 
 Available endpoints:
 - `POST /{PATH_SECRET}/send-cookies`: Store cookies associated with unique ID
+- `GET /{PATH_SECRET}/receive-cookies/{id}`: Receive cookies for a given ID
+- `GET /{PATH_SECRET}/list-cookies-by-host/{host}`: Userscript cloud list endpoint
+- `DELETE /{PATH_SECRET}/delete?key={id}`: Userscript cloud delete endpoint
 - `GET /{PATH_SECRET}/admin`: Open the admin UI shell
 - `GET /{PATH_SECRET}/admin/list-cookies`: List all stored cookie IDs and URLs
 - `GET /{PATH_SECRET}/admin/list-cookies-by-host`: List cookies filtered by hostname
+- `POST /{PATH_SECRET}/admin/create`: Create a record from the admin page
 - `DELETE /{PATH_SECRET}/admin/delete`: Delete data for given key
 - `PUT /{PATH_SECRET}/admin/update`: Update data for given key
+- `GET /{PATH_SECRET}/admin/export-all`: Export all records as encrypted JSON
+- `POST /{PATH_SECRET}/admin/import-all`: Import encrypted JSON and upsert records by ID
 - `OPTIONS /{PATH_SECRET}/`: Handle CORS preflight requests
 
 Admin management page provides a user-friendly interface for managing cookies and other data. It includes viewing all stored cookies, creating new cookie entries, updating existing cookies, and deleting individual cookie records.
 
-To access the admin page, navigate to `https://your-backend-address/{PATH_SECRET}/admin` in the browser. The page itself is directly reachable, but all `/admin/*` data APIs require `X-Admin-Password`.
+To access the admin page, navigate to `https://your-backend-address/{PATH_SECRET}/admin` in the browser. The page itself is directly reachable, and the admin page only requires `ADMIN_PASSWORD`. The userscript only requires `TRANSPORT_SECRET`.
 
 **All `/admin/*` API endpoints require authentication using the admin password.**
 
@@ -203,9 +208,10 @@ Modifying backend:
 ## Smoke Checklist
 
 - Deploy through the Cloudflare button and confirm the D1 database is created and bound automatically
-- Run `POST /send-cookies -> GET /receive-cookies/{id} -> GET /admin/list-cookies -> GET /admin/list-cookies-by-host/{host} -> PUT /admin/update -> DELETE /admin/delete`
+- Run `POST /send-cookies -> GET /receive-cookies/{id} -> GET /admin/list-cookies -> GET /admin/list-cookies-by-host/{host} -> PUT /admin/update -> DELETE /admin/delete -> GET /admin/export-all -> POST /admin/import-all`
+- Verify that userscript cloud actions fail clearly when `TRANSPORT_SECRET` is missing or incorrect
 - Verify invalid IDs, missing keys, invalid URLs, malformed cookie payloads, and wrong admin passwords all return the expected 4xx responses
-- Open `/{PATH_SECRET}/admin` and confirm the table renders correctly and refresh/delete actions work
+- Open `/{PATH_SECRET}/admin` and confirm the Pico CSS admin page can refresh, delete, export, and import correctly
 - Confirm the userscript still shows combined local/cloud data and no longer crashes on an empty list state
 
 ## Contributions

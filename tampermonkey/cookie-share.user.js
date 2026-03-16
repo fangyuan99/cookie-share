@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.4.0
+// @version      0.4.1
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -881,53 +881,53 @@
 
     injectStyles() {
       GM_addStyle(`
-        /* ===== Dark Theme (Warm luxury gold) ===== */
+        /* ===== Dark Theme (Apple/Linear inspired) ===== */
         body[data-cs-theme="dark"] {
-          --cs-overlay: rgba(0, 0, 0, 0.5);
-          --cs-surface: #1A1816;
-          --cs-surface-secondary: #252220;
-          --cs-surface-hover: #302D2A;
-          --cs-card-border: 1px solid #33302D;
-          --cs-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
-          --cs-heading: #FAF8F5;
-          --cs-text: #E8E4DF;
-          --cs-text-secondary: #A09A93;
-          --cs-text-muted: #6E6861;
-          --cs-input-bg: #252220;
-          --cs-input-border: #3D3935;
-          --cs-input-focus-border: #CA8A04;
-          --cs-input-focus-shadow: 0 0 0 2px rgba(202, 138, 4, 0.2);
-          --cs-accent: #CA8A04;
-          --cs-accent-hover: #B07A03;
-          --cs-danger: #EF5350;
-          --cs-danger-hover: #D84340;
-          --cs-success-border: #CA8A04;
-          --cs-error-border: #EF5350;
-          --cs-btn-primary-bg: #CA8A04;
-          --cs-btn-primary-text: #1A1816;
-          --cs-btn-primary-hover: #D4960A;
-          --cs-btn-secondary-bg: #2A2725;
-          --cs-btn-secondary-text: #E8E4DF;
-          --cs-btn-secondary-hover: #33302D;
-          --cs-btn-danger-bg: #EF5350;
+          --cs-overlay: rgba(0, 0, 0, 0.55);
+          --cs-surface: #1C1C1E;
+          --cs-surface-secondary: #2C2C2E;
+          --cs-surface-hover: #3A3A3C;
+          --cs-card-border: 1px solid rgba(255, 255, 255, 0.08);
+          --cs-shadow: 0 8px 40px rgba(0, 0, 0, 0.45);
+          --cs-heading: #F5F5F7;
+          --cs-text: #E5E5EA;
+          --cs-text-secondary: #98989D;
+          --cs-text-muted: #636366;
+          --cs-input-bg: #2C2C2E;
+          --cs-input-border: #3A3A3C;
+          --cs-input-focus-border: #7C6AEF;
+          --cs-input-focus-shadow: 0 0 0 2px rgba(124, 106, 239, 0.25);
+          --cs-accent: #7C6AEF;
+          --cs-accent-hover: #6857D9;
+          --cs-danger: #FF453A;
+          --cs-danger-hover: #E5342A;
+          --cs-success-border: #30D158;
+          --cs-error-border: #FF453A;
+          --cs-btn-primary-bg: #7C6AEF;
+          --cs-btn-primary-text: #FFF;
+          --cs-btn-primary-hover: #6857D9;
+          --cs-btn-secondary-bg: #2C2C2E;
+          --cs-btn-secondary-text: #E5E5EA;
+          --cs-btn-secondary-hover: #3A3A3C;
+          --cs-btn-danger-bg: #FF453A;
           --cs-btn-danger-text: #FFF;
-          --cs-btn-danger-hover: #D84340;
-          --cs-toggle-bg: #3D3935;
-          --cs-toggle-active: #CA8A04;
+          --cs-btn-danger-hover: #E5342A;
+          --cs-toggle-bg: #3A3A3C;
+          --cs-toggle-active: #7C6AEF;
           --cs-radius: 10px;
           --cs-radius-lg: 14px;
-          --cs-divider: #33302D;
-          --cs-spinner-track: #3D3935;
-          --cs-spinner-head: #CA8A04;
-          --cs-notif-bg: rgba(26, 24, 22, 0.97);
-          --cs-notif-border: 1px solid #33302D;
-          --cs-float-bg: rgba(26, 24, 22, 0.95);
-          --cs-float-border: 1px solid #3D3935;
-          --cs-float-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-          --cs-theme-btn-active: #CA8A04;
-          --cs-theme-btn-active-text: #1A1816;
-          --cs-theme-btn-inactive: #2A2725;
-          --cs-theme-btn-inactive-text: #A09A93;
+          --cs-divider: rgba(255, 255, 255, 0.08);
+          --cs-spinner-track: #3A3A3C;
+          --cs-spinner-head: #7C6AEF;
+          --cs-notif-bg: rgba(28, 28, 30, 0.97);
+          --cs-notif-border: 1px solid rgba(255, 255, 255, 0.1);
+          --cs-float-bg: rgba(28, 28, 30, 0.92);
+          --cs-float-border: 1px solid rgba(255, 255, 255, 0.1);
+          --cs-float-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+          --cs-theme-btn-active: #7C6AEF;
+          --cs-theme-btn-active-text: #FFF;
+          --cs-theme-btn-inactive: #2C2C2E;
+          --cs-theme-btn-inactive-text: #98989D;
         }
 
         /* ===== Claude Theme ===== */
@@ -1020,7 +1020,7 @@
         /* ===== Container ===== */
         .cookie-share-container {
           font-family: -apple-system, system-ui, 'Segoe UI', sans-serif !important;
-          padding: 32px !important;
+          padding: 28px !important;
           color: var(--cs-text) !important;
         }
 
@@ -1081,10 +1081,10 @@
           align-items: center !important;
           justify-content: center !important;
           gap: 10px !important;
-          margin-bottom: 28px !important;
+          margin-bottom: 24px !important;
         }
         .cookie-share-container h1 {
-          font-size: 24px !important;
+          font-size: 22px !important;
           font-weight: 700 !important;
           margin: 0 !important;
           color: var(--cs-heading) !important;
@@ -1109,8 +1109,8 @@
         .cookie-share-container input[type="password"],
         .cookie-share-container .cookie-id-input {
           width: 100% !important;
-          height: 44px !important;
-          padding: 0 14px !important;
+          height: 40px !important;
+          padding: 0 12px !important;
           border: 1px solid var(--cs-input-border) !important;
           border-radius: var(--cs-radius) !important;
           font-size: 14px !important;
@@ -1133,9 +1133,9 @@
         /* ===== ID Input Row ===== */
         .cookie-share-container .id-input-container {
           display: flex !important;
-          gap: 10px !important;
+          gap: 8px !important;
           align-items: center !important;
-          margin-bottom: 14px !important;
+          margin-bottom: 10px !important;
         }
         .cookie-share-container .id-input-container input {
           flex: 1 !important;
@@ -1154,8 +1154,8 @@
         }
 
         .cs-btn {
-          height: 44px !important;
-          padding: 0 18px !important;
+          height: 40px !important;
+          padding: 0 16px !important;
           border-radius: var(--cs-radius) !important;
           font-size: 14px !important;
           font-weight: 500 !important;
@@ -1195,12 +1195,12 @@
         .cookie-share-container .generate-btn {
           width: auto !important;
           min-width: 90px !important;
-          height: 44px !important;
+          height: 40px !important;
           flex-shrink: 0 !important;
           background: var(--cs-btn-secondary-bg) !important;
           color: var(--cs-btn-secondary-text) !important;
           margin: 0 !important;
-          padding: 0 16px !important;
+          padding: 0 14px !important;
           white-space: nowrap !important;
         }
         .cookie-share-container .generate-btn:hover {
@@ -1209,15 +1209,15 @@
 
         .cookie-share-container .action-buttons {
           display: flex !important;
-          gap: 10px !important;
-          margin-bottom: 14px !important;
+          gap: 8px !important;
+          margin-bottom: 10px !important;
         }
         .cookie-share-container .action-buttons button {
           margin: 0 !important;
         }
         .cookie-share-container .action-btn {
           flex: 1 !important;
-          height: 44px !important;
+          height: 40px !important;
           background: var(--cs-accent) !important;
           color: #FFF !important;
         }
@@ -1227,7 +1227,7 @@
 
         .cookie-share-container .clear-btn {
           width: 100% !important;
-          height: 44px !important;
+          height: 40px !important;
           background: var(--cs-btn-danger-bg) !important;
           color: var(--cs-btn-danger-text) !important;
           margin-bottom: 0 !important;
@@ -1238,8 +1238,8 @@
 
         /* ===== Settings ===== */
         .cookie-share-settings {
-          margin-top: 16px !important;
-          padding: 16px !important;
+          margin-top: 14px !important;
+          padding: 14px !important;
           background: var(--cs-surface-secondary) !important;
           border-radius: var(--cs-radius) !important;
           border: var(--cs-card-border) !important;
@@ -1327,8 +1327,8 @@
 
         /* ===== Config Transfer ===== */
         .cookie-share-config-transfer {
-          margin-top: 16px !important;
-          padding: 16px !important;
+          margin-top: 14px !important;
+          padding: 14px !important;
           background: var(--cs-surface-secondary) !important;
           border-radius: var(--cs-radius) !important;
           border: var(--cs-card-border) !important;
@@ -1357,20 +1357,20 @@
 
         /* ===== Cookie List ===== */
         .cookie-list-container {
-          margin-top: 20px !important;
+          margin-top: 16px !important;
           max-height: 400px !important;
           overflow-y: auto !important;
-          margin-bottom: 16px !important;
+          margin-bottom: 14px !important;
         }
         .cookie-share-item {
           display: flex !important;
           justify-content: space-between !important;
           align-items: center !important;
-          padding: 12px 14px !important;
+          padding: 10px 12px !important;
           background: var(--cs-surface-secondary) !important;
           border: 1px solid var(--cs-divider) !important;
           border-radius: var(--cs-radius) !important;
-          margin-bottom: 8px !important;
+          margin-bottom: 6px !important;
           transition: background 0.15s ease !important;
           color: var(--cs-text) !important;
         }
@@ -1473,7 +1473,7 @@
         .cookie-share-notification {
           position: fixed !important;
           bottom: 24px !important; right: 24px !important;
-          padding: 16px 22px !important;
+          padding: 14px 20px !important;
           border-radius: var(--cs-radius) !important;
           background: var(--cs-notif-bg) !important;
           border: var(--cs-notif-border) !important;

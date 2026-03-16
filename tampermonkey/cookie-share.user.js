@@ -33,7 +33,7 @@
     THEME: "cookie_share_theme",
   };
 
-  const THEMES = { VERCEL: "vercel", CLAUDE: "claude" };
+  const THEMES = { DARK: "dark", CLAUDE: "claude" };
 
   // ===================== i18n =====================
   const LANGUAGES = {
@@ -89,14 +89,17 @@
       placeholderAdminPassword: "Enter admin password",
       placeholderTransportSecret: "Enter transport secret",
       settingsShowFloatingButton: `Show Floating Button (${getShortcutLabel("L")})`,
-      settingsAutoHideFullscreen: "Auto Hide in Fullscreen (Not Available For Safari)",
-      settingsSaveLocally: "Prefer Local Save ('Send' will only save locally if checked)",
+      settingsAutoHideFullscreen:
+        "Auto Hide in Fullscreen (Not Available For Safari)",
+      settingsSaveLocally:
+        "Prefer Local Save ('Send' will only save locally if checked)",
       settingsConfigTransferTitle: "Import / Export Config",
-      settingsConfigTransferHint: "Only userscript settings are included. Local cookie records are excluded.",
+      settingsConfigTransferHint:
+        "Only userscript settings are included. Local cookie records are excluded.",
       settingsExportConfigButton: "Export Config",
       settingsImportConfigButton: "Import Config",
       settingsTheme: "Theme",
-      themeVercel: "Vercel",
+      themeDark: "Dark",
       themeClaude: "Claude",
       menuShowShare: `Show Cookie Share (${getShortcutLabel("C")})`,
       menuShowList: `Show Cookie List (${getShortcutLabel("L")})`,
@@ -107,33 +110,43 @@
       notificationEnterServer: "Please enter the server address",
       notificationSentSuccess: "Sent successfully",
       notificationReceivedSuccess: "Received successfully",
-      notificationClearedSuccess: "Cookies have been cleared, the page will refresh shortly",
-      notificationImportSuccess: "Successfully imported {{count}} cookies from local, refreshing soon",
+      notificationClearedSuccess:
+        "Cookies have been cleared, the page will refresh shortly",
+      notificationImportSuccess:
+        "Successfully imported {{count}} cookies from local, refreshing soon",
       notificationLocalDataNotFound: "Local cookie data not found",
       notificationLocalDataInvalid: "Local cookie data format invalid",
       notificationLocalImportFailed: "Failed to import any local cookies",
       notificationNeedServerAddress: "Please set the server address first",
-      notificationReceiveFailed: "Receive {{source}} cookie failed: {{message}}",
+      notificationReceiveFailed:
+        "Receive {{source}} cookie failed: {{message}}",
       notificationLocalDeleted: "Local cookie deleted",
-      notificationNeedAdminCreds: "Deleting cloud cookies requires server address and admin password",
-      notificationNeedTransportSecret: "Cloud operations require a transport secret",
+      notificationNeedAdminCreds:
+        "Deleting cloud cookies requires server address and admin password",
+      notificationNeedTransportSecret:
+        "Cloud operations require a transport secret",
       notificationCloudDeleted: "Cloud cookie deleted",
       notificationDeleteFailed: "Delete {{source}} cookie failed: {{message}}",
-      notificationListInitFailed: "Failed to initialize cookie list: {{message}}",
-      notificationLoadCloudFailed: "Failed to load cloud cookies: {{message}} (Local cookies will still be shown)",
+      notificationListInitFailed:
+        "Failed to initialize cookie list: {{message}}",
+      notificationLoadCloudFailed:
+        "Failed to load cloud cookies: {{message}} (Local cookies will still be shown)",
       notificationLoadLocalFailed: "Failed to load local cookies: {{message}}",
       notificationInvalidPassword: "Invalid admin password",
-      notificationAdminPermission: "Invalid admin password or insufficient permissions",
+      notificationAdminPermission:
+        "Invalid admin password or insufficient permissions",
       notificationServerDeleteFailed: "Server returned delete failure",
       notificationNetworkError: "Network request failed",
       notificationRequestTimeout: "Request timed out",
       notificationResponseError: "Error processing response: {{message}}",
       notificationEncryptFailed: "Failed to encrypt payload",
       notificationDecryptFailed: "Failed to decrypt server response",
-      notificationInvalidTransportSecret: "Invalid transport secret or corrupted payload",
+      notificationInvalidTransportSecret:
+        "Invalid transport secret or corrupted payload",
       notificationConfigExported: "Config exported to the text box",
       notificationConfigCopied: "Config exported and copied to clipboard",
-      notificationConfigCopyFailed: "Config exported, but clipboard copy failed",
+      notificationConfigCopyFailed:
+        "Config exported, but clipboard copy failed",
       notificationConfigImported: "Config imported successfully",
       notificationConfigEmpty: "Please enter a Base64 config",
       notificationConfigInvalid: "Invalid config payload",
@@ -173,11 +186,12 @@
       settingsAutoHideFullscreen: "全屏时自动隐藏 (Safari 不可用)",
       settingsSaveLocally: "优先本地保存 (勾选后'发送'将仅保存本地)",
       settingsConfigTransferTitle: "导入 / 导出配置",
-      settingsConfigTransferHint: "仅包含脚本自身配置，不包含本地 Cookie 记录。",
+      settingsConfigTransferHint:
+        "仅包含脚本自身配置，不包含本地 Cookie 记录。",
       settingsExportConfigButton: "导出配置",
       settingsImportConfigButton: "导入配置",
       settingsTheme: "主题",
-      themeVercel: "Vercel",
+      themeDark: "Dark",
       themeClaude: "Claude",
       menuShowShare: `显示 Cookie 分享面板 (${getShortcutLabel("C")})`,
       menuShowList: `显示 Cookie 列表 (${getShortcutLabel("L")})`,
@@ -201,7 +215,8 @@
       notificationCloudDeleted: "云端 Cookie 已删除",
       notificationDeleteFailed: "删除 {{source}} Cookie 失败: {{message}}",
       notificationListInitFailed: "初始化 Cookie 列表失败: {{message}}",
-      notificationLoadCloudFailed: "加载云端 Cookie 失败: {{message}} (本地 Cookie 仍会显示)",
+      notificationLoadCloudFailed:
+        "加载云端 Cookie 失败: {{message}} (本地 Cookie 仍会显示)",
       notificationLoadLocalFailed: "加载本地 Cookie 失败: {{message}}",
       notificationInvalidPassword: "无效的管理密码",
       notificationAdminPermission: "管理密码无效或权限不足",
@@ -269,17 +284,17 @@
     [STORAGE_KEYS.LANGUAGE_PREFERENCE]: (value) =>
       value === LANGUAGES.EN || value === LANGUAGES.ZH ? value : null,
     [STORAGE_KEYS.THEME]: (value) =>
-      value === THEMES.VERCEL || value === THEMES.CLAUDE ? value : THEMES.VERCEL,
+      value === THEMES.DARK || value === THEMES.CLAUDE ? value : THEMES.CLAUDE,
   };
 
   // ===================== Theme Manager =====================
   const themeManager = {
-    current: THEMES.VERCEL,
+    current: THEMES.CLAUDE,
 
     init() {
-      this.current = GM_getValue(STORAGE_KEYS.THEME, THEMES.VERCEL);
-      if (this.current !== THEMES.VERCEL && this.current !== THEMES.CLAUDE) {
-        this.current = THEMES.VERCEL;
+      this.current = GM_getValue(STORAGE_KEYS.THEME, THEMES.CLAUDE);
+      if (this.current !== THEMES.DARK && this.current !== THEMES.CLAUDE) {
+        this.current = THEMES.CLAUDE;
       }
       this.apply();
     },
@@ -289,16 +304,14 @@
     },
 
     setTheme(theme) {
-      if (theme !== THEMES.VERCEL && theme !== THEMES.CLAUDE) return;
+      if (theme !== THEMES.DARK && theme !== THEMES.CLAUDE) return;
       this.current = theme;
       GM_setValue(STORAGE_KEYS.THEME, theme);
       this.apply();
     },
 
     toggle() {
-      this.setTheme(
-        this.current === THEMES.VERCEL ? THEMES.CLAUDE : THEMES.VERCEL
-      );
+      this.setTheme(this.current === THEMES.DARK ? THEMES.CLAUDE : THEMES.DARK);
     },
   };
 
@@ -314,11 +327,11 @@
       if (!state.floatingButton) return;
       const showFloatingButton = GM_getValue(
         STORAGE_KEYS.SHOW_FLOATING_BUTTON,
-        true
+        true,
       );
       const autoHideFullscreen = GM_getValue(
         STORAGE_KEYS.AUTO_HIDE_FULLSCREEN,
-        true
+        true,
       );
       const shouldHide = state.isFullscreen && autoHideFullscreen;
       state.floatingButton.style.display =
@@ -343,7 +356,7 @@
               httpOnly: cookie.httpOnly,
               session: cookie.session,
               expirationDate: cookie.expirationDate,
-            }))
+            })),
           );
         });
       });
@@ -362,7 +375,7 @@
             sameSite: utils.normalizeSameSiteForSet(cookie.sameSite),
             expirationDate: cookie.expirationDate || undefined,
           },
-          resolve
+          resolve,
         );
       });
     },
@@ -384,7 +397,7 @@
                 if (deletedCount === totalCookies) {
                   resolve();
                 }
-              }
+              },
             );
           });
         });
@@ -413,7 +426,7 @@
       const bytes = new Uint8Array(length);
       crypto.getRandomValues(bytes);
       return Array.from(bytes, (byte) =>
-        chars.charAt(byte % chars.length)
+        chars.charAt(byte % chars.length),
       ).join("");
     },
 
@@ -430,8 +443,9 @@
         "Import completed": "导入成功",
         Unauthorized: t("notificationAdminPermission"),
         "Invalid encrypted payload": t("notificationDecryptFailed"),
-        "Transport secret mismatch or corrupted payload":
-          t("notificationInvalidTransportSecret"),
+        "Transport secret mismatch or corrupted payload": t(
+          "notificationInvalidTransportSecret",
+        ),
       };
       return mapping[message] || message;
     },
@@ -520,7 +534,7 @@
       this.exportKeys.forEach((storageKey) => {
         values[storageKey] = this.normalizeValue(
           storageKey,
-          GM_getValue(storageKey, undefined)
+          GM_getValue(storageKey, undefined),
         );
       });
       return { version: this.version, values };
@@ -555,7 +569,7 @@
         }
         await GM_setValue(
           storageKey,
-          this.normalizeValue(storageKey, values[storageKey])
+          this.normalizeValue(storageKey, values[storageKey]),
         );
         appliedCount += 1;
       }
@@ -577,12 +591,16 @@
       for (const value of bytes) {
         binary += String.fromCharCode(value);
       }
-      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      return btoa(binary)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
     },
 
     base64UrlDecode(value) {
       const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-      const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+      const padded =
+        normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
       const binary = atob(padded);
       const bytes = new Uint8Array(binary.length);
       for (let index = 0; index < binary.length; index += 1) {
@@ -594,11 +612,11 @@
     isEnvelope(value) {
       return Boolean(
         value &&
-          typeof value === "object" &&
-          value.version === this.version &&
-          typeof value.salt === "string" &&
-          typeof value.iv === "string" &&
-          typeof value.payload === "string"
+        typeof value === "object" &&
+        value.version === this.version &&
+        typeof value.salt === "string" &&
+        typeof value.iv === "string" &&
+        typeof value.payload === "string",
       );
     },
 
@@ -608,14 +626,14 @@
         this.encoder.encode(secret),
         "PBKDF2",
         false,
-        ["deriveKey"]
+        ["deriveKey"],
       );
       return await crypto.subtle.deriveKey(
         { name: "PBKDF2", hash: "SHA-256", salt, iterations: this.iterations },
         material,
         { name: "AES-GCM", length: 256 },
         false,
-        ["encrypt", "decrypt"]
+        ["encrypt", "decrypt"],
       );
     },
 
@@ -627,8 +645,8 @@
         await crypto.subtle.encrypt(
           { name: "AES-GCM", iv },
           key,
-          this.encoder.encode(JSON.stringify(payload))
-        )
+          this.encoder.encode(JSON.stringify(payload)),
+        ),
       );
       return {
         version: this.version,
@@ -645,12 +663,12 @@
       try {
         const key = await this.deriveKey(
           secret,
-          this.base64UrlDecode(envelope.salt)
+          this.base64UrlDecode(envelope.salt),
         );
         const plaintext = await crypto.subtle.decrypt(
           { name: "AES-GCM", iv: this.base64UrlDecode(envelope.iv) },
           key,
-          this.base64UrlDecode(envelope.payload)
+          this.base64UrlDecode(envelope.payload),
         );
         return JSON.parse(this.decoder.decode(plaintext));
       } catch {
@@ -661,7 +679,13 @@
 
   // ===================== API Operations =====================
   const api = {
-    async requestEncryptedJson({ method, url, body, transportSecret, headers }) {
+    async requestEncryptedJson({
+      method,
+      url,
+      body,
+      transportSecret,
+      headers,
+    }) {
       if (!transportSecret) {
         throw new Error(t("notificationNeedTransportSecret"));
       }
@@ -675,7 +699,9 @@
       const requestData =
         body === undefined
           ? undefined
-          : JSON.stringify(await transportCrypto.encrypt(transportSecret, body));
+          : JSON.stringify(
+              await transportCrypto.encrypt(transportSecret, body),
+            );
       const response = await new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
           method,
@@ -691,7 +717,9 @@
       });
       let payload = {};
       try {
-        payload = response.responseText ? JSON.parse(response.responseText) : {};
+        payload = response.responseText
+          ? JSON.parse(response.responseText)
+          : {};
       } catch {
         throw new Error(t("notificationDecryptFailed"));
       }
@@ -699,16 +727,16 @@
         if (transportCrypto.isEnvelope(payload)) {
           const decryptedError = await transportCrypto.decrypt(
             transportSecret,
-            payload
+            payload,
           );
           throw new Error(
             utils.localizeServerMessage(
-              decryptedError.message || decryptedError.error || ""
+              decryptedError.message || decryptedError.error || "",
             ) ||
               t("apiErrorServerReturn", {
                 status: response.status || "?",
                 text: response.responseText || "",
-              })
+              }),
           );
         }
         throw new Error(
@@ -716,7 +744,7 @@
             t("apiErrorServerReturn", {
               status: response.status || "?",
               text: response.responseText || "",
-            })
+            }),
         );
       }
       return await transportCrypto.decrypt(transportSecret, payload);
@@ -777,7 +805,7 @@
   const notification = {
     show(message, type = "success") {
       const existingNotification = document.querySelector(
-        ".cookie-share-notification"
+        ".cookie-share-notification",
       );
       if (existingNotification) {
         existingNotification.remove();
@@ -853,53 +881,53 @@
 
     injectStyles() {
       GM_addStyle(`
-        /* ===== Vercel Theme ===== */
-        body[data-cs-theme="vercel"] {
-          --cs-overlay: rgba(0, 0, 0, 0.7);
-          --cs-surface: #0A0A0A;
-          --cs-surface-secondary: #111111;
-          --cs-surface-hover: #1A1A1A;
-          --cs-card-border: 1px solid #222;
-          --cs-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-          --cs-heading: #FFFFFF;
-          --cs-text: #EDEDED;
-          --cs-text-secondary: #888;
-          --cs-text-muted: #666;
-          --cs-input-bg: #111;
-          --cs-input-border: #333;
-          --cs-input-focus-border: #0070F3;
-          --cs-input-focus-shadow: 0 0 0 2px rgba(0, 112, 243, 0.25);
-          --cs-accent: #0070F3;
-          --cs-accent-hover: #005CC5;
-          --cs-danger: #EE0000;
-          --cs-danger-hover: #CC0000;
-          --cs-success-border: #0070F3;
-          --cs-error-border: #EE0000;
-          --cs-btn-primary-bg: #EDEDED;
-          --cs-btn-primary-text: #000;
-          --cs-btn-primary-hover: #FFF;
-          --cs-btn-secondary-bg: #222;
-          --cs-btn-secondary-text: #EDEDED;
-          --cs-btn-secondary-hover: #333;
-          --cs-btn-danger-bg: #EE0000;
+        /* ===== Dark Theme (Warm luxury gold) ===== */
+        body[data-cs-theme="dark"] {
+          --cs-overlay: rgba(0, 0, 0, 0.5);
+          --cs-surface: #1A1816;
+          --cs-surface-secondary: #252220;
+          --cs-surface-hover: #302D2A;
+          --cs-card-border: 1px solid #33302D;
+          --cs-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+          --cs-heading: #FAF8F5;
+          --cs-text: #E8E4DF;
+          --cs-text-secondary: #A09A93;
+          --cs-text-muted: #6E6861;
+          --cs-input-bg: #252220;
+          --cs-input-border: #3D3935;
+          --cs-input-focus-border: #CA8A04;
+          --cs-input-focus-shadow: 0 0 0 2px rgba(202, 138, 4, 0.2);
+          --cs-accent: #CA8A04;
+          --cs-accent-hover: #B07A03;
+          --cs-danger: #EF5350;
+          --cs-danger-hover: #D84340;
+          --cs-success-border: #CA8A04;
+          --cs-error-border: #EF5350;
+          --cs-btn-primary-bg: #CA8A04;
+          --cs-btn-primary-text: #1A1816;
+          --cs-btn-primary-hover: #D4960A;
+          --cs-btn-secondary-bg: #2A2725;
+          --cs-btn-secondary-text: #E8E4DF;
+          --cs-btn-secondary-hover: #33302D;
+          --cs-btn-danger-bg: #EF5350;
           --cs-btn-danger-text: #FFF;
-          --cs-btn-danger-hover: #CC0000;
-          --cs-toggle-bg: #333;
-          --cs-toggle-active: #0070F3;
-          --cs-radius: 8px;
-          --cs-radius-lg: 12px;
-          --cs-divider: #222;
-          --cs-spinner-track: #333;
-          --cs-spinner-head: #0070F3;
-          --cs-notif-bg: rgba(10, 10, 10, 0.95);
-          --cs-notif-border: 1px solid #222;
-          --cs-float-bg: rgba(10, 10, 10, 0.9);
-          --cs-float-border: 1px solid #333;
-          --cs-float-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-          --cs-theme-btn-active: #0070F3;
-          --cs-theme-btn-active-text: #FFF;
-          --cs-theme-btn-inactive: #222;
-          --cs-theme-btn-inactive-text: #888;
+          --cs-btn-danger-hover: #D84340;
+          --cs-toggle-bg: #3D3935;
+          --cs-toggle-active: #CA8A04;
+          --cs-radius: 10px;
+          --cs-radius-lg: 14px;
+          --cs-divider: #33302D;
+          --cs-spinner-track: #3D3935;
+          --cs-spinner-head: #CA8A04;
+          --cs-notif-bg: rgba(26, 24, 22, 0.97);
+          --cs-notif-border: 1px solid #33302D;
+          --cs-float-bg: rgba(26, 24, 22, 0.95);
+          --cs-float-border: 1px solid #3D3935;
+          --cs-float-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+          --cs-theme-btn-active: #CA8A04;
+          --cs-theme-btn-active-text: #1A1816;
+          --cs-theme-btn-inactive: #2A2725;
+          --cs-theme-btn-inactive-text: #A09A93;
         }
 
         /* ===== Claude Theme ===== */
@@ -976,7 +1004,7 @@
           box-shadow: var(--cs-shadow) !important;
           width: min(480px, 90vw) !important;
           max-height: 90vh !important;
-          overflow: hidden !important;
+          overflow-y: auto !important;
           position: relative !important;
           display: none !important;
           z-index: 2147483647 !important;
@@ -992,7 +1020,7 @@
         /* ===== Container ===== */
         .cookie-share-container {
           font-family: -apple-system, system-ui, 'Segoe UI', sans-serif !important;
-          padding: 28px !important;
+          padding: 32px !important;
           color: var(--cs-text) !important;
         }
 
@@ -1017,16 +1045,46 @@
           background: var(--cs-surface-secondary) !important;
         }
 
+        /* ===== Settings Button ===== */
+        .cookie-share-container .settings-btn {
+          position: absolute !important;
+          right: 48px !important; top: 16px !important;
+          width: 28px !important; height: 28px !important;
+          background: none !important; border: none !important;
+          color: var(--cs-text-muted) !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important; justify-content: center !important;
+          padding: 0 !important;
+          border-radius: 6px !important;
+          transition: all 0.15s ease !important;
+          line-height: 1 !important;
+          margin: 0 !important;
+        }
+        .cookie-share-container .settings-btn:hover,
+        .cookie-share-container .settings-btn.active {
+          color: var(--cs-text) !important;
+          background: var(--cs-surface-secondary) !important;
+        }
+
+        /* ===== Settings Panel (hidden by default) ===== */
+        .cookie-share-settings-panel {
+          display: none !important;
+        }
+        .cookie-share-settings-panel.visible {
+          display: block !important;
+        }
+
         /* ===== Title ===== */
         .cookie-share-container .title-container {
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
           gap: 10px !important;
-          margin-bottom: 24px !important;
+          margin-bottom: 28px !important;
         }
         .cookie-share-container h1 {
-          font-size: 22px !important;
+          font-size: 24px !important;
           font-weight: 700 !important;
           margin: 0 !important;
           color: var(--cs-heading) !important;
@@ -1051,8 +1109,8 @@
         .cookie-share-container input[type="password"],
         .cookie-share-container .cookie-id-input {
           width: 100% !important;
-          height: 40px !important;
-          padding: 0 12px !important;
+          height: 44px !important;
+          padding: 0 14px !important;
           border: 1px solid var(--cs-input-border) !important;
           border-radius: var(--cs-radius) !important;
           font-size: 14px !important;
@@ -1075,9 +1133,9 @@
         /* ===== ID Input Row ===== */
         .cookie-share-container .id-input-container {
           display: flex !important;
-          gap: 8px !important;
+          gap: 10px !important;
           align-items: center !important;
-          margin-bottom: 10px !important;
+          margin-bottom: 14px !important;
         }
         .cookie-share-container .id-input-container input {
           flex: 1 !important;
@@ -1096,8 +1154,8 @@
         }
 
         .cs-btn {
-          height: 40px !important;
-          padding: 0 16px !important;
+          height: 44px !important;
+          padding: 0 18px !important;
           border-radius: var(--cs-radius) !important;
           font-size: 14px !important;
           font-weight: 500 !important;
@@ -1137,12 +1195,12 @@
         .cookie-share-container .generate-btn {
           width: auto !important;
           min-width: 90px !important;
-          height: 40px !important;
+          height: 44px !important;
           flex-shrink: 0 !important;
           background: var(--cs-btn-secondary-bg) !important;
           color: var(--cs-btn-secondary-text) !important;
           margin: 0 !important;
-          padding: 0 14px !important;
+          padding: 0 16px !important;
           white-space: nowrap !important;
         }
         .cookie-share-container .generate-btn:hover {
@@ -1151,15 +1209,15 @@
 
         .cookie-share-container .action-buttons {
           display: flex !important;
-          gap: 8px !important;
-          margin-bottom: 10px !important;
+          gap: 10px !important;
+          margin-bottom: 14px !important;
         }
         .cookie-share-container .action-buttons button {
           margin: 0 !important;
         }
         .cookie-share-container .action-btn {
           flex: 1 !important;
-          height: 40px !important;
+          height: 44px !important;
           background: var(--cs-accent) !important;
           color: #FFF !important;
         }
@@ -1169,7 +1227,7 @@
 
         .cookie-share-container .clear-btn {
           width: 100% !important;
-          height: 40px !important;
+          height: 44px !important;
           background: var(--cs-btn-danger-bg) !important;
           color: var(--cs-btn-danger-text) !important;
           margin-bottom: 0 !important;
@@ -1180,8 +1238,8 @@
 
         /* ===== Settings ===== */
         .cookie-share-settings {
-          margin-top: 14px !important;
-          padding: 14px !important;
+          margin-top: 16px !important;
+          padding: 16px !important;
           background: var(--cs-surface-secondary) !important;
           border-radius: var(--cs-radius) !important;
           border: var(--cs-card-border) !important;
@@ -1269,8 +1327,8 @@
 
         /* ===== Config Transfer ===== */
         .cookie-share-config-transfer {
-          margin-top: 14px !important;
-          padding: 14px !important;
+          margin-top: 16px !important;
+          padding: 16px !important;
           background: var(--cs-surface-secondary) !important;
           border-radius: var(--cs-radius) !important;
           border: var(--cs-card-border) !important;
@@ -1299,20 +1357,20 @@
 
         /* ===== Cookie List ===== */
         .cookie-list-container {
-          margin-top: 16px !important;
+          margin-top: 20px !important;
           max-height: 400px !important;
           overflow-y: auto !important;
-          margin-bottom: 14px !important;
+          margin-bottom: 16px !important;
         }
         .cookie-share-item {
           display: flex !important;
           justify-content: space-between !important;
           align-items: center !important;
-          padding: 10px 12px !important;
+          padding: 12px 14px !important;
           background: var(--cs-surface-secondary) !important;
           border: 1px solid var(--cs-divider) !important;
           border-radius: var(--cs-radius) !important;
-          margin-bottom: 6px !important;
+          margin-bottom: 8px !important;
           transition: background 0.15s ease !important;
           color: var(--cs-text) !important;
         }
@@ -1415,7 +1473,7 @@
         .cookie-share-notification {
           position: fixed !important;
           bottom: 24px !important; right: 24px !important;
-          padding: 14px 20px !important;
+          padding: 16px 22px !important;
           border-radius: var(--cs-radius) !important;
           background: var(--cs-notif-bg) !important;
           border: var(--cs-notif-border) !important;
@@ -1461,7 +1519,7 @@
     createFloatingButton() {
       const showFloatingButton = GM_getValue(
         STORAGE_KEYS.SHOW_FLOATING_BUTTON,
-        true
+        true,
       );
       if (!showFloatingButton) return;
 
@@ -1568,7 +1626,12 @@
       const settingsContainer = document.createElement("div");
       settingsContainer.className = "cookie-share-settings";
 
-      const createToggle = (labelTextKey, storageKey, onChange, defaultValue = true) => {
+      const createToggle = (
+        labelTextKey,
+        storageKey,
+        onChange,
+        defaultValue = true,
+      ) => {
         const row = document.createElement("div");
         row.className = "cs-setting-row";
 
@@ -1624,24 +1687,41 @@
         return btn;
       };
 
-      themeSelector.appendChild(createThemeBtn(THEMES.VERCEL, `▲ ${t("themeVercel")}`));
-      themeSelector.appendChild(createThemeBtn(THEMES.CLAUDE, `✦ ${t("themeClaude")}`));
+      themeSelector.appendChild(
+        createThemeBtn(THEMES.CLAUDE, `✦ ${t("themeClaude")}`),
+      );
+      themeSelector.appendChild(
+        createThemeBtn(THEMES.DARK, `● ${t("themeDark")}`),
+      );
       themeRow.appendChild(themeLabel);
       themeRow.appendChild(themeSelector);
 
       settingsContainer.appendChild(themeRow);
       settingsContainer.appendChild(
-        createToggle("settingsShowFloatingButton", STORAGE_KEYS.SHOW_FLOATING_BUTTON, () => {
-          ui.refreshFloatingButton();
-        })
+        createToggle(
+          "settingsShowFloatingButton",
+          STORAGE_KEYS.SHOW_FLOATING_BUTTON,
+          () => {
+            ui.refreshFloatingButton();
+          },
+        ),
       );
       settingsContainer.appendChild(
-        createToggle("settingsAutoHideFullscreen", STORAGE_KEYS.AUTO_HIDE_FULLSCREEN, () => {
-          fullscreenManager.updateFloatingButtonVisibility();
-        })
+        createToggle(
+          "settingsAutoHideFullscreen",
+          STORAGE_KEYS.AUTO_HIDE_FULLSCREEN,
+          () => {
+            fullscreenManager.updateFloatingButtonVisibility();
+          },
+        ),
       );
       settingsContainer.appendChild(
-        createToggle("settingsSaveLocally", STORAGE_KEYS.SAVE_LOCALLY, null, false)
+        createToggle(
+          "settingsSaveLocally",
+          STORAGE_KEYS.SAVE_LOCALLY,
+          null,
+          false,
+        ),
       );
 
       container.appendChild(settingsContainer);
@@ -1665,6 +1745,18 @@
       closeBtn.className = "close-btn";
       closeBtn.textContent = t("closeButton");
       closeBtn.onclick = () => ui.hideModal();
+
+      // Settings gear button
+      const settingsBtn = document.createElement("button");
+      settingsBtn.className = "settings-btn";
+      settingsBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+      settingsBtn.onclick = () => {
+        const panel = container.querySelector(".cookie-share-settings-panel");
+        if (panel) {
+          panel.classList.toggle("visible");
+          settingsBtn.classList.toggle("active");
+        }
+      };
 
       // Title container with GitHub icon inline
       const titleContainer = document.createElement("div");
@@ -1777,12 +1869,17 @@
       actionButtons.appendChild(receiveBtn);
 
       container.appendChild(closeBtn);
+      container.appendChild(settingsBtn);
       container.appendChild(titleContainer);
       container.appendChild(idContainer);
       container.appendChild(serverContainer);
       container.appendChild(transportContainer);
       container.appendChild(actionButtons);
       container.appendChild(clearBtn);
+
+      // Settings panel (hidden by default, toggled by gear button)
+      const settingsPanel = document.createElement("div");
+      settingsPanel.className = "cookie-share-settings-panel";
 
       modal.appendChild(container);
       overlay.appendChild(modal);
@@ -1820,10 +1917,16 @@
               notification.show(t("notificationNeedTransportSecret"), "error");
               return;
             }
-            const result = await api.sendCookies(cookieId, serverUrl, transportSecret);
+            const result = await api.sendCookies(
+              cookieId,
+              serverUrl,
+              transportSecret,
+            );
             notification.show(
-              result.success ? t("notificationSentSuccess") : utils.localizeServerMessage(result.message || ""),
-              result.success ? "success" : "error"
+              result.success
+                ? t("notificationSentSuccess")
+                : utils.localizeServerMessage(result.message || ""),
+              result.success ? "success" : "error",
             );
           }
         } catch (error) {
@@ -1843,7 +1946,10 @@
           const actionKey = GM_getValue(STORAGE_KEYS.SAVE_LOCALLY, false)
             ? "settingsSaveLocally"
             : "sendCookieButton";
-          notification.show(`${t(actionKey)} ${t("failed")}: ${errorMessage}`, "error");
+          notification.show(
+            `${t(actionKey)} ${t("failed")}: ${errorMessage}`,
+            "error",
+          );
         }
       };
 
@@ -1864,18 +1970,25 @@
           await api.receiveCookies(
             idInput.value.trim(),
             serverInput.value.trim(),
-            transportInput.value.trim()
+            transportInput.value.trim(),
           );
           notification.show(t("notificationReceivedSuccess"), "success");
         } catch (error) {
           let errorMessage = error.message;
-          if (error.message === "Request failed") errorMessage = t("apiErrorNetwork");
-          else if (error.message === "Request timeout") errorMessage = t("apiErrorTimeout");
-          else if (error.message === "Invalid data format") errorMessage = t("apiErrorInvalidData");
-          else if (error.message === "No cookies were successfully imported") errorMessage = t("apiErrorNoImport");
+          if (error.message === "Request failed")
+            errorMessage = t("apiErrorNetwork");
+          else if (error.message === "Request timeout")
+            errorMessage = t("apiErrorTimeout");
+          else if (error.message === "Invalid data format")
+            errorMessage = t("apiErrorInvalidData");
+          else if (error.message === "No cookies were successfully imported")
+            errorMessage = t("apiErrorNoImport");
           notification.show(
-            t("notificationReceiveFailed", { source: t("sourceCloud"), message: errorMessage }),
-            "error"
+            t("notificationReceiveFailed", {
+              source: t("sourceCloud"),
+              message: errorMessage,
+            }),
+            "error",
           );
         }
       };
@@ -1898,9 +2011,13 @@
         GM_setValue(STORAGE_KEYS.CUSTOM_URL, url);
       });
 
-      ui.createSettingsView(container);
-      const configTransferView = this.createConfigTransferView({ idInput, options });
-      container.appendChild(configTransferView);
+      ui.createSettingsView(settingsPanel);
+      const configTransferView = this.createConfigTransferView({
+        idInput,
+        options,
+      });
+      settingsPanel.appendChild(configTransferView);
+      container.appendChild(settingsPanel);
     },
 
     showModal(options = {}) {
@@ -1981,14 +2098,23 @@
         const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
         cookiesList.innerHTML = "";
         const transportSecret = GM_getValue(STORAGE_KEYS.TRANSPORT_SECRET);
-        await this.loadCombinedCookieList(cookiesList, customUrl, transportSecret);
+        await this.loadCombinedCookieList(
+          cookiesList,
+          customUrl,
+          transportSecret,
+        );
       } catch (error) {
         console.error("Error initializing cookies list:", error);
         cookiesList.innerHTML = `<div class="cookie-share-error">${t("notificationListInitFailed", { message: error.message })}</div>`;
       }
     },
 
-    async loadCombinedCookieList(cookiesList, customUrl, transportSecret, loadOnlyLocal = false) {
+    async loadCombinedCookieList(
+      cookiesList,
+      customUrl,
+      transportSecret,
+      loadOnlyLocal = false,
+    ) {
       cookiesList.innerHTML = `
         <div class="cookie-share-loading">
           <div class="cookie-share-spinner"></div>
@@ -2002,7 +2128,9 @@
 
       try {
         const allKeys = await GM_listValues();
-        const localKeys = allKeys.filter((key) => key.startsWith("cookie_share_local_"));
+        const localKeys = allKeys.filter((key) =>
+          key.startsWith("cookie_share_local_"),
+        );
         for (const key of localKeys) {
           try {
             const rawData = await GM_getValue(key);
@@ -2024,7 +2152,10 @@
               }
             }
           } catch (parseError) {
-            console.error(`Failed to parse local cookie data for key ${key}:`, parseError);
+            console.error(
+              `Failed to parse local cookie data for key ${key}:`,
+              parseError,
+            );
           }
         }
       } catch (error) {
@@ -2044,7 +2175,11 @@
             });
             if (data.success && Array.isArray(data.cookies)) {
               data.cookies.forEach((cookie) => {
-                if (!combinedCookies.some((c) => c.id === cookie.id && c.source === "cloud")) {
+                if (
+                  !combinedCookies.some(
+                    (c) => c.id === cookie.id && c.source === "cloud",
+                  )
+                ) {
                   combinedCookies.push({
                     id: cookie.id,
                     source: "cloud",
@@ -2053,7 +2188,9 @@
                 }
               });
             } else {
-              throw new Error(data.message || "Failed to parse cloud cookie data");
+              throw new Error(
+                data.message || "Failed to parse cloud cookie data",
+              );
             }
           }
         } catch (error) {
@@ -2062,13 +2199,17 @@
         }
       }
 
-      const loadingIndicator = cookiesList.querySelector(".cookie-share-loading");
+      const loadingIndicator = cookiesList.querySelector(
+        ".cookie-share-loading",
+      );
       if (loadingIndicator) loadingIndicator.remove();
 
       if (cloudError) {
         const errorDiv = document.createElement("div");
         errorDiv.className = "cookie-share-error";
-        errorDiv.textContent = t("notificationLoadCloudFailed", { message: cloudError.message });
+        errorDiv.textContent = t("notificationLoadCloudFailed", {
+          message: cloudError.message,
+        });
         cookiesList.prepend(errorDiv);
       }
 
@@ -2078,20 +2219,26 @@
           const emptyDiv = document.createElement("div");
           emptyDiv.className = "cookie-share-empty";
           if (loadOnlyLocal || (!customUrl && !cloudError)) {
-            emptyDiv.textContent = t("listEmptyLocalOnly", { host: currentHost });
+            emptyDiv.textContent = t("listEmptyLocalOnly", {
+              host: currentHost,
+            });
           } else {
             emptyDiv.textContent = t("listEmpty", { host: currentHost });
           }
           cookiesList.appendChild(emptyDiv);
         }
       } else {
-        const existingItems = cookiesList.querySelectorAll(".cookie-share-item, .cookie-share-empty");
+        const existingItems = cookiesList.querySelectorAll(
+          ".cookie-share-item, .cookie-share-empty",
+        );
         existingItems.forEach((item) => item.remove());
 
         combinedCookies.forEach((cookie) => {
           const item = document.createElement("div");
           item.className = "cookie-share-item";
-          const sourceText = t(cookie.source === "local" ? "sourceLocal" : "sourceCloud");
+          const sourceText = t(
+            cookie.source === "local" ? "sourceLocal" : "sourceCloud",
+          );
           item.innerHTML = `
             <span style="font-size: 13px; font-weight: 500;">ID: ${cookie.id} <span style="color: var(--cs-text-muted); font-weight: 400;">(${sourceText})</span></span>
             <div class="cookie-share-buttons">
@@ -2113,7 +2260,9 @@
           const source = button.dataset.source;
           const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
           const transportSecret = GM_getValue(STORAGE_KEYS.TRANSPORT_SECRET);
-          const sourceText = t(source === "local" ? "sourceLocal" : "sourceCloud");
+          const sourceText = t(
+            source === "local" ? "sourceLocal" : "sourceCloud",
+          );
 
           try {
             if (source === "local") {
@@ -2121,7 +2270,8 @@
               const rawData = await GM_getValue(localKey);
               if (!rawData) throw new Error(t("notificationLocalDataNotFound"));
               const cookieData = JSON.parse(rawData);
-              if (!Array.isArray(cookieData.cookies)) throw new Error(t("notificationLocalDataInvalid"));
+              if (!Array.isArray(cookieData.cookies))
+                throw new Error(t("notificationLocalDataInvalid"));
               await cookieManager.clearAll();
               let importedCount = 0;
               for (const cookie of cookieData.cookies) {
@@ -2130,8 +2280,12 @@
                   importedCount++;
                 }
               }
-              if (importedCount === 0) throw new Error(t("notificationLocalImportFailed"));
-              notification.show(t("notificationImportSuccess", { count: importedCount }), "success");
+              if (importedCount === 0)
+                throw new Error(t("notificationLocalImportFailed"));
+              notification.show(
+                t("notificationImportSuccess", { count: importedCount }),
+                "success",
+              );
               setTimeout(() => window.location.reload(), 500);
               this.hideCookieList();
             } else {
@@ -2140,7 +2294,10 @@
                 return;
               }
               if (!transportSecret) {
-                notification.show(t("notificationNeedTransportSecret"), "error");
+                notification.show(
+                  t("notificationNeedTransportSecret"),
+                  "error",
+                );
                 return;
               }
               await api.receiveCookies(cookieId, customUrl, transportSecret);
@@ -2149,8 +2306,11 @@
             }
           } catch (error) {
             notification.show(
-              t("notificationReceiveFailed", { source: sourceText, message: error.message }),
-              "error"
+              t("notificationReceiveFailed", {
+                source: sourceText,
+                message: error.message,
+              }),
+              "error",
             );
           }
         };
@@ -2160,7 +2320,9 @@
         button.onclick = async () => {
           const cookieId = button.dataset.id;
           const source = button.dataset.source;
-          const sourceText = t(source === "local" ? "sourceLocal" : "sourceCloud");
+          const sourceText = t(
+            source === "local" ? "sourceLocal" : "sourceCloud",
+          );
 
           if (await this.confirmDelete()) {
             try {
@@ -2171,13 +2333,21 @@
                 this.showCookieList();
               } else {
                 const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
-                const transportSecret = GM_getValue(STORAGE_KEYS.TRANSPORT_SECRET);
+                const transportSecret = GM_getValue(
+                  STORAGE_KEYS.TRANSPORT_SECRET,
+                );
                 if (!customUrl) {
-                  notification.show(t("notificationNeedServerAddress"), "error");
+                  notification.show(
+                    t("notificationNeedServerAddress"),
+                    "error",
+                  );
                   return;
                 }
                 if (!transportSecret) {
-                  notification.show(t("notificationNeedTransportSecret"), "error");
+                  notification.show(
+                    t("notificationNeedTransportSecret"),
+                    "error",
+                  );
                   return;
                 }
                 try {
@@ -2194,8 +2364,11 @@
               }
             } catch (error) {
               notification.show(
-                t("notificationDeleteFailed", { source: sourceText, message: error.message }),
-                "error"
+                t("notificationDeleteFailed", {
+                  source: sourceText,
+                  message: error.message,
+                }),
+                "error",
               );
             }
           }
@@ -2212,18 +2385,20 @@
     ui.createFloatingButton();
 
     document.addEventListener("fullscreenchange", () =>
-      fullscreenManager.handleFullscreenChange()
+      fullscreenManager.handleFullscreenChange(),
     );
     document.addEventListener("webkitfullscreenchange", () =>
-      fullscreenManager.handleFullscreenChange()
+      fullscreenManager.handleFullscreenChange(),
     );
 
     const matchesShortcut = (event, actionKey) => {
       const key = event.key.toLowerCase();
       const expectedKey = actionKey.toLowerCase();
       if (key !== expectedKey || !event.shiftKey) return false;
-      const hasMacShortcut = isMacOS && !event.ctrlKey && (event.metaKey || event.altKey);
-      const hasDefaultShortcut = !isMacOS && !event.ctrlKey && !event.metaKey && event.altKey;
+      const hasMacShortcut =
+        isMacOS && !event.ctrlKey && (event.metaKey || event.altKey);
+      const hasDefaultShortcut =
+        !isMacOS && !event.ctrlKey && !event.metaKey && event.altKey;
       return hasMacShortcut || hasDefaultShortcut;
     };
 
@@ -2244,7 +2419,9 @@
         e.preventDefault();
         e.stopPropagation();
         const overlay = document.querySelector(".cookie-share-overlay");
-        const modal = document.querySelector(".cookie-share-modal:not(.cookie-list-modal)");
+        const modal = document.querySelector(
+          ".cookie-share-modal:not(.cookie-list-modal)",
+        );
         if (overlay && modal) {
           ui.hideModal();
         } else {
@@ -2255,7 +2432,9 @@
     };
 
     document.removeEventListener("keydown", handleKeyboardShortcuts);
-    document.addEventListener("keydown", handleKeyboardShortcuts, { capture: true });
+    document.addEventListener("keydown", handleKeyboardShortcuts, {
+      capture: true,
+    });
 
     GM_registerMenuCommand(t("menuShowShare"), () => ui.showModal());
     GM_registerMenuCommand(t("menuShowList"), () => ui.showCookieList());
@@ -2265,7 +2444,8 @@
   init();
 
   function switchLanguage() {
-    const newLanguage = currentLanguage === LANGUAGES.EN ? LANGUAGES.ZH : LANGUAGES.EN;
+    const newLanguage =
+      currentLanguage === LANGUAGES.EN ? LANGUAGES.ZH : LANGUAGES.EN;
     GM_setValue(STORAGE_KEYS.LANGUAGE_PREFERENCE, newLanguage);
     currentLanguage = newLanguage;
     notification.show(t("menuSwitchLanguage"), "success");

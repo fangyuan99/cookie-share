@@ -6,6 +6,8 @@ build/
 2c.js
 .gitignore
 
+# Cursor files
+.cursor/
 
 # Node modules
 node_modules/

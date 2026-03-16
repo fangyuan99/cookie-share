@@ -1,3 +1,17 @@
+- v0.4.0:
+  - Added dual theme system: Claude (warm light) and Dark (luxury gold accent) with one-click switching
+  - Rebuilt all UI styles with CSS custom properties for consistent theming across modal, inputs, buttons, and notifications
+  - Moved GitHub icon inline next to the title text instead of absolute-positioned to the far right
+  - Collapsed settings (floating button toggle, fullscreen auto-hide, local save, config transfer) behind a gear button
+  - Increased padding, input height, and spacing throughout for a more comfortable layout
+  - Consolidated notification system and all style injections inside the IIFE for cleaner code
+  - 新增双主题系统：Claude（暖色浅色）和 Dark（奢华金色暗色），支持一键切换
+  - 使用 CSS 自定义属性重构所有 UI 样式，弹窗、输入框、按钮、通知等全面适配主题
+  - 将 GitHub 图标移至标题文字右侧内联显示，不再绝对定位到最右边
+  - 将设置项（悬浮按钮开关、全屏自动隐藏、本地保存、配置导入导出）折叠到齿轮按钮后面
+  - 增大内边距、输入框高度和整体间距，提升布局舒适度
+  - 将通知系统和所有样式注入统一移入 IIFE 内部，代码更整洁
+
 - v0.3.1:
   - Added userscript config export/import for script-only settings such as backend URL, transport secret, language preference, and UI toggles
   - Exported config is encoded as Base64 and copied to the clipboard automatically

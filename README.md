@@ -54,6 +54,7 @@ Tested websites:
 - Manage cookies with Cookie List (local and cloud data)
 - Admin features for managing stored cookies
 - Can support `HTTPOnly` cookies that ordinary page JS cannot access
+- Dual theme support: Claude (warm light) and Dark (luxury gold) with one-click switching (added in v0.4.0)
 
 ## Usage Instructions
 

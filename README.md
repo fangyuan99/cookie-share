@@ -66,9 +66,9 @@ Tested websites:
 ![tm](./images/tm.png)
 1. Send Cookie from logged-in browser page
 2. Accept Cookie on non-logged-in browser page
-3. Note: Don't add `/` after the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
-4. If you use a Cloudflare Worker backend, the userscript only needs `Transport Secret`. `send/receive`, cloud list, and cloud delete all use `TRANSPORT_SECRET`
-5. Management panel access `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin`
+3. Note: Don't add `/` at the end of the address, example: `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}`
+4. If you use a Cloudflare Worker backend, the userscript only needs the address and `Transport Secret`. `send/receive`, cloud list, and cloud delete all use `TRANSPORT_SECRET`
+5. Management panel access `https://your-worker-name.your-subdomain.workers.dev/{PATH_SECRET}/admin`, log in with admin password `ADMIN_PASSWORD`
 
 ### Local Use Without Backend
 
@@ -85,9 +85,11 @@ For sharing cookies between different devices or browsers, you'll still need to 
 
 #### Option 1: Cloudflare Worker + D1 (Recommended)
 
+> **⚠️ Note: Starting from v0.4.1, the backend uses D1 database and is NOT compatible with data from older versions (KV). If you are upgrading from an older version, you need to redeploy and migrate your data.**
+
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/fangyuan99/cookie-share&env=ADMIN_PASSWORD&env=PATH_SECRET&env=TRANSPORT_SECRET&d1=COOKIE_DB)
 
-Deploy to Cloudflare (one click):
+##### Deploy to Cloudflare (one click, recommended):
 
 1. Click the Deploy button above and authorize Cloudflare
 2. Fill in `ADMIN_PASSWORD`, `PATH_SECRET`, and `TRANSPORT_SECRET` in the deploy form
@@ -95,7 +97,7 @@ Deploy to Cloudflare (one click):
 4. No manual KV or D1 setup is required. The Worker will create the required tables automatically on the first storage request
 5. Use `https://your-worker-domain/{PATH_SECRET}` as the backend address in the userscript
 
-Deploy locally with Wrangler:
+##### Deploy locally with Wrangler:
 
 1. Install dependencies with `npm install`
 2. Run `npx wrangler login`

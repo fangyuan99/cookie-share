@@ -1,3 +1,7 @@
+- v0.4.1:
+  - **Breaking Change**: Switched Cloudflare Worker storage from KV to D1 database. Data from older versions is NOT compatible and requires redeployment
+  - **破坏性变更**：Cloudflare Worker 存储层从 KV 切换为 D1 数据库，不兼容旧版数据，需要重新部署
+
 - v0.4.0:
   - Added dual theme system: Claude (warm light) and Dark (luxury gold accent) with one-click switching
   - Rebuilt all UI styles with CSS custom properties for consistent theming across modal, inputs, buttons, and notifications

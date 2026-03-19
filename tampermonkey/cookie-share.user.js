@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.4.1
+// @version      0.5.0
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -79,7 +79,11 @@
       generateIdButton: "Generate ID",
       sendCookieButton: "Send Cookie",
       receiveCookieButton: "Receive Cookie",
-      clearAllCookiesButton: "Clear All Cookies of This Page",
+      clearAllCookiesButton: "Clear page's Cookies",
+      addAccountButton: "Add Account",
+      addAccountConfirmTitle: "Add Account",
+      addAccountConfirmMessage: "This will send the current cookies, clear all cookies on this page, and reload the page so you can log in with a new account. Continue?",
+      confirmButton: "Confirm",
       sourceLocal: "Local",
       sourceCloud: "Cloud",
       loadingCookies: "Loading cookies...",
@@ -173,7 +177,11 @@
       generateIdButton: "生成 ID",
       sendCookieButton: "发送 Cookie",
       receiveCookieButton: "接收 Cookie",
-      clearAllCookiesButton: "清除本页所有 Cookie",
+      clearAllCookiesButton: "清除本页 Cookie",
+      addAccountButton: "新增账号",
+      addAccountConfirmTitle: "新增账号",
+      addAccountConfirmMessage: "此操作会发送当前 Cookie，清空本页所有 Cookie 并刷新页面，以便您登录新账号。是否继续？",
+      confirmButton: "确认",
       sourceLocal: "本地",
       sourceCloud: "云端",
       loadingCookies: "正在加载 Cookie...",
@@ -869,6 +877,53 @@
             resolve(false);
           }
         };
+      });
+    },
+
+    confirmAddAccount() {
+      return new Promise((resolve) => {
+        const container = document.createElement("div");
+        container.style.cssText = `
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: var(--cs-overlay); backdrop-filter: blur(4px);
+          z-index: 2147483647;
+        `;
+
+        const dialog = document.createElement("div");
+        dialog.style.cssText = `
+          background: var(--cs-surface); padding: 24px;
+          border-radius: var(--cs-radius-lg); text-align: center;
+          min-width: 320px; border: var(--cs-card-border);
+          box-shadow: var(--cs-shadow);
+        `;
+
+        dialog.innerHTML = `
+          <h3 style="margin: 0 0 16px 0; color: var(--cs-heading); font-size: 18px; font-weight: 600;">${t("addAccountConfirmTitle")}</h3>
+          <p style="margin: 0 0 24px 0; color: var(--cs-text-secondary);">${t("addAccountConfirmMessage")}</p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button id="cancelBtn" class="cs-btn cs-btn-secondary" style="min-width: 100px; margin: 0 !important;">${t("cancelButton")}</button>
+            <button id="confirmBtn" class="cs-btn cs-btn-danger" style="min-width: 100px; margin: 0 !important;">${t("confirmButton")}</button>
+          </div>
+        `;
+
+        container.appendChild(dialog);
+        document.body.appendChild(container);
+
+        dialog.querySelector("#cancelBtn").onclick = () => {
+          container.remove();
+          resolve(false);
+        };
+        dialog.querySelector("#confirmBtn").onclick = () => {
+          container.remove();
+          resolve(true);
+        };
+        container.onclick = (e) => {
+          if (e.target === container) {
+            container.remove();
+            resolve(false);
+          }
+        };
 
         dialog.style.opacity = "0";
         dialog.style.transform = "scale(0.95)";
@@ -1225,12 +1280,28 @@
           background: var(--cs-accent-hover) !important;
         }
 
+        .cookie-share-container .bottom-buttons {
+          display: flex !important;
+          gap: 8px !important;
+          margin-bottom: 0 !important;
+        }
+        .cookie-share-container .bottom-buttons button {
+          margin: 0 !important;
+        }
+        .cookie-share-container .add-account-btn {
+          flex: 1 !important;
+          height: 40px !important;
+          background: var(--cs-btn-primary-bg) !important;
+          color: var(--cs-btn-primary-text) !important;
+        }
+        .cookie-share-container .add-account-btn:hover {
+          background: var(--cs-btn-primary-hover) !important;
+        }
         .cookie-share-container .clear-btn {
-          width: 100% !important;
+          flex: 1 !important;
           height: 40px !important;
           background: var(--cs-btn-danger-bg) !important;
           color: var(--cs-btn-danger-text) !important;
-          margin-bottom: 0 !important;
         }
         .cookie-share-container .clear-btn:hover {
           background: var(--cs-btn-danger-hover) !important;
@@ -1858,9 +1929,19 @@
       receiveBtn.className = "action-btn receive-btn";
       receiveBtn.textContent = t("receiveCookieButton");
 
+      const bottomButtons = document.createElement("div");
+      bottomButtons.className = "bottom-buttons";
+
+      const addAccountBtn = document.createElement("button");
+      addAccountBtn.className = "add-account-btn";
+      addAccountBtn.textContent = t("addAccountButton");
+
       const clearBtn = document.createElement("button");
       clearBtn.className = "clear-btn";
       clearBtn.textContent = t("clearAllCookiesButton");
+
+      bottomButtons.appendChild(addAccountBtn);
+      bottomButtons.appendChild(clearBtn);
 
       // Assemble DOM
       idContainer.appendChild(idInput);
@@ -1875,7 +1956,7 @@
       container.appendChild(serverContainer);
       container.appendChild(transportContainer);
       container.appendChild(actionButtons);
-      container.appendChild(clearBtn);
+      container.appendChild(bottomButtons);
 
       // Settings panel (hidden by default, toggled by gear button)
       const settingsPanel = document.createElement("div");
@@ -1990,6 +2071,64 @@
             }),
             "error",
           );
+        }
+      };
+
+      addAccountBtn.onclick = async () => {
+        if (!(await this.confirmAddAccount())) {
+          return;
+        }
+        try {
+          const saveLocally = GM_getValue(STORAGE_KEYS.SAVE_LOCALLY, false);
+          const cookieId = idInput.value.trim();
+          const serverUrl = serverInput.value.trim();
+          const transportSecret = transportInput.value.trim();
+
+          if (!cookieId) {
+            notification.show(t("notificationEnterCookieId"), "error");
+            return;
+          }
+
+          if (saveLocally) {
+            const cookies = await cookieManager.getAll();
+            if (!cookies.length) {
+              notification.show(t("notificationNoCookiesToSave"), "error");
+              return;
+            }
+            const data = { id: cookieId, url: window.location.href, cookies };
+            const localKey = `cookie_share_local_${data.id}`;
+            await GM_setValue(localKey, JSON.stringify(data));
+          } else {
+            if (!serverUrl) {
+              notification.show(t("notificationEnterServer"), "error");
+              return;
+            }
+            if (!transportSecret) {
+              notification.show(t("notificationNeedTransportSecret"), "error");
+              return;
+            }
+            const result = await api.sendCookies(cookieId, serverUrl, transportSecret);
+            if (!result.success) {
+              notification.show(
+                utils.localizeServerMessage(result.message || ""),
+                "error",
+              );
+              return;
+            }
+          }
+          await cookieManager.clearAll();
+          notification.show(t("notificationClearedSuccess"), "success");
+          setTimeout(() => window.location.reload(), 500);
+        } catch (error) {
+          let errorMessage = error.message;
+          if (error.message.includes("No cookies to send")) {
+            errorMessage = t("apiErrorNoCookiesToSend");
+          } else if (error.message === "Network request failed") {
+            errorMessage = t("apiErrorNetwork");
+          } else if (error.message === "Request timeout") {
+            errorMessage = t("apiErrorTimeout");
+          }
+          notification.show(errorMessage, "error");
         }
       };
 

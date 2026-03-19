@@ -1,160 +1,193 @@
-- v0.4.1:
-  - **Breaking Change**: Switched Cloudflare Worker storage from KV to D1 database. Data from older versions is NOT compatible and requires redeployment
-  - **破坏性变更**：Cloudflare Worker 存储层从 KV 切换为 D1 数据库，不兼容旧版数据，需要重新部署
+# Changelog
 
-- v0.4.0:
-  - Added dual theme system: Claude (warm light) and Dark (luxury gold accent) with one-click switching
-  - Rebuilt all UI styles with CSS custom properties for consistent theming across modal, inputs, buttons, and notifications
-  - Moved GitHub icon inline next to the title text instead of absolute-positioned to the far right
-  - Collapsed settings (floating button toggle, fullscreen auto-hide, local save, config transfer) behind a gear button
-  - Increased padding, input height, and spacing throughout for a more comfortable layout
-  - Consolidated notification system and all style injections inside the IIFE for cleaner code
-  - 新增双主题系统：Claude（暖色浅色）和 Dark（奢华金色暗色），支持一键切换
-  - 使用 CSS 自定义属性重构所有 UI 样式，弹窗、输入框、按钮、通知等全面适配主题
-  - 将 GitHub 图标移至标题文字右侧内联显示，不再绝对定位到最右边
-  - 将设置项（悬浮按钮开关、全屏自动隐藏、本地保存、配置导入导出）折叠到齿轮按钮后面
-  - 增大内边距、输入框高度和整体间距，提升布局舒适度
-  - 将通知系统和所有样式注入统一移入 IIFE 内部，代码更整洁
+All notable changes to Cookie-share will be documented in this file.
 
-- v0.3.1:
-  - Added userscript config export/import for script-only settings such as backend URL, transport secret, language preference, and UI toggles
-  - Exported config is encoded as Base64 and copied to the clipboard automatically
-  - Moved the userscript config transfer panel to the bottom of the main modal
-  - Replaced the external GitHub icon asset in the userscript with an inline SVG
-  - Reduced Worker PBKDF2 iterations to `100000` for Cloudflare Workers compatibility
-  - Added top-level Worker error handling so browser requests show a readable error page instead of only `Error 1101`
-  - 为油猴脚本新增配置导出 / 导入功能，仅处理脚本自身配置，例如后端地址、传输密钥、语言偏好和界面开关
-  - 导出配置时会编码为 Base64，并自动复制到剪贴板
-  - 将油猴脚本的配置传输面板移动到主弹窗底部
-  - 将油猴脚本中的外部 GitHub 图标资源替换为内联 SVG
-  - 将 Worker 的 PBKDF2 迭代次数调整为 `100000`，兼容 Cloudflare Workers 限制
-  - 为 Worker 增加顶层异常处理，浏览器访问时会显示可读错误页，而不是只看到 `Error 1101`
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- v0.3.0:
-  - Added `TRANSPORT_SECRET` for encrypted Worker JSON API transport
-  - Encrypted `send/receive/admin` JSON request and response bodies with a shared secret envelope
-  - Added full export/import support in the Worker admin page
-  - Switched the Worker admin UI to Pico CSS to reduce embedded style code
-  - Updated the userscript to store and use `TRANSPORT_SECRET` for cloud operations
-  - Split credential usage so the userscript only needs `TRANSPORT_SECRET`, while the admin page only needs `ADMIN_PASSWORD`
-  - Updated deployment docs, local dev defaults, and version metadata
-  - Added userscript config export/import for script-only settings such as backend URL, transport secret, language preference, and UI toggles
-  - Exported config is encoded as Base64 and copied to the clipboard automatically
-  - Moved the userscript config transfer panel to the bottom of the main modal
-  - 为油猴脚本新增配置导出 / 导入功能，仅处理脚本自身配置，例如后端地址、传输密钥、语言偏好和界面开关
-  - 导出配置时会编码为 Base64，并自动复制到剪贴板
-  - 将油猴脚本的配置传输面板移动到主弹窗底部
-  - 新增 `TRANSPORT_SECRET`，用于 Worker JSON API 传输加密
-  - 将 `send/receive/admin` 的 JSON 请求与响应统一切换为共享密钥加密信封
-  - 为 Worker 管理页新增全量导出 / 导入能力
-  - 将 Worker 管理页 UI 切换为 Pico CSS，减少内嵌样式代码
-  - 更新油猴脚本，支持保存并使用 `TRANSPORT_SECRET` 完成云端操作
-  - 拆分凭据使用方式：油猴脚本只需要 `TRANSPORT_SECRET`，管理页只需要 `ADMIN_PASSWORD`
-  - 更新部署文档、本地开发默认值和版本元数据
+---
 
-- v0.2.0:
-  - Reworked the Cloudflare Worker storage layer from KV to D1
-  - Added `wrangler.jsonc`, D1 migrations, and standardized deploy scripts
-  - Updated Cloudflare deployment docs for D1 binding and one-click deployment flow
-  - Added localhost fallback defaults for `wrangler dev` when `.dev.vars` is missing
-  - Fixed Worker admin page rendering issues and stricter request validation
-  - Fixed userscript empty-list crash and switched ID generation to Web Crypto
-  - 将 Cloudflare Worker 存储层从 KV 重构为 D1
-  - 新增 `wrangler.jsonc`、D1 migration 和标准化部署脚本
-  - 更新 Cloudflare D1 绑定与一键部署文档说明
-  - 为缺少 `.dev.vars` 的 `wrangler dev` 增加 localhost 默认值回退
-  - 修复 Worker 管理页渲染问题并加强请求校验
-  - 修复油猴脚本空列表崩溃，并将 ID 生成改为 Web Crypto
+## [0.5.0]
 
-- Tampermonkey Script v0.1.0 / 油猴脚本版v0.1.0
-  - 新增保存到本地选项框
-  - 在 Cookie List 中区分本地与云端数据
-  - 在油猴插件中新增 Cookie List 的打开项
-  - 新增 updateURL 用于更新脚本
-  - 优化云端数据传输流程
-  - 新增语言选择，当前支持中文和英文
-  - Added local storage option checkbox
-  - Distinguished between local and cloud data in Cookie List
-  - Added Cookie List opening option in Tampermonkey plugin
-  - Added updateURL for script updates
-  - Improved the cloud data transmission flow
-  - Added language selection, currently supports Chinese and English
+### Added
 
-- Node.js Server v0.0.1 / Node.js 服务器版v0.0.1
-  - Added standalone Node.js server implementation in separate repository (cookie-share-server)
-  - 在独立仓库中添加了 Node.js 服务器实现 (cookie-share-server)
-  - Added cookie encryption using ADMIN_PASSWORD for better security
-  - 使用 ADMIN_PASSWORD 对 cookie 数据进行加密，提高安全性
-  - SQLite database for persistent storage
-  - 使用 SQLite 数据库进行持久化存储
+- "Add Account" button: one-click send current cookies, clear page cookies, and reload for new account login
+- Embedded `/server` TypeScript Node.js backend (requires Node.js 22.5.0+, built-in `node:sqlite`) with the same encrypted API contract as the Cloudflare Worker
+- Automated integration tests for the Node.js backend protocol
+- FAQ section with collapsible answers in both English and Chinese READMEs
+- "新增账号"按钮：一键发送当前 Cookie、清空本页 Cookie 并刷新页面以登录新账号
+- 内置 `/server` TypeScript Node.js 后端（需要 Node.js 22.5.0+，使用内置 `node:sqlite`），与 Cloudflare Worker 加密 API 协议一致
+- Node.js 后端的自动化集成测试
+- 中英文 README 新增可折叠的常见问题（FAQ）章节
 
-- Tampermonkey Script v0.0.1 / 油猴脚本版v0.0.1
-  - Reconstructed using Tampermonkey script for better compatibility and easier installation
-  - 使用油猴脚本重构，兼容性更强，安装更方便
-  - Added PATH_SECRET in _worker.js to prevent brute force attacks
-  - _worker.js 文件中添加了 PATH_SECRET，防止被爆破
+### Changed
 
-- v0.3.8:
-  - Added clear all cookies button, for adding multiple accounts like: chatgpt.com...
-  - 新增 clear all cookies 按钮，方便添加多个账号：chatgpt.com...
-  - Changed the logic of floating button, wait for the page to load before generating
-  - 修改浮动按钮的生成逻辑，等待页面加载完成后再生成
+- Restructured both README.md and README_CN.md with Quick Start guide, feature categories, and collapsible detail sections
+- Node.js backend setup now uses the in-repo `server/` directory instead of the separate `cookie-share-server` repository
+- Updated screenshots for the new UI layout
+- 重构了中英文 README，新增快速上手指南、功能分类和可折叠详情
+- Node.js 后端现使用仓库内置 `server/` 目录，不再需要独立的 `cookie-share-server` 仓库
+- 更新了截图以匹配新 UI 布局
 
-- v0.3.7:
-  - Refactored worker code
-  - 重构 worker 代码
-  - Refactored page and modified icons
-  - 重构页面，修改图标
-  - Added floating button for quick account switching
-  - 新增浮动按钮，可以快速切换账号
-  - Attempted to fix Firefox browser compatibility issues
-  - 尝试修复 Firefox 浏览器兼容问题
+---
 
-- v0.2.0:
-  - Significantly refactored the page
-  - 大幅重构了页面
-  - Added admin redirect link
-  - 增加 admin 跳转链接
-  - Added list-cookies popup
-  - 增加 list-cookies 弹窗
-  - Attempted to fix Firefox browser compatibility issues
-  - 尝试修复火狐浏览器兼容问题
+## [0.4.1]
 
-- v0.1.5:
-  - Modified worker code/admin authentication, changed worker code structure, adjusted cookie expiration time
-  - 修改 worker 代码/admin 鉴权，修改了 worker 代码结构，调整了 cookie 过期时间
+### Breaking Changes
 
-- v0.1.4:
-  - Improved interface layout and design
-  - 改进界面布局和设计
-  - Added GitHub repository link
-  - 添加 GitHub 仓库链接
-  - Added version display and update check
-  - 添加版本显示和更新检查
-  - Rearranged version information layout
-  - 重新布局版本信息位置
-  - Added manual update check feature
-  - 添加手动更新检查功能
+- **D1 migration**: Switched Cloudflare Worker storage from KV to D1 database. Data from older versions is NOT compatible and requires redeployment.
 
-- v0.1.3:
-  - Changed all information to English
-  - 所有信息改为英文
-  - Removed "Save URL" button, changed to auto-save
-  - 移除"保存 URL"按钮，改为自动保存
-  - Added build script with version control
-  - 添加带版本控制的构建脚本
-  - Improved user experience, URL auto-save
-  - 改进用户体验，URL 自动保存
+---
 
-- v0.1.2:
-  - Added clear cookie confirmation prompt
-  - 添加清除 cookie 确认提示
+## [0.4.0]
 
-- v0.1.1:
-  - Added custom URL save feature
-  - 添加自定义 URL 保存功能
+### Added
 
-- v0.1.0:
-  - Initial version
-  - 初始版本
+- Dual theme system: Claude (warm light) and Dark (luxury gold accent) with one-click switching
+- Rebuilt all UI styles with CSS custom properties for consistent theming across modal, inputs, buttons, and notifications
+- Collapsed settings (floating button toggle, fullscreen auto-hide, local save, config transfer) behind a gear button
 
+### Changed
+
+- Moved GitHub icon inline next to the title text instead of absolute-positioned to the far right
+- Increased padding, input height, and spacing throughout for a more comfortable layout
+- Consolidated notification system and all style injections inside the IIFE for cleaner code
+
+---
+
+## [0.3.1]
+
+### Added
+
+- Userscript config export/import for script-only settings (backend URL, transport secret, language preference, UI toggles)
+- Exported config is encoded as Base64 and copied to clipboard automatically
+- Top-level Worker error handling so browser requests show a readable error page instead of `Error 1101`
+
+### Changed
+
+- Moved the userscript config transfer panel to the bottom of the main modal
+- Replaced the external GitHub icon asset with an inline SVG
+- Reduced Worker PBKDF2 iterations to `100000` for Cloudflare Workers compatibility
+
+---
+
+## [0.3.0]
+
+### Added
+
+- `TRANSPORT_SECRET` for encrypted Worker JSON API transport
+- Encrypted `send/receive/admin` JSON request and response bodies with a shared secret envelope
+- Full export/import support in the Worker admin page
+- Userscript stores and uses `TRANSPORT_SECRET` for cloud operations
+
+### Changed
+
+- Switched the Worker admin UI to Pico CSS to reduce embedded style code
+- Split credential usage: userscript only needs `TRANSPORT_SECRET`, admin page only needs `ADMIN_PASSWORD`
+- Updated deployment docs, local dev defaults, and version metadata
+
+---
+
+## [0.2.0]
+
+### Added
+
+- `wrangler.jsonc`, D1 migrations, and standardized deploy scripts
+- Localhost fallback defaults for `wrangler dev` when `.dev.vars` is missing
+
+### Changed
+
+- Reworked the Cloudflare Worker storage layer from KV to D1
+- Updated Cloudflare deployment docs for D1 binding and one-click deployment flow
+
+### Fixed
+
+- Worker admin page rendering issues and stricter request validation
+- Userscript empty-list crash; switched ID generation to Web Crypto
+
+---
+
+## [0.1.0]
+
+### Added
+
+- Local storage option checkbox — save cookies locally without backend
+- Distinguished between local and cloud data in Cookie List
+- Cookie List opening option in Tampermonkey plugin menu
+- `updateURL` for automatic script updates
+- Language selection (Chinese and English)
+
+### Changed
+
+- Improved the cloud data transmission flow
+
+---
+
+## Legacy Chrome Extension Versions
+
+> The following versions predate the Tampermonkey script rewrite. They are kept here for historical reference.
+
+### [0.3.8]
+
+- Added clear all cookies button for multi-account scenarios (e.g. chatgpt.com)
+- Changed floating button logic to wait for page load before rendering
+
+### [0.3.7]
+
+- Refactored worker code and page UI, updated icons
+- Added floating button for quick account switching
+- Attempted Firefox browser compatibility fixes
+
+### [0.2.0]
+
+- Major page refactoring
+- Added admin redirect link
+- Added list-cookies popup
+- Attempted Firefox browser compatibility fixes
+
+### [0.1.5]
+
+- Modified worker code and admin authentication, adjusted cookie expiration time
+
+### [0.1.4]
+
+- Improved interface layout and design
+- Added GitHub repository link
+- Added version display, update check, and manual update check feature
+
+### [0.1.3]
+
+- Changed all UI text to English
+- Removed "Save URL" button, switched to auto-save
+- Added build script with version control
+
+### [0.1.2]
+
+- Added clear cookie confirmation prompt
+
+### [0.1.1]
+
+- Added custom URL save feature
+
+### [0.1.0]
+
+- Initial release
+
+---
+
+## Node.js Server
+
+### [0.0.1]
+
+- Standalone Node.js server implementation, now embedded in the main repository under `server/`
+- Cookie encryption using `ADMIN_PASSWORD` for enhanced security
+- SQLite database for persistent storage
+
+---
+
+## Tampermonkey Script
+
+### [0.0.1]
+
+- Reconstructed using Tampermonkey script for better compatibility and easier installation
+- Added `PATH_SECRET` in `_worker.js` to prevent brute force attacks

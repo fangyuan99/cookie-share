@@ -12,6 +12,8 @@ build/
 # Node modules
 node_modules/
 .wrangler/
+server/node_modules/
+server/dist/
 
 # IDE files
 .vscode/
@@ -31,3 +33,7 @@ Thumbs.db
 
 # Local environment files
 .dev.vars
+server/.env
+server/data/*.db
+server/data/*.db-shm
+server/data/*.db-wal

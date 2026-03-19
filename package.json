@@ -11,6 +11,6 @@
     "db:migrate": "wrangler d1 migrations apply COOKIE_DB --remote"
   },
   "devDependencies": {
-    "wrangler": "^4.73.0"
+    "wrangler": "^4.75.0"
   }
 }

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.2]
+
+### Fixed
+
+- Refactored `initShadowDOM` into `ensureShadowDOM` with idempotent re-attachment and readiness guards
+- Added graceful fallback when `document.body` is not yet available at script injection time
+- Used `DOMContentLoaded` and `requestAnimationFrame` to defer UI init on slow-loading pages
+- Added null-safety checks in `showModal`, `createModal`, and `showCookieList` to prevent crashes
+- Styles are now injected only once via `stylesInjected` flag, avoiding duplicate style elements
+- 将 `initShadowDOM` 重构为 `ensureShadowDOM`，支持幂等重连与就绪状态守卫
+- 添加 `document.body` 尚未可用时的优雅回退逻辑，避免脚本注入时机过早导致失败
+- 使用 `DOMContentLoaded` 和 `requestAnimationFrame` 在页面加载较慢时延迟初始化 UI
+- 在 `showModal`、`createModal`、`showCookieList` 中添加空值安全检查，防止运行时崩溃
+- 通过 `stylesInjected` 标志确保样式仅注入一次，避免重复样式元素
+
+---
+
 ## [0.5.1]
 
 ### Changed

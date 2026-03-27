@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.5.1
+// @version      0.5.2
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -299,23 +299,44 @@
   let shadowHost = null;
   let shadowRoot = null;
   let shadowWrapper = null;
+  let shadowReady = false;
+  let stylesInjected = false;
 
-  function initShadowDOM() {
-    shadowHost = document.createElement("div");
-    shadowHost.id = "cookie-share-root";
-    shadowHost.style.cssText = "all: initial !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 0 !important; height: 0 !important; overflow: visible !important; z-index: 2147483645 !important; pointer-events: none !important;";
-    document.body.appendChild(shadowHost);
-    shadowRoot = shadowHost.attachShadow({ mode: "open" });
-    shadowWrapper = document.createElement("div");
-    shadowWrapper.id = "cs-wrapper";
-    shadowRoot.appendChild(shadowWrapper);
+  function ensureShadowDOM() {
+    if (shadowReady && shadowHost.isConnected) return true;
+    if (!document.body) return false;
+    try {
+      if (!shadowHost) {
+        shadowHost = document.createElement("div");
+        shadowHost.id = "cookie-share-root";
+        shadowHost.style.cssText = "all: initial !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 0 !important; height: 0 !important; overflow: visible !important; z-index: 2147483645 !important; pointer-events: none !important;";
+        shadowRoot = shadowHost.attachShadow({ mode: "open" });
+        shadowWrapper = document.createElement("div");
+        shadowWrapper.id = "cs-wrapper";
+        shadowRoot.appendChild(shadowWrapper);
+      }
+      if (!shadowHost.isConnected) {
+        document.body.appendChild(shadowHost);
+      }
+      if (!stylesInjected) {
+        ui.injectStyles();
+        stylesInjected = true;
+      }
+      shadowReady = true;
+      return true;
+    } catch (e) {
+      console.error("[Cookie Share] Shadow DOM init failed:", e);
+      return false;
+    }
   }
 
   function getShadowRoot() {
+    ensureShadowDOM();
     return shadowRoot;
   }
 
   function getShadowWrapper() {
+    ensureShadowDOM();
     return shadowWrapper;
   }
 
@@ -332,9 +353,8 @@
     },
 
     apply() {
-      const wrapper = getShadowWrapper();
-      if (wrapper) {
-        wrapper.setAttribute("data-cs-theme", this.current);
+      if (shadowWrapper) {
+        shadowWrapper.setAttribute("data-cs-theme", this.current);
       }
     },
 
@@ -1638,7 +1658,7 @@
           }
         }
       `;
-      getShadowRoot().appendChild(styleEl);
+      shadowRoot.appendChild(styleEl);
     },
 
     createFloatingButton() {
@@ -2215,6 +2235,7 @@
 
     showModal(options = {}) {
       const root = getShadowWrapper();
+      if (!root) return;
       const existingOverlay = root.querySelector(".cookie-share-overlay");
       if (existingOverlay) existingOverlay.remove();
       this.createMainView(options);
@@ -2263,12 +2284,16 @@
       };
 
       overlay.appendChild(modal);
-      getShadowWrapper().appendChild(overlay);
+      const root = getShadowWrapper();
+      if (!root) return { overlay, modal };
+      root.appendChild(overlay);
       return { overlay, modal };
     },
 
     showCookieList() {
-      const existingOverlay = getShadowWrapper()?.querySelector(".cookie-share-overlay");
+      const root = getShadowWrapper();
+      if (!root) return;
+      const existingOverlay = root.querySelector(".cookie-share-overlay");
       if (existingOverlay) existingOverlay.remove();
       const { overlay, modal } = this.createCookieListModal();
       overlay.classList.add("visible");
@@ -2573,12 +2598,30 @@
   };
 
   // ===================== Initialize =====================
-  function init() {
-    detectLanguage();
-    initShadowDOM();
-    ui.injectStyles();
+  function initUI() {
+    if (!ensureShadowDOM()) return false;
     themeManager.init();
     ui.createFloatingButton();
+    return true;
+  }
+
+  function init() {
+    detectLanguage();
+
+    if (!initUI()) {
+      const waitForBody = () => {
+        if (document.body) {
+          initUI();
+        } else {
+          requestAnimationFrame(waitForBody);
+        }
+      };
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => initUI(), { once: true });
+      } else {
+        requestAnimationFrame(waitForBody);
+      }
+    }
 
     document.addEventListener("fullscreenchange", () =>
       fullscreenManager.handleFullscreenChange(),

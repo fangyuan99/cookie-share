@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.1]
+
+### Changed
+
+- Migrated all UI elements into a Shadow DOM container to prevent CSS style conflicts with host pages
+- Styles are now injected into the shadow root instead of `document.body`, ensuring complete style isolation
+- Theme attributes are applied to the shadow wrapper instead of `document.body`
+- All DOM queries now scoped to the shadow root for correct element lookups
+- Added `pointer-events: auto` to overlay and notification elements within shadow DOM
+- 将所有 UI 元素迁移至 Shadow DOM 容器，彻底防止与宿主页面 CSS 样式冲突
+- 样式注入到 Shadow Root 而非 `document.body`，实现完整的样式隔离
+- 主题属性应用于 Shadow 包装元素，不再污染 `document.body`
+- 所有 DOM 查询限定在 Shadow Root 内部，确保元素查找正确
+- 为 Shadow DOM 内的遮罩层和通知元素添加 `pointer-events: auto`
+
+---
+
 ## [0.5.0]
 
 ### Added

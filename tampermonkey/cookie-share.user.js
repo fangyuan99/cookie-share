@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.5.0
+// @version      0.5.1
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -295,6 +295,30 @@
       value === THEMES.DARK || value === THEMES.CLAUDE ? value : THEMES.CLAUDE,
   };
 
+  // ===================== Shadow DOM =====================
+  let shadowHost = null;
+  let shadowRoot = null;
+  let shadowWrapper = null;
+
+  function initShadowDOM() {
+    shadowHost = document.createElement("div");
+    shadowHost.id = "cookie-share-root";
+    shadowHost.style.cssText = "all: initial !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 0 !important; height: 0 !important; overflow: visible !important; z-index: 2147483645 !important; pointer-events: none !important;";
+    document.body.appendChild(shadowHost);
+    shadowRoot = shadowHost.attachShadow({ mode: "open" });
+    shadowWrapper = document.createElement("div");
+    shadowWrapper.id = "cs-wrapper";
+    shadowRoot.appendChild(shadowWrapper);
+  }
+
+  function getShadowRoot() {
+    return shadowRoot;
+  }
+
+  function getShadowWrapper() {
+    return shadowWrapper;
+  }
+
   // ===================== Theme Manager =====================
   const themeManager = {
     current: THEMES.CLAUDE,
@@ -308,7 +332,10 @@
     },
 
     apply() {
-      document.body.setAttribute("data-cs-theme", this.current);
+      const wrapper = getShadowWrapper();
+      if (wrapper) {
+        wrapper.setAttribute("data-cs-theme", this.current);
+      }
     },
 
     setTheme(theme) {
@@ -343,7 +370,7 @@
       );
       const shouldHide = state.isFullscreen && autoHideFullscreen;
       state.floatingButton.style.display =
-        !shouldHide && showFloatingButton ? "block" : "none";
+        !shouldHide && showFloatingButton ? "flex" : "none";
     },
   };
 
@@ -812,7 +839,9 @@
   // ===================== Notification =====================
   const notification = {
     show(message, type = "success") {
-      const existingNotification = document.querySelector(
+      const root = getShadowWrapper();
+      if (!root) return;
+      const existingNotification = root.querySelector(
         ".cookie-share-notification",
       );
       if (existingNotification) {
@@ -821,7 +850,7 @@
       const notificationEl = document.createElement("div");
       notificationEl.className = `cookie-share-notification ${type}`;
       notificationEl.textContent = message;
-      document.body.appendChild(notificationEl);
+      root.appendChild(notificationEl);
       notificationEl.offsetHeight;
       notificationEl.classList.add("show");
       setTimeout(() => {
@@ -835,12 +864,14 @@
   const ui = {
     confirmDelete() {
       return new Promise((resolve) => {
+        const root = getShadowWrapper();
+        if (!root) { resolve(false); return; }
         const container = document.createElement("div");
         container.style.cssText = `
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           display: flex; align-items: center; justify-content: center;
           background: var(--cs-overlay); backdrop-filter: blur(4px);
-          z-index: 2147483647;
+          z-index: 2147483647; pointer-events: auto;
         `;
 
         const dialog = document.createElement("div");
@@ -849,6 +880,8 @@
           border-radius: var(--cs-radius-lg); text-align: center;
           min-width: 320px; border: var(--cs-card-border);
           box-shadow: var(--cs-shadow);
+          font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+          color: var(--cs-text);
         `;
 
         dialog.innerHTML = `
@@ -861,7 +894,7 @@
         `;
 
         container.appendChild(dialog);
-        document.body.appendChild(container);
+        root.appendChild(container);
 
         dialog.querySelector("#cancelBtn").onclick = () => {
           container.remove();
@@ -882,12 +915,14 @@
 
     confirmAddAccount() {
       return new Promise((resolve) => {
+        const root = getShadowWrapper();
+        if (!root) { resolve(false); return; }
         const container = document.createElement("div");
         container.style.cssText = `
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           display: flex; align-items: center; justify-content: center;
           background: var(--cs-overlay); backdrop-filter: blur(4px);
-          z-index: 2147483647;
+          z-index: 2147483647; pointer-events: auto;
         `;
 
         const dialog = document.createElement("div");
@@ -896,6 +931,8 @@
           border-radius: var(--cs-radius-lg); text-align: center;
           min-width: 320px; border: var(--cs-card-border);
           box-shadow: var(--cs-shadow);
+          font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+          color: var(--cs-text);
         `;
 
         dialog.innerHTML = `
@@ -908,7 +945,7 @@
         `;
 
         container.appendChild(dialog);
-        document.body.appendChild(container);
+        root.appendChild(container);
 
         dialog.querySelector("#cancelBtn").onclick = () => {
           container.remove();
@@ -935,9 +972,22 @@
     },
 
     injectStyles() {
-      GM_addStyle(`
+      const styleEl = document.createElement("style");
+      styleEl.textContent = `
+        /* ===== Base Reset ===== */
+        *, *::before, *::after {
+          box-sizing: border-box;
+        }
+        #cs-wrapper {
+          font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+          line-height: 1.5;
+          color: var(--cs-text);
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
         /* ===== Dark Theme (Apple/Linear inspired) ===== */
-        body[data-cs-theme="dark"] {
+        #cs-wrapper[data-cs-theme="dark"] {
           --cs-overlay: rgba(0, 0, 0, 0.55);
           --cs-surface: #1C1C1E;
           --cs-surface-secondary: #2C2C2E;
@@ -986,7 +1036,7 @@
         }
 
         /* ===== Claude Theme ===== */
-        body[data-cs-theme="claude"] {
+        #cs-wrapper[data-cs-theme="claude"] {
           --cs-overlay: rgba(0, 0, 0, 0.25);
           --cs-surface: #FFFFFF;
           --cs-surface-secondary: #F5F3EE;
@@ -1044,6 +1094,7 @@
           -webkit-backdrop-filter: blur(4px) !important;
           z-index: 2147483646 !important;
           display: none !important;
+          pointer-events: auto !important;
         }
         .cookie-share-overlay.visible {
           display: flex !important;
@@ -1526,6 +1577,7 @@
           justify-content: center !important;
           backdrop-filter: blur(8px) !important;
           -webkit-backdrop-filter: blur(8px) !important;
+          pointer-events: auto !important;
         }
         .cookie-share-floating-btn:hover {
           transform: scale(1.1) !important;
@@ -1558,6 +1610,7 @@
           backdrop-filter: blur(8px) !important;
           -webkit-backdrop-filter: blur(8px) !important;
           max-width: 360px !important;
+          pointer-events: auto !important;
         }
         .cookie-share-notification.show {
           transform: translateY(0) !important;
@@ -1584,7 +1637,8 @@
             flex-direction: column !important;
           }
         }
-      `);
+      `;
+      getShadowRoot().appendChild(styleEl);
     },
 
     createFloatingButton() {
@@ -1607,13 +1661,13 @@
       floatingBtn.innerHTML = cookieSvg;
       floatingBtn.className = "cookie-share-floating-btn";
       floatingBtn.onclick = () => this.showCookieList();
-      document.body.appendChild(floatingBtn);
+      getShadowWrapper().appendChild(floatingBtn);
       state.floatingButton = floatingBtn;
       fullscreenManager.updateFloatingButtonVisibility();
     },
 
     refreshFloatingButton() {
-      const existingBtn = document.querySelector(".cookie-share-floating-btn");
+      const existingBtn = getShadowWrapper()?.querySelector(".cookie-share-floating-btn");
       if (existingBtn) {
         existingBtn.remove();
       }
@@ -1964,7 +2018,7 @@
 
       modal.appendChild(container);
       overlay.appendChild(modal);
-      document.body.appendChild(overlay);
+      getShadowWrapper().appendChild(overlay);
 
       // Event listeners
       sendBtn.onclick = async () => {
@@ -2160,11 +2214,12 @@
     },
 
     showModal(options = {}) {
-      const existingOverlay = document.querySelector(".cookie-share-overlay");
+      const root = getShadowWrapper();
+      const existingOverlay = root.querySelector(".cookie-share-overlay");
       if (existingOverlay) existingOverlay.remove();
       this.createMainView(options);
-      const overlay = document.querySelector(".cookie-share-overlay");
-      const modal = document.querySelector(".cookie-share-modal");
+      const overlay = root.querySelector(".cookie-share-overlay");
+      const modal = root.querySelector(".cookie-share-modal");
       if (overlay && modal) {
         overlay.classList.add("visible");
         modal.classList.add("visible");
@@ -2172,7 +2227,7 @@
     },
 
     hideModal() {
-      const overlay = document.querySelector(".cookie-share-overlay");
+      const overlay = getShadowWrapper()?.querySelector(".cookie-share-overlay");
       if (overlay) {
         overlay.classList.remove("visible");
         setTimeout(() => overlay.remove(), 300);
@@ -2208,12 +2263,12 @@
       };
 
       overlay.appendChild(modal);
-      document.body.appendChild(overlay);
+      getShadowWrapper().appendChild(overlay);
       return { overlay, modal };
     },
 
     showCookieList() {
-      const existingOverlay = document.querySelector(".cookie-share-overlay");
+      const existingOverlay = getShadowWrapper()?.querySelector(".cookie-share-overlay");
       if (existingOverlay) existingOverlay.remove();
       const { overlay, modal } = this.createCookieListModal();
       overlay.classList.add("visible");
@@ -2223,8 +2278,9 @@
     },
 
     hideCookieList() {
-      const overlay = document.querySelector(".cookie-share-overlay");
-      const modal = document.querySelector(".cookie-share-modal");
+      const root = getShadowWrapper();
+      const overlay = root?.querySelector(".cookie-share-overlay");
+      const modal = root?.querySelector(".cookie-share-modal");
       if (overlay && modal) {
         overlay.classList.remove("visible");
         modal.classList.remove("visible");
@@ -2519,8 +2575,9 @@
   // ===================== Initialize =====================
   function init() {
     detectLanguage();
-    themeManager.init();
+    initShadowDOM();
     ui.injectStyles();
+    themeManager.init();
     ui.createFloatingButton();
 
     document.addEventListener("fullscreenchange", () =>
@@ -2542,11 +2599,13 @@
     };
 
     const handleKeyboardShortcuts = (e) => {
+      const root = getShadowWrapper();
+      if (!root) return;
       if (matchesShortcut(e, "l")) {
         e.preventDefault();
         e.stopPropagation();
-        const overlay = document.querySelector(".cookie-share-overlay");
-        const modal = document.querySelector(".cookie-list-modal");
+        const overlay = root.querySelector(".cookie-share-overlay");
+        const modal = root.querySelector(".cookie-list-modal");
         if (overlay && modal) {
           ui.hideCookieList();
         } else {
@@ -2557,8 +2616,8 @@
       if (matchesShortcut(e, "c")) {
         e.preventDefault();
         e.stopPropagation();
-        const overlay = document.querySelector(".cookie-share-overlay");
-        const modal = document.querySelector(
+        const overlay = root.querySelector(".cookie-share-overlay");
+        const modal = root.querySelector(
           ".cookie-share-modal:not(.cookie-list-modal)",
         );
         if (overlay && modal) {

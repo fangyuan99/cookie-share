@@ -7,6 +7,7 @@ const WORKER_ADMIN_TEMPLATE = `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cookie Share Admin</title>
     <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/daisyui@5/daisyui.css">
+    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/daisyui@5/themes.css">
     <script src="https://fastly.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>
   </head>
   <body class="min-h-screen bg-base-200">

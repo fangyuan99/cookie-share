@@ -169,7 +169,10 @@ export function createApp(config: RuntimeConfig, store: CookieStore): express.Ex
   }));
 
   app.delete(`${config.basePath}/delete`, handleRoute((request, response) => {
-    const key = validateId(request.query.key, "Invalid key. Only letters and numbers are allowed.");
+    // Reading the key from an encrypted body forces the caller to prove
+    // knowledge of the transport secret, not just the URL path secret.
+    const body = readEncryptedRequestBody(request, config.transportSecret) as { key?: unknown };
+    const key = validateId(body?.key, "Invalid key. Only letters and numbers are allowed.");
     store.deleteCookieRecord(key);
     sendEncryptedJson(response, 200, {
       success: true,

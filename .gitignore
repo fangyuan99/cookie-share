@@ -4,7 +4,6 @@
 *.py
 build/
 2c.js
-.gitignore
 
 # Cursor files
 .cursor/

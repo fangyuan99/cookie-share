@@ -222,7 +222,7 @@ Available endpoints:
 - `POST /{PATH_SECRET}/send-cookies` — Store cookies associated with unique ID
 - `GET /{PATH_SECRET}/receive-cookies/{id}` — Receive cookies for a given ID
 - `GET /{PATH_SECRET}/list-cookies-by-host/{host}` — Userscript cloud list endpoint
-- `DELETE /{PATH_SECRET}/delete?key={id}` — Userscript cloud delete endpoint
+- `DELETE /{PATH_SECRET}/delete` — Userscript cloud delete endpoint; the `{ id }` to delete is sent in an encrypted body keyed on `TRANSPORT_SECRET`
 - `GET /{PATH_SECRET}/admin` — Open the admin UI shell
 - `GET /{PATH_SECRET}/admin/list-cookies` — List all stored cookie IDs and URLs
 - `GET /{PATH_SECRET}/admin/list-cookies-by-host` — List cookies filtered by hostname

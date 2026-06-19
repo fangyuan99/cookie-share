@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.6.0
+// @version      0.6.1
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -262,7 +262,7 @@
       return key;
     }
     for (const placeholder in replacements) {
-      const regex = new RegExp(`{{\s*${placeholder}\s*}}`, "g");
+      const regex = new RegExp(`{{\\s*${placeholder}\\s*}}`, "g");
       translation = translation.replace(regex, replacements[placeholder]);
     }
     return translation;
@@ -2762,15 +2762,12 @@
                   );
                   return;
                 }
-                try {
-                  await api.requestEncryptedJson({
-                    method: "DELETE",
-                    url: `${customUrl}/delete?key=${encodeURIComponent(cookieId)}`,
-                    transportSecret,
-                  });
-                } catch (error) {
-                  throw error;
-                }
+                await api.requestEncryptedJson({
+                  method: "DELETE",
+                  url: `${customUrl}/delete`,
+                  body: { key: cookieId },
+                  transportSecret,
+                });
                 notification.show(t("notificationCloudDeleted"), "success");
                 this.showCookieList();
               }

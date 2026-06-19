@@ -80,8 +80,19 @@ export class CookieStore {
   }
 
   public upsertCookieRecords(records: ImportRecord[]): void {
-    for (const record of records) {
-      this.upsertCookieRecord(record);
+    if (records.length === 0) {
+      return;
+    }
+
+    this.database.exec("BEGIN");
+    try {
+      for (const record of records) {
+        this.upsertCookieRecord(record);
+      }
+      this.database.exec("COMMIT");
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
     }
   }
 
@@ -104,14 +115,6 @@ export class CookieStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
-  }
-
-  public listCookieRecords(): CookieSummary[] {
-    const rows = this.database.prepare(
-      "SELECT id, url FROM cookie_records ORDER BY updated_at DESC",
-    ).all() as unknown as CookieSummaryRow[];
-
-    return rows.map((row) => ({ id: row.id, url: row.url }));
   }
 
   public listCookieRecordsByHost(host: string): CookieSummary[] {

@@ -1,6 +1,591 @@
 import { ENCRYPTION_VERSION, PBKDF2_ITERATIONS } from "./crypto";
 
-const WORKER_ADMIN_TEMPLATE = "<!doctype html>\r\n<html lang=\"zh-CN\">\r\n  <head>\r\n    <meta charset=\"UTF-8\">\r\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\r\n    <title>Cookie Share Admin</title>\r\n    <link\r\n      rel=\"stylesheet\"\r\n      href=\"https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css\"\r\n    >\r\n  </head>\r\n  <body>\r\n    <main class=\"container\">\r\n      <header>\r\n        <h1>Cookie Share 管理页</h1>\r\n        <p>管理页 HTML 明文返回，所有 <code>/admin/*</code> JSON API 都使用 <code>ADMIN_PASSWORD</code> 做鉴权与加密。</p>\r\n        ${devHint}\r\n      </header>\r\n\r\n      <section>\r\n        <h2>凭据</h2>\r\n        <label>\r\n          管理员密码\r\n          <input id=\"adminPassword\" type=\"password\" placeholder=\"X-Admin-Password\">\r\n        </label>\r\n        <button id=\"saveCredentials\" type=\"button\">保存并加载</button>\r\n        <p id=\"status\" role=\"status\"></p>\r\n      </section>\r\n\r\n      <section id=\"panels\" hidden>\r\n        <div class=\"grid\">\r\n          <article>\r\n            <h3>创建</h3>\r\n            <form id=\"createForm\">\r\n              <label>\r\n                ID\r\n                <input id=\"createId\" required>\r\n              </label>\r\n              <label>\r\n                URL\r\n                <input id=\"createUrl\" required>\r\n              </label>\r\n              <label>\r\n                Cookies JSON\r\n                <textarea id=\"createCookies\" required></textarea>\r\n              </label>\r\n              <button type=\"submit\">创建</button>\r\n            </form>\r\n          </article>\r\n\r\n          <article>\r\n            <h3>更新</h3>\r\n            <form id=\"updateForm\">\r\n              <label>\r\n                ID\r\n                <input id=\"updateId\" required>\r\n              </label>\r\n              <label>\r\n                URL\r\n                <input id=\"updateUrl\" placeholder=\"留空则保留原值\">\r\n              </label>\r\n              <label>\r\n                Cookies JSON\r\n                <textarea id=\"updateCookies\" required></textarea>\r\n              </label>\r\n              <button type=\"submit\">更新</button>\r\n            </form>\r\n          </article>\r\n\r\n          <article>\r\n            <h3>删除</h3>\r\n            <form id=\"deleteForm\">\r\n              <label>\r\n                ID\r\n                <input id=\"deleteId\" required>\r\n              </label>\r\n              <button type=\"submit\" class=\"contrast\">删除</button>\r\n            </form>\r\n          </article>\r\n        </div>\r\n\r\n        <article>\r\n          <h3>导入 / 导出</h3>\r\n          <div class=\"grid\">\r\n            <button id=\"exportAll\" type=\"button\" class=\"secondary\">导出全部数据</button>\r\n            <input id=\"importFile\" type=\"file\" accept=\".json,application/json\">\r\n            <button id=\"importAll\" type=\"button\">导入全部数据</button>\r\n          </div>\r\n          <p><small>导出文件为加密 JSON；导入策略为按 ID 覆盖合并，不会清空现有数据。</small></p>\r\n        </article>\r\n\r\n        <article>\r\n          <div class=\"grid\">\r\n            <div>\r\n              <h3>已存储记录</h3>\r\n              <p><small>按最近更新时间倒序排列。</small></p>\r\n            </div>\r\n            <div>\r\n              <button id=\"refreshList\" type=\"button\" class=\"secondary\">刷新列表</button>\r\n            </div>\r\n          </div>\r\n          <figure>\r\n            <table>\r\n              <thead>\r\n                <tr>\r\n                  <th scope=\"col\">ID</th>\r\n                  <th scope=\"col\">URL</th>\r\n                  <th scope=\"col\">Cookie 原文</th>\r\n                  <th scope=\"col\">操作</th>\r\n                </tr>\r\n              </thead>\r\n              <tbody id=\"cookieTableBody\"></tbody>\r\n            </table>\r\n          </figure>\r\n        </article>\r\n      </section>\r\n\r\n      <dialog id=\"cookieRawDialog\">\r\n        <article style=\"width:min(1200px, 92vw); max-width:1200px;\">\r\n          <header>\r\n            <button id=\"closeRawDialog\" aria-label=\"Close\" rel=\"prev\"></button>\r\n            <h3 id=\"cookieRawTitle\">Cookie 原文</h3>\r\n          </header>\r\n          <p>\r\n            <button id=\"copyRawDialog\" type=\"button\" class=\"secondary\">复制原文</button>\r\n          </p>\r\n          <pre id=\"cookieRawContent\"></pre>\r\n        </article>\r\n      </dialog>\r\n    </main>\r\n\r\n    <script>\r\n      const API_BASE = ${JSON.stringify(basePath)};\r\n      const PASSWORD_KEY = \"cookie-share-admin-password\";\r\n      const VERSION = ${JSON.stringify(ENCRYPTION_VERSION)};\r\n      const ITERATIONS = ${JSON.stringify(PBKDF2_ITERATIONS)};\r\n      const encoder = new TextEncoder();\r\n      const decoder = new TextDecoder();\r\n      let adminPassword = \"\";\r\n      let rawDialog;\r\n      let rawTitle;\r\n      let rawContent;\r\n\r\n      document.addEventListener(\"DOMContentLoaded\", () => {\r\n        adminPassword = localStorage.getItem(PASSWORD_KEY) || \"\";\r\n        rawDialog = document.getElementById(\"cookieRawDialog\");\r\n        rawTitle = document.getElementById(\"cookieRawTitle\");\r\n        rawContent = document.getElementById(\"cookieRawContent\");\r\n        document.getElementById(\"adminPassword\").value = adminPassword;\r\n        document.getElementById(\"saveCredentials\").addEventListener(\"click\", saveCredentials);\r\n        document.getElementById(\"closeRawDialog\").addEventListener(\"click\", () => {\r\n          rawDialog.close();\r\n        });\r\n        document.getElementById(\"copyRawDialog\").addEventListener(\"click\", async () => {\r\n          try {\r\n            await navigator.clipboard.writeText(rawContent.textContent || \"\");\r\n            setStatus(\"原文已复制。\");\r\n          } catch {\r\n            setStatus(\"复制失败，请手动复制。\", true);\r\n          }\r\n        });\r\n        document.getElementById(\"createForm\").addEventListener(\"submit\", createCookie);\r\n        document.getElementById(\"updateForm\").addEventListener(\"submit\", updateCookie);\r\n        document.getElementById(\"deleteForm\").addEventListener(\"submit\", deleteCookie);\r\n        document.getElementById(\"refreshList\").addEventListener(\"click\", () => loadCookies().catch(showError));\r\n        document.getElementById(\"exportAll\").addEventListener(\"click\", () => exportAll().catch(showError));\r\n        document.getElementById(\"importAll\").addEventListener(\"click\", () => importAll().catch(showError));\r\n\r\n        if (adminPassword) {\r\n          showPanels();\r\n          loadCookies().catch(showError);\r\n        }\r\n      });\r\n\r\n      function setStatus(message, isError = false) {\r\n        const node = document.getElementById(\"status\");\r\n        node.textContent = message || \"\";\r\n        node.dataset.state = isError ? \"error\" : \"ok\";\r\n      }\r\n\r\n      function showError(error) {\r\n        setStatus(error && error.message ? error.message : \"请求失败\", true);\r\n      }\r\n\r\n      function showPanels() {\r\n        document.getElementById(\"panels\").hidden = false;\r\n      }\r\n\r\n      function ensureCredentials() {\r\n        if (!adminPassword) {\r\n          throw new Error(\"请先输入管理员密码。\");\r\n        }\r\n      }\r\n\r\n      function saveCredentials() {\r\n        const password = document.getElementById(\"adminPassword\").value.trim();\r\n        if (!password) {\r\n          setStatus(\"管理员密码不能为空。\", true);\r\n          return;\r\n        }\r\n\r\n        adminPassword = password;\r\n        localStorage.setItem(PASSWORD_KEY, password);\r\n        showPanels();\r\n        setStatus(\"凭据已保存，正在加载列表。\");\r\n        loadCookies().catch(showError);\r\n      }\r\n\r\n      function adminHeaders() {\r\n        return {\r\n          \"Content-Type\": \"application/json\",\r\n          \"X-Admin-Password\": adminPassword,\r\n        };\r\n      }\r\n\r\n      function base64UrlEncode(bytes) {\r\n        let binary = \"\";\r\n        for (const value of bytes) {\r\n          binary += String.fromCharCode(value);\r\n        }\r\n        return btoa(binary).replace(/\\+/g, \"-\").replace(/\\//g, \"_\").replace(/=+$/g, \"\");\r\n      }\r\n\r\n      function base64UrlDecode(value) {\r\n        const normalized = value.replace(/-/g, \"+\").replace(/_/g, \"/\");\r\n        const padded = normalized + \"=\".repeat((4 - (normalized.length % 4 || 4)) % 4);\r\n        const binary = atob(padded);\r\n        const bytes = new Uint8Array(binary.length);\r\n        for (let index = 0; index < binary.length; index += 1) {\r\n          bytes[index] = binary.charCodeAt(index);\r\n        }\r\n        return bytes;\r\n      }\r\n\r\n      function isEnvelope(value) {\r\n        return Boolean(\r\n          value &&\r\n          typeof value === \"object\" &&\r\n          value.version === VERSION &&\r\n          typeof value.salt === \"string\" &&\r\n          typeof value.iv === \"string\" &&\r\n          typeof value.payload === \"string\"\r\n        );\r\n      }\r\n\r\n      async function deriveKey(secret, salt) {\r\n        const material = await crypto.subtle.importKey(\r\n          \"raw\",\r\n          encoder.encode(secret),\r\n          \"PBKDF2\",\r\n          false,\r\n          [\"deriveKey\"]\r\n        );\r\n\r\n        return await crypto.subtle.deriveKey(\r\n          {\r\n            name: \"PBKDF2\",\r\n            hash: \"SHA-256\",\r\n            salt,\r\n            iterations: ITERATIONS,\r\n          },\r\n          material,\r\n          {\r\n            name: \"AES-GCM\",\r\n            length: 256,\r\n          },\r\n          false,\r\n          [\"encrypt\", \"decrypt\"]\r\n        );\r\n      }\r\n\r\n      async function encryptClientPayload(secret, data) {\r\n        const salt = crypto.getRandomValues(new Uint8Array(16));\r\n        const iv = crypto.getRandomValues(new Uint8Array(12));\r\n        const key = await deriveKey(secret, salt);\r\n        const payload = new Uint8Array(\r\n          await crypto.subtle.encrypt(\r\n            { name: \"AES-GCM\", iv },\r\n            key,\r\n            encoder.encode(JSON.stringify(data))\r\n          )\r\n        );\r\n\r\n        return {\r\n          version: VERSION,\r\n          salt: base64UrlEncode(salt),\r\n          iv: base64UrlEncode(iv),\r\n          payload: base64UrlEncode(payload),\r\n        };\r\n      }\r\n\r\n      async function decryptClientPayload(secret, envelope) {\r\n        if (!isEnvelope(envelope)) {\r\n          throw new Error(\"Invalid encrypted payload\");\r\n        }\r\n\r\n        try {\r\n          const key = await deriveKey(secret, base64UrlDecode(envelope.salt));\r\n          const plaintext = await crypto.subtle.decrypt(\r\n            { name: \"AES-GCM\", iv: base64UrlDecode(envelope.iv) },\r\n            key,\r\n            base64UrlDecode(envelope.payload)\r\n          );\r\n          return JSON.parse(decoder.decode(plaintext));\r\n        } catch {\r\n          throw new Error(\"Transport secret mismatch or corrupted payload\");\r\n        }\r\n      }\r\n\r\n      async function requestEncryptedJson(path, options = {}) {\r\n        ensureCredentials();\r\n\r\n        const init = {\r\n          method: options.method || \"GET\",\r\n          headers: adminHeaders(),\r\n        };\r\n\r\n        if (options.body !== undefined) {\r\n          init.body = JSON.stringify(await encryptClientPayload(adminPassword, options.body));\r\n        }\r\n\r\n        const response = await fetch(API_BASE + path, init);\r\n        const responseText = await response.text();\r\n        let payload;\r\n\r\n        try {\r\n          payload = responseText ? JSON.parse(responseText) : {};\r\n        } catch {\r\n          throw new Error(responseText || \"响应不是合法 JSON\");\r\n        }\r\n\r\n        if (!response.ok) {\r\n          if (isEnvelope(payload)) {\r\n            const decryptedError = await decryptClientPayload(adminPassword, payload);\r\n            throw new Error(decryptedError.message || decryptedError.error || \"请求失败\");\r\n          }\r\n          throw new Error(payload.message || payload.error || \"请求失败\");\r\n        }\r\n\r\n        return await decryptClientPayload(adminPassword, payload);\r\n      }\r\n\r\n      function parseCookieJson(id) {\r\n        try {\r\n          return JSON.parse(document.getElementById(id).value);\r\n        } catch {\r\n          throw new Error(\"Cookies 必须是合法 JSON 数组。\");\r\n        }\r\n      }\r\n\r\n      function showRawCookie(id, cookiesJson) {\r\n        rawTitle.textContent = \"Cookie 原文: \" + id;\r\n        rawContent.textContent = cookiesJson || \"[]\";\r\n        rawDialog.showModal();\r\n      }\r\n\r\n      async function loadCookies() {\r\n        const data = await requestEncryptedJson(\"/admin/list-cookies\");\r\n        const tbody = document.getElementById(\"cookieTableBody\");\r\n        tbody.replaceChildren();\r\n        const rows = Array.isArray(data.cookies) ? data.cookies : [];\r\n\r\n        if (rows.length === 0) {\r\n          const row = document.createElement(\"tr\");\r\n          const cell = document.createElement(\"td\");\r\n          cell.colSpan = 4;\r\n          cell.textContent = \"暂无数据\";\r\n          row.appendChild(cell);\r\n          tbody.appendChild(row);\r\n          setStatus(\"列表已刷新。\");\r\n          return;\r\n        }\r\n\r\n        for (const cookie of rows) {\r\n          const row = document.createElement(\"tr\");\r\n          const idCell = document.createElement(\"td\");\r\n          const urlCell = document.createElement(\"td\");\r\n          const rawCell = document.createElement(\"td\");\r\n          const actionCell = document.createElement(\"td\");\r\n          const rawButton = document.createElement(\"button\");\r\n          const button = document.createElement(\"button\");\r\n\r\n          idCell.textContent = cookie.id;\r\n          urlCell.textContent = cookie.url;\r\n          rawButton.type = \"button\";\r\n          rawButton.className = \"secondary\";\r\n          rawButton.textContent = \"查看原文\";\r\n          rawButton.addEventListener(\"click\", () => {\r\n            showRawCookie(cookie.id, cookie.cookiesJson);\r\n          });\r\n          rawCell.appendChild(rawButton);\r\n          button.type = \"button\";\r\n          button.className = \"contrast\";\r\n          button.textContent = \"删除\";\r\n          button.addEventListener(\"click\", () => deleteCookieById(cookie.id).catch(showError));\r\n          actionCell.appendChild(button);\r\n          row.append(idCell, urlCell, rawCell, actionCell);\r\n          tbody.appendChild(row);\r\n        }\r\n\r\n        setStatus(\"列表已刷新。\");\r\n      }\r\n\r\n      async function createCookie(event) {\r\n        event.preventDefault();\r\n        try {\r\n          const result = await requestEncryptedJson(\"/admin/create\", {\r\n            method: \"POST\",\r\n            body: {\r\n              id: document.getElementById(\"createId\").value.trim(),\r\n              url: document.getElementById(\"createUrl\").value.trim(),\r\n              cookies: parseCookieJson(\"createCookies\"),\r\n            },\r\n          });\r\n          document.getElementById(\"createForm\").reset();\r\n          setStatus(\"创建成功。\");\r\n          await loadCookies();\r\n        } catch (error) {\r\n          showError(error);\r\n        }\r\n      }\r\n\r\n      async function updateCookie(event) {\r\n        event.preventDefault();\r\n        try {\r\n          const result = await requestEncryptedJson(\"/admin/update\", {\r\n            method: \"PUT\",\r\n            body: {\r\n              key: document.getElementById(\"updateId\").value.trim(),\r\n              url: document.getElementById(\"updateUrl\").value.trim(),\r\n              value: parseCookieJson(\"updateCookies\"),\r\n            },\r\n          });\r\n          document.getElementById(\"updateForm\").reset();\r\n          setStatus(\"更新成功。\");\r\n          await loadCookies();\r\n        } catch (error) {\r\n          showError(error);\r\n        }\r\n      }\r\n\r\n      async function deleteCookie(event) {\r\n        event.preventDefault();\r\n        await deleteCookieById(document.getElementById(\"deleteId\").value.trim());\r\n        document.getElementById(\"deleteForm\").reset();\r\n      }\r\n\r\n      async function deleteCookieById(id) {\r\n        if (!id) {\r\n          throw new Error(\"请输入要删除的 ID。\");\r\n        }\r\n        if (!window.confirm(\"确定删除 \" + id + \" 吗？\")) {\r\n          return;\r\n        }\r\n\r\n        const result = await requestEncryptedJson(\"/admin/delete?key=\" + encodeURIComponent(id), {\r\n          method: \"DELETE\",\r\n        });\r\n        setStatus(\"删除成功。\");\r\n        await loadCookies();\r\n      }\r\n\r\n      function exportFilename() {\r\n        const now = new Date();\r\n        const pad = (value) => String(value).padStart(2, \"0\");\r\n        return \"cookie-share-export-\" +\r\n          now.getFullYear() +\r\n          pad(now.getMonth() + 1) +\r\n          pad(now.getDate()) +\r\n          \"-\" +\r\n          pad(now.getHours()) +\r\n          pad(now.getMinutes()) +\r\n          pad(now.getSeconds()) +\r\n          \".json\";\r\n      }\r\n\r\n      async function exportAll() {\r\n        ensureCredentials();\r\n        const response = await fetch(API_BASE + \"/admin/export-all\", {\r\n          method: \"GET\",\r\n          headers: adminHeaders(),\r\n        });\r\n        const responseText = await response.text();\r\n        let payload;\r\n\r\n        try {\r\n          payload = responseText ? JSON.parse(responseText) : {};\r\n        } catch {\r\n          throw new Error(\"导出响应格式无效\");\r\n        }\r\n\r\n        if (!response.ok) {\r\n          if (isEnvelope(payload)) {\r\n            const decryptedError = await decryptClientPayload(adminPassword, payload);\r\n            throw new Error(decryptedError.message || decryptedError.error || \"导出失败\");\r\n          }\r\n          throw new Error(payload.message || payload.error || \"导出失败\");\r\n        }\r\n\r\n        if (!isEnvelope(payload)) {\r\n          throw new Error(\"导出内容不是合法加密文件\");\r\n        }\r\n\r\n        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: \"application/json\" });\r\n        const blobUrl = URL.createObjectURL(blob);\r\n        const link = document.createElement(\"a\");\r\n        link.href = blobUrl;\r\n        link.download = exportFilename();\r\n        document.body.appendChild(link);\r\n        link.click();\r\n        link.remove();\r\n        URL.revokeObjectURL(blobUrl);\r\n        setStatus(\"导出成功。\");\r\n      }\r\n\r\n      async function importAll() {\r\n        const file = document.getElementById(\"importFile\").files[0];\r\n        if (!file) {\r\n          throw new Error(\"请先选择导入文件。\");\r\n        }\r\n\r\n        let payload;\r\n        try {\r\n          payload = JSON.parse(await file.text());\r\n        } catch {\r\n          throw new Error(\"导入文件不是合法 JSON。\");\r\n        }\r\n\r\n        if (!isEnvelope(payload)) {\r\n          throw new Error(\"导入文件不是合法加密信封。\");\r\n        }\r\n\r\n        const result = await requestEncryptedJson(\"/admin/import-all\", {\r\n          method: \"POST\",\r\n          body: await decryptClientPayload(adminPassword, payload),\r\n        });\r\n        setStatus(\"导入成功，已导入 \" + result.imported + \" 条。\");\r\n        await loadCookies();\r\n      }\r\n    </script>\r\n  </body>\r\n</html>";
+const WORKER_ADMIN_TEMPLATE = `<!doctype html>
+<html lang="zh-CN" data-theme="nord">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cookie Share Admin</title>
+    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/daisyui@5/dist/full.min.css">
+    <script src="https://fastly.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>
+  </head>
+  <body class="min-h-screen bg-base-200">
+    <div class="navbar bg-base-100 shadow-sm sticky top-0 z-50">
+      <div class="flex-1">
+        <span class="text-xl font-bold px-2">Cookie Share</span>
+        <span class="badge badge-soft badge-primary ml-2">Admin</span>
+      </div>
+      <div class="flex-none">
+        <select id="themeSelect" class="select select-bordered select-sm w-auto">
+          <option value="nord">Nord</option>
+          <option value="corporate">Corporate</option>
+          <option value="cupcake">Cupcake</option>
+          <option value="emerald">Emerald</option>
+          <option value="dark">Dark</option>
+          <option value="dracula">Dracula</option>
+        </select>
+      </div>
+    </div>
+
+    <main class="container mx-auto px-4 py-6 max-w-5xl">
+      \${devHint}
+
+      <div class="card bg-base-100 shadow-sm mb-6">
+        <div class="card-body">
+          <h2 class="card-title text-lg">凭据</h2>
+          <p class="text-sm opacity-60">所有 <kbd class="kbd kbd-sm">/admin/*</kbd> API 使用 ADMIN_PASSWORD 鉴权与加密。</p>
+          <div class="flex flex-col sm:flex-row gap-3 mt-2">
+            <input id="adminPassword" type="password" placeholder="管理员密码" class="input input-bordered flex-1">
+            <button id="saveCredentials" type="button" class="btn btn-primary">保存并加载</button>
+          </div>
+          <p id="status" role="status" class="text-sm mt-2"></p>
+        </div>
+      </div>
+
+      <section id="panels" hidden>
+        <div class="card bg-base-100 shadow-sm mb-6">
+          <div class="card-body">
+            <div role="tablist" class="tabs tabs-bordered mb-4">
+              <button role="tab" class="tab tab-active" data-tab="create">创建</button>
+              <button role="tab" class="tab" data-tab="update">更新</button>
+              <button role="tab" class="tab" data-tab="delete">删除</button>
+            </div>
+
+            <div id="tab-create" class="tab-content">
+              <form id="createForm" class="space-y-3 max-w-lg">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">ID</span></label>
+                  <input id="createId" required class="input input-bordered w-full">
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">URL</span></label>
+                  <input id="createUrl" required class="input input-bordered w-full">
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Cookies JSON</span></label>
+                  <textarea id="createCookies" required class="textarea textarea-bordered w-full h-28" placeholder="[...]"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">创建</button>
+              </form>
+            </div>
+
+            <div id="tab-update" class="tab-content hidden">
+              <form id="updateForm" class="space-y-3 max-w-lg">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">ID</span></label>
+                  <input id="updateId" required class="input input-bordered w-full">
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">URL</span></label>
+                  <input id="updateUrl" class="input input-bordered w-full" placeholder="留空则保留原值">
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Cookies JSON</span></label>
+                  <textarea id="updateCookies" required class="textarea textarea-bordered w-full h-28" placeholder="[...]"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">更新</button>
+              </form>
+            </div>
+
+            <div id="tab-delete" class="tab-content hidden">
+              <form id="deleteForm" class="space-y-3 max-w-lg">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">ID</span></label>
+                  <input id="deleteId" required class="input input-bordered w-full">
+                </div>
+                <button type="submit" class="btn btn-error">删除</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm mb-6">
+          <div class="card-body">
+            <h2 class="card-title text-lg">导入 / 导出</h2>
+            <p class="text-sm opacity-60">导出文件为加密 JSON；导入策略为按 ID 覆盖合并，不会清空现有数据。</p>
+            <div class="flex flex-col sm:flex-row gap-3 mt-3 items-center">
+              <button id="exportAll" type="button" class="btn btn-outline">导出全部数据</button>
+              <input id="importFile" type="file" accept=".json,application/json" class="file-input file-input-bordered flex-1">
+              <button id="importAll" type="button" class="btn btn-primary">导入全部数据</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm mb-6">
+          <div class="card-body">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h2 class="card-title text-lg">已存储记录</h2>
+                <p class="text-sm opacity-60">按最近更新时间倒序排列</p>
+              </div>
+              <button id="refreshList" type="button" class="btn btn-outline btn-sm">刷新列表</button>
+            </div>
+            <div class="overflow-x-auto mt-4">
+              <table class="table table-zebra">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>URL</th>
+                    <th>Cookie 原文</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="cookieTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="cookieRawDialog" class="modal">
+      <div class="modal-box w-11/12 max-w-4xl">
+        <h3 id="cookieRawTitle" class="text-lg font-bold">Cookie 原文</h3>
+        <div class="mt-3">
+          <button id="copyRawDialog" type="button" class="btn btn-outline btn-sm">复制原文</button>
+        </div>
+        <pre id="cookieRawContent" class="bg-base-200 p-4 rounded-lg mt-4 overflow-auto max-h-96 text-sm whitespace-pre-wrap break-all"></pre>
+        <div class="modal-action">
+          <button id="closeRawDialog" class="btn">关闭</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <script>
+      (function() {
+        var sel = document.getElementById("themeSelect");
+        var saved = localStorage.getItem("cookie-share-theme");
+        if (saved) {
+          document.documentElement.setAttribute("data-theme", saved);
+          sel.value = saved;
+        }
+        sel.addEventListener("change", function() {
+          document.documentElement.setAttribute("data-theme", this.value);
+          localStorage.setItem("cookie-share-theme", this.value);
+        });
+      })();
+
+      document.querySelectorAll("[data-tab]").forEach(function(tab) {
+        tab.addEventListener("click", function() {
+          document.querySelectorAll("[data-tab]").forEach(function(t) { t.classList.remove("tab-active"); });
+          document.querySelectorAll(".tab-content").forEach(function(c) { c.classList.add("hidden"); });
+          this.classList.add("tab-active");
+          document.getElementById("tab-" + this.dataset.tab).classList.remove("hidden");
+        });
+      });
+
+      const API_BASE = \${JSON.stringify(basePath)};
+      const PASSWORD_KEY = "cookie-share-admin-password";
+      const VERSION = \${JSON.stringify(ENCRYPTION_VERSION)};
+      const ITERATIONS = \${JSON.stringify(PBKDF2_ITERATIONS)};
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      let adminPassword = "";
+      let rawDialog;
+      let rawTitle;
+      let rawContent;
+
+      document.addEventListener("DOMContentLoaded", () => {
+        adminPassword = localStorage.getItem(PASSWORD_KEY) || "";
+        rawDialog = document.getElementById("cookieRawDialog");
+        rawTitle = document.getElementById("cookieRawTitle");
+        rawContent = document.getElementById("cookieRawContent");
+        document.getElementById("adminPassword").value = adminPassword;
+        document.getElementById("saveCredentials").addEventListener("click", saveCredentials);
+        document.getElementById("closeRawDialog").addEventListener("click", () => {
+          rawDialog.close();
+        });
+        document.getElementById("copyRawDialog").addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(rawContent.textContent || "");
+            setStatus("原文已复制。");
+          } catch {
+            setStatus("复制失败，请手动复制。", true);
+          }
+        });
+        document.getElementById("createForm").addEventListener("submit", createCookie);
+        document.getElementById("updateForm").addEventListener("submit", updateCookie);
+        document.getElementById("deleteForm").addEventListener("submit", deleteCookie);
+        document.getElementById("refreshList").addEventListener("click", () => loadCookies().catch(showError));
+        document.getElementById("exportAll").addEventListener("click", () => exportAll().catch(showError));
+        document.getElementById("importAll").addEventListener("click", () => importAll().catch(showError));
+
+        if (adminPassword) {
+          showPanels();
+          loadCookies().catch(showError);
+        }
+      });
+
+      function setStatus(message, isError = false) {
+        const node = document.getElementById("status");
+        node.textContent = message || "";
+        node.className = "text-sm mt-2 " + (isError ? "text-error" : "text-success");
+      }
+
+      function showError(error) {
+        setStatus(error && error.message ? error.message : "请求失败", true);
+      }
+
+      function showPanels() {
+        document.getElementById("panels").hidden = false;
+      }
+
+      function ensureCredentials() {
+        if (!adminPassword) {
+          throw new Error("请先输入管理员密码。");
+        }
+      }
+
+      function saveCredentials() {
+        const password = document.getElementById("adminPassword").value.trim();
+        if (!password) {
+          setStatus("管理员密码不能为空。", true);
+          return;
+        }
+
+        adminPassword = password;
+        localStorage.setItem(PASSWORD_KEY, password);
+        showPanels();
+        setStatus("凭据已保存，正在加载列表。");
+        loadCookies().catch(showError);
+      }
+
+      function adminHeaders() {
+        return {
+          "Content-Type": "application/json",
+          "X-Admin-Password": adminPassword,
+        };
+      }
+
+      function base64UrlEncode(bytes) {
+        let binary = "";
+        for (const value of bytes) {
+          binary += String.fromCharCode(value);
+        }
+        return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+      }
+
+      function base64UrlDecode(value) {
+        const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+        const binary = atob(padded);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+          bytes[index] = binary.charCodeAt(index);
+        }
+        return bytes;
+      }
+
+      function isEnvelope(value) {
+        return Boolean(
+          value &&
+          typeof value === "object" &&
+          value.version === VERSION &&
+          typeof value.salt === "string" &&
+          typeof value.iv === "string" &&
+          typeof value.payload === "string"
+        );
+      }
+
+      async function deriveKey(secret, salt) {
+        const material = await crypto.subtle.importKey(
+          "raw",
+          encoder.encode(secret),
+          "PBKDF2",
+          false,
+          ["deriveKey"]
+        );
+
+        return await crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            hash: "SHA-256",
+            salt,
+            iterations: ITERATIONS,
+          },
+          material,
+          {
+            name: "AES-GCM",
+            length: 256,
+          },
+          false,
+          ["encrypt", "decrypt"]
+        );
+      }
+
+      async function encryptClientPayload(secret, data) {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveKey(secret, salt);
+        const payload = new Uint8Array(
+          await crypto.subtle.encrypt(
+            { name: "AES-GCM", iv },
+            key,
+            encoder.encode(JSON.stringify(data))
+          )
+        );
+
+        return {
+          version: VERSION,
+          salt: base64UrlEncode(salt),
+          iv: base64UrlEncode(iv),
+          payload: base64UrlEncode(payload),
+        };
+      }
+
+      async function decryptClientPayload(secret, envelope) {
+        if (!isEnvelope(envelope)) {
+          throw new Error("Invalid encrypted payload");
+        }
+
+        try {
+          const key = await deriveKey(secret, base64UrlDecode(envelope.salt));
+          const plaintext = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: base64UrlDecode(envelope.iv) },
+            key,
+            base64UrlDecode(envelope.payload)
+          );
+          return JSON.parse(decoder.decode(plaintext));
+        } catch {
+          throw new Error("Transport secret mismatch or corrupted payload");
+        }
+      }
+
+      async function requestEncryptedJson(path, options = {}) {
+        ensureCredentials();
+
+        const init = {
+          method: options.method || "GET",
+          headers: adminHeaders(),
+        };
+
+        if (options.body !== undefined) {
+          init.body = JSON.stringify(await encryptClientPayload(adminPassword, options.body));
+        }
+
+        const response = await fetch(API_BASE + path, init);
+        const responseText = await response.text();
+        let payload;
+
+        try {
+          payload = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          throw new Error(responseText || "响应不是合法 JSON");
+        }
+
+        if (!response.ok) {
+          if (isEnvelope(payload)) {
+            const decryptedError = await decryptClientPayload(adminPassword, payload);
+            throw new Error(decryptedError.message || decryptedError.error || "请求失败");
+          }
+          throw new Error(payload.message || payload.error || "请求失败");
+        }
+
+        return await decryptClientPayload(adminPassword, payload);
+      }
+
+      function parseCookieJson(id) {
+        try {
+          return JSON.parse(document.getElementById(id).value);
+        } catch {
+          throw new Error("Cookies 必须是合法 JSON 数组。");
+        }
+      }
+
+      function showRawCookie(id, cookiesJson) {
+        rawTitle.textContent = "Cookie 原文: " + id;
+        rawContent.textContent = cookiesJson || "[]";
+        rawDialog.showModal();
+      }
+
+      async function loadCookies() {
+        const data = await requestEncryptedJson("/admin/list-cookies");
+        const tbody = document.getElementById("cookieTableBody");
+        tbody.replaceChildren();
+        const rows = Array.isArray(data.cookies) ? data.cookies : [];
+
+        if (rows.length === 0) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 4;
+          cell.textContent = "暂无数据";
+          cell.className = "text-center opacity-60";
+          row.appendChild(cell);
+          tbody.appendChild(row);
+          setStatus("列表已刷新。");
+          return;
+        }
+
+        for (const cookie of rows) {
+          const row = document.createElement("tr");
+          const idCell = document.createElement("td");
+          const urlCell = document.createElement("td");
+          const rawCell = document.createElement("td");
+          const actionCell = document.createElement("td");
+          const rawButton = document.createElement("button");
+          const button = document.createElement("button");
+
+          idCell.textContent = cookie.id;
+          urlCell.textContent = cookie.url;
+          rawButton.type = "button";
+          rawButton.className = "btn btn-ghost btn-xs";
+          rawButton.textContent = "查看原文";
+          rawButton.addEventListener("click", () => {
+            showRawCookie(cookie.id, cookie.cookiesJson);
+          });
+          rawCell.appendChild(rawButton);
+          button.type = "button";
+          button.className = "btn btn-error btn-xs";
+          button.textContent = "删除";
+          button.addEventListener("click", () => deleteCookieById(cookie.id).catch(showError));
+          actionCell.appendChild(button);
+          row.append(idCell, urlCell, rawCell, actionCell);
+          tbody.appendChild(row);
+        }
+
+        setStatus("列表已刷新。");
+      }
+
+      async function createCookie(event) {
+        event.preventDefault();
+        try {
+          const result = await requestEncryptedJson("/admin/create", {
+            method: "POST",
+            body: {
+              id: document.getElementById("createId").value.trim(),
+              url: document.getElementById("createUrl").value.trim(),
+              cookies: parseCookieJson("createCookies"),
+            },
+          });
+          document.getElementById("createForm").reset();
+          setStatus("创建成功。");
+          await loadCookies();
+        } catch (error) {
+          showError(error);
+        }
+      }
+
+      async function updateCookie(event) {
+        event.preventDefault();
+        try {
+          const result = await requestEncryptedJson("/admin/update", {
+            method: "PUT",
+            body: {
+              key: document.getElementById("updateId").value.trim(),
+              url: document.getElementById("updateUrl").value.trim(),
+              value: parseCookieJson("updateCookies"),
+            },
+          });
+          document.getElementById("updateForm").reset();
+          setStatus("更新成功。");
+          await loadCookies();
+        } catch (error) {
+          showError(error);
+        }
+      }
+
+      async function deleteCookie(event) {
+        event.preventDefault();
+        await deleteCookieById(document.getElementById("deleteId").value.trim());
+        document.getElementById("deleteForm").reset();
+      }
+
+      async function deleteCookieById(id) {
+        if (!id) {
+          throw new Error("请输入要删除的 ID。");
+        }
+        if (!window.confirm("确定删除 " + id + " 吗？")) {
+          return;
+        }
+
+        const result = await requestEncryptedJson("/admin/delete?key=" + encodeURIComponent(id), {
+          method: "DELETE",
+        });
+        setStatus("删除成功。");
+        await loadCookies();
+      }
+
+      function exportFilename() {
+        const now = new Date();
+        const pad = (value) => String(value).padStart(2, "0");
+        return "cookie-share-export-" +
+          now.getFullYear() +
+          pad(now.getMonth() + 1) +
+          pad(now.getDate()) +
+          "-" +
+          pad(now.getHours()) +
+          pad(now.getMinutes()) +
+          pad(now.getSeconds()) +
+          ".json";
+      }
+
+      async function exportAll() {
+        ensureCredentials();
+        const response = await fetch(API_BASE + "/admin/export-all", {
+          method: "GET",
+          headers: adminHeaders(),
+        });
+        const responseText = await response.text();
+        let payload;
+
+        try {
+          payload = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          throw new Error("导出响应格式无效");
+        }
+
+        if (!response.ok) {
+          if (isEnvelope(payload)) {
+            const decryptedError = await decryptClientPayload(adminPassword, payload);
+            throw new Error(decryptedError.message || decryptedError.error || "导出失败");
+          }
+          throw new Error(payload.message || payload.error || "导出失败");
+        }
+
+        if (!isEnvelope(payload)) {
+          throw new Error("导出内容不是合法加密文件");
+        }
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = exportFilename();
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(blobUrl);
+        setStatus("导出成功。");
+      }
+
+      async function importAll() {
+        const file = document.getElementById("importFile").files[0];
+        if (!file) {
+          throw new Error("请先选择导入文件。");
+        }
+
+        let payload;
+        try {
+          payload = JSON.parse(await file.text());
+        } catch {
+          throw new Error("导入文件不是合法 JSON。");
+        }
+
+        if (!isEnvelope(payload)) {
+          throw new Error("导入文件不是合法加密信封。");
+        }
+
+        const result = await requestEncryptedJson("/admin/import-all", {
+          method: "POST",
+          body: await decryptClientPayload(adminPassword, payload),
+        });
+        setStatus("导入成功，已导入 " + result.imported + " 条。");
+        await loadCookies();
+      }
+    <\/script>
+  </body>
+</html>`;
 
 export function renderAdminPage(basePath: string): string {
   const replacements: Record<string, string> = {

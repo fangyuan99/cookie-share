@@ -971,7 +971,7 @@ function handleAdminPage(basePath, runtimeConfig) {
               <button role="tab" class="tab" data-tab="delete">删除</button>
             </div>
 
-            <div id="tab-create" class="tab-content">
+            <div id="tab-create" class="tab-panel">
               <form id="createForm" class="space-y-3 max-w-lg">
                 <div class="form-control">
                   <label class="label"><span class="label-text">ID</span></label>
@@ -989,7 +989,7 @@ function handleAdminPage(basePath, runtimeConfig) {
               </form>
             </div>
 
-            <div id="tab-update" class="tab-content hidden">
+            <div id="tab-update" class="tab-panel hidden">
               <form id="updateForm" class="space-y-3 max-w-lg">
                 <div class="form-control">
                   <label class="label"><span class="label-text">ID</span></label>
@@ -1007,7 +1007,7 @@ function handleAdminPage(basePath, runtimeConfig) {
               </form>
             </div>
 
-            <div id="tab-delete" class="tab-content hidden">
+            <div id="tab-delete" class="tab-panel hidden">
               <form id="deleteForm" class="space-y-3 max-w-lg">
                 <div class="form-control">
                   <label class="label"><span class="label-text">ID</span></label>
@@ -1089,7 +1089,7 @@ function handleAdminPage(basePath, runtimeConfig) {
       document.querySelectorAll("[data-tab]").forEach(function(tab) {
         tab.addEventListener("click", function() {
           document.querySelectorAll("[data-tab]").forEach(function(t) { t.classList.remove("tab-active"); });
-          document.querySelectorAll(".tab-content").forEach(function(c) { c.classList.add("hidden"); });
+          document.querySelectorAll(".tab-panel").forEach(function(c) { c.classList.add("hidden"); });
           this.classList.add("tab-active");
           document.getElementById("tab-" + this.dataset.tab).classList.remove("hidden");
         });

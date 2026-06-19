@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.3]
+
+### Changed
+
+- Migrated admin page UI from Pico CSS to DaisyUI v5 + Tailwind CSS, with multi-theme support (Nord, Corporate, Cupcake, Emerald, Dark, Dracula)
+- Added CLAUDE.md for Claude Code guidance
+- 管理页面 UI 从 Pico CSS 迁移至 DaisyUI v5 + Tailwind CSS，支持多主题切换（Nord、Corporate、Cupcake、Emerald、Dark、Dracula）
+- 新增 CLAUDE.md 文件为 Claude Code 提供项目指引
+
+---
+
 ## [0.5.2]
 
 ### Fixed

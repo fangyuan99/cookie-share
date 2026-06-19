@@ -281,7 +281,7 @@ v0.4.1 将存储从 Cloudflare KV 切换到了 D1 数据库，数据格式不兼
 - 完整验证 `POST /send-cookies -> GET /receive-cookies/{id} -> GET /admin/list-cookies -> GET /admin/list-cookies-by-host/{host} -> PUT /admin/update -> DELETE /admin/delete -> GET /admin/export-all -> POST /admin/import-all`
 - 验证当 `TRANSPORT_SECRET` 缺失或错误时，油猴脚本的云端操作会明确失败
 - 验证非法 ID、缺失 key、非法 URL、错误的 cookie JSON、错误管理密码都返回预期的 4xx
-- 打开 `/{PATH_SECRET}/admin`，确认 Pico CSS 管理页的刷新、删除、导出、导入都正常
+- 打开 `/{PATH_SECRET}/admin`，确认 DaisyUI 管理页的刷新、删除、导出、导入都正常
 - 确认油猴脚本仍能同时显示本地 / 云端数据，并且空列表时不再报错
 
 </details>

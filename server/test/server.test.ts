@@ -95,6 +95,17 @@ describe("cookie-share server", () => {
     });
   }
 
+  async function deleteEncrypted(url: string, secret: string, payload: unknown, headers?: Record<string, string>): Promise<Response> {
+    return fetch(baseUrl + url, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        ...(headers ?? {}),
+      },
+      body: JSON.stringify(encryptPayload(secret, payload)),
+    });
+  }
+
   test("stores and receives cookies with transport secret", async () => {
     const createResponse = await postEncrypted(`${config.basePath}/send-cookies`, config.transportSecret, {
       id: "abc123",
@@ -135,9 +146,15 @@ describe("cookie-share server", () => {
       cookies: [{ id: "host1", url: "https://example.com/account" }],
     });
 
-    const deleteResponse = await fetch(`${baseUrl}${config.basePath}/delete?key=host1`, {
+    const wrongSecretDelete = await deleteEncrypted(`${config.basePath}/delete`, "wrong-secret", { key: "host1" });
+    expect(wrongSecretDelete.status).toBe(400);
+
+    const plainDelete = await fetch(`${baseUrl}${config.basePath}/delete?key=host1`, {
       method: "DELETE",
     });
+    expect(plainDelete.status).toBe(400);
+
+    const deleteResponse = await deleteEncrypted(`${config.basePath}/delete`, config.transportSecret, { key: "host1" });
     expect(deleteResponse.status).toBe(200);
     expect(decryptPayload(config.transportSecret, await readJson(deleteResponse))).toMatchObject({
       success: true,

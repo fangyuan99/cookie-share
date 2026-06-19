@@ -281,7 +281,7 @@ async function handleRequest(request, env, runtimeConfig, url, path, basePath) {
   }
 
   if (request.method === "DELETE" && path === `${basePath}/delete`) {
-    return await handleDelete(url, env, runtimeConfig.transportSecret);
+    return await handlePublicDelete(request, env, runtimeConfig.transportSecret);
   }
 
   if (request.method === "GET" && path === `${basePath}/admin/list-cookies`) {
@@ -340,13 +340,10 @@ function timingSafeEqual(left, right) {
 
   const leftBytes = encoder.encode(left);
   const rightBytes = encoder.encode(right);
-  if (leftBytes.length !== rightBytes.length) {
-    return false;
-  }
 
-  let diff = 0;
+  let diff = leftBytes.length ^ rightBytes.length;
   for (let index = 0; index < leftBytes.length; index += 1) {
-    diff |= leftBytes[index] ^ rightBytes[index];
+    diff |= leftBytes[index] ^ (rightBytes[index] ?? 0);
   }
   return diff === 0;
 }
@@ -456,6 +453,19 @@ async function handleDelete(url, env, encryptionSecret) {
   }, encryptionSecret);
 }
 
+// Public delete reads the key from an encrypted body so the caller must prove
+// knowledge of the transport secret (knowing PATH_SECRET alone is not enough).
+async function handlePublicDelete(request, env, encryptionSecret) {
+  const body = await readEncryptedRequestBody(request, encryptionSecret);
+  const key = validateId(body?.key, "Invalid key. Only letters and numbers are allowed.");
+  await ensureSchema(env.COOKIE_DB);
+  await deleteCookieRecord(env.COOKIE_DB, key);
+  return await encryptedJsonResponse(200, {
+    success: true,
+    message: "Data deleted successfully",
+  }, encryptionSecret);
+}
+
 async function handleExportAll(env, encryptionSecret) {
   await ensureSchema(env.COOKIE_DB);
   return await encryptedJsonResponse(200, {
@@ -486,13 +496,18 @@ async function handleImportAll(request, env, encryptionSecret) {
   }, encryptionSecret);
 }
 
+let schemaInitialized = false;
+
 async function ensureSchema(database) {
+  if (schemaInitialized) {
+    return;
+  }
   await database.batch(SCHEMA_STATEMENTS.map((statement) => database.prepare(statement)));
+  schemaInitialized = true;
 }
 
-async function upsertCookieRecord(database, record) {
-  const now = new Date().toISOString();
-  await database.prepare(
+function buildUpsertStatement(database, record, now) {
+  return database.prepare(
     `INSERT INTO cookie_records (id, url, host, cookies_json, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
@@ -507,13 +522,20 @@ async function upsertCookieRecord(database, record) {
     JSON.stringify(record.cookies),
     record.createdAt || now,
     record.updatedAt || now
-  ).run();
+  );
+}
+
+async function upsertCookieRecord(database, record) {
+  const now = new Date().toISOString();
+  await buildUpsertStatement(database, record, now).run();
 }
 
 async function upsertCookieRecords(database, records) {
-  for (const record of records) {
-    await upsertCookieRecord(database, record);
+  if (records.length === 0) {
+    return;
   }
+  const now = new Date().toISOString();
+  await database.batch(records.map((record) => buildUpsertStatement(database, record, now)));
 }
 
 async function getCookieRecord(database, id) {
@@ -535,14 +557,6 @@ async function getCookieRecord(database, id) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
-}
-
-async function listCookieRecords(database) {
-  const { results } = await database.prepare(
-    `SELECT id, url FROM cookie_records ORDER BY updated_at DESC`
-  ).all();
-
-  return results.map((row) => ({ id: row.id, url: row.url }));
 }
 
 async function listCookieRecordsByHost(database, host) {

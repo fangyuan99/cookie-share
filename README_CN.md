@@ -228,7 +228,7 @@ v0.4.1 将存储从 Cloudflare KV 切换到了 D1 数据库，数据格式不兼
 - `POST /{PATH_SECRET}/send-cookies` — 存储与唯一 ID 关联的 Cookie
 - `GET /{PATH_SECRET}/receive-cookies/{id}` — 读取指定 ID 的 Cookie
 - `GET /{PATH_SECRET}/list-cookies-by-host/{host}` — 油猴脚本云端列表接口
-- `DELETE /{PATH_SECRET}/delete?key={id}` — 油猴脚本云端删除接口
+- `DELETE /{PATH_SECRET}/delete` — 油猴脚本云端删除接口；待删除的 `{ id }` 通过以 `TRANSPORT_SECRET` 加密的请求体传入
 - `GET /{PATH_SECRET}/admin` — 打开管理页面
 - `GET /{PATH_SECRET}/admin/list-cookies` — 列出所有存储的 Cookie ID 和 URL
 - `GET /{PATH_SECRET}/admin/list-cookies-by-host` — 按主机名筛选列出 Cookie

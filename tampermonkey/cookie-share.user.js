@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.5.2
+// @version      0.6.0
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -31,6 +31,7 @@
     SAVE_LOCALLY: "cookie_share_save_locally",
     LANGUAGE_PREFERENCE: "cookie_share_language_preference",
     THEME: "cookie_share_theme",
+    FLOATING_BUTTON_POS: "cookie_share_floating_button_pos",
   };
 
   const THEMES = { DARK: "dark", CLAUDE: "claude" };
@@ -1582,14 +1583,13 @@
         /* ===== Floating Button ===== */
         .cookie-share-floating-btn {
           position: fixed !important;
-          bottom: 20px !important; left: 20px !important;
           width: 36px !important; height: 36px !important;
           background: var(--cs-float-bg) !important;
           border: var(--cs-float-border) !important;
           border-radius: 10px !important;
-          cursor: pointer !important;
+          cursor: grab !important;
           z-index: 2147483645 !important;
-          transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+          transition: transform 0.25s ease-out, box-shadow 0.15s ease, opacity 0.15s ease, left 0.25s ease-out, top 0.25s ease-out, border-radius 0.25s ease-out !important;
           box-shadow: var(--cs-float-shadow) !important;
           padding: 0 !important;
           display: flex !important;
@@ -1598,9 +1598,26 @@
           backdrop-filter: blur(8px) !important;
           -webkit-backdrop-filter: blur(8px) !important;
           pointer-events: auto !important;
+          touch-action: none !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
         }
         .cookie-share-floating-btn:hover {
           transform: scale(1.1) !important;
+        }
+        .cookie-share-floating-btn.cs-dragging {
+          cursor: grabbing !important;
+          transition: opacity 0.15s ease !important;
+        }
+        .cookie-share-floating-btn.cs-docked {
+          border-radius: 0 10px 10px 0 !important;
+          cursor: pointer !important;
+        }
+        .cookie-share-floating-btn.cs-docked.cs-docked-right {
+          border-radius: 10px 0 0 10px !important;
+        }
+        .cookie-share-floating-btn.cs-docked:hover {
+          transform: none !important;
         }
         .cookie-share-floating-btn svg {
           width: 20px !important; height: 20px !important;
@@ -1680,13 +1697,188 @@
       const floatingBtn = document.createElement("button");
       floatingBtn.innerHTML = cookieSvg;
       floatingBtn.className = "cookie-share-floating-btn";
-      floatingBtn.onclick = () => this.showCookieList();
       getShadowWrapper().appendChild(floatingBtn);
       state.floatingButton = floatingBtn;
+
+      const BTN_SIZE = 36;
+      const DOCK_THRESHOLD = 20;
+      const DOCK_VISIBLE = 10;
+      const DRAG_THRESHOLD = 5;
+
+      floatingBtn.style.top = (window.innerHeight - BTN_SIZE - 20) + "px";
+      floatingBtn.style.left = (window.innerWidth - BTN_SIZE - 20) + "px";
+
+      const savedPos = GM_getValue(STORAGE_KEYS.FLOATING_BUTTON_POS, null);
+      if (savedPos && savedPos.docked) {
+        const y = clampY(savedPos.y);
+        if (savedPos.docked === "left") {
+          applyDocked("left", y);
+        } else {
+          applyDocked("right", y);
+        }
+      } else if (savedPos) {
+        const x = Math.min(Math.max(0, savedPos.x), window.innerWidth - BTN_SIZE);
+        const y = clampY(savedPos.y);
+        floatingBtn.style.left = x + "px";
+        floatingBtn.style.top = y + "px";
+        floatingBtn.style.bottom = "auto";
+      }
+
+      function clampY(y) {
+        return Math.min(Math.max(0, y), window.innerHeight - BTN_SIZE);
+      }
+
+      function applyDocked(side, y) {
+        floatingBtn.classList.add("cs-docked");
+        floatingBtn.classList.remove("cs-docked-right");
+        if (side === "left") {
+          floatingBtn.style.left = -(BTN_SIZE - DOCK_VISIBLE) + "px";
+        } else {
+          floatingBtn.style.left = (window.innerWidth - DOCK_VISIBLE) + "px";
+          floatingBtn.classList.add("cs-docked-right");
+        }
+        floatingBtn.style.top = y + "px";
+        floatingBtn.style.bottom = "auto";
+        state._floatingDocked = side;
+      }
+
+      function undock() {
+        floatingBtn.classList.remove("cs-docked", "cs-docked-right");
+        state._floatingDocked = null;
+      }
+
+      function savePos(x, y, docked) {
+        GM_setValue(STORAGE_KEYS.FLOATING_BUTTON_POS, { x, y, docked: docked || null });
+      }
+
+      let isDragging = false;
+      let startX, startY, btnStartX, btnStartY;
+      let totalMovement = 0;
+      let wasDocked = null;
+      let undockedDuringDrag = false;
+
+      floatingBtn.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        floatingBtn.setPointerCapture(e.pointerId);
+
+        wasDocked = state._floatingDocked;
+        undockedDuringDrag = false;
+
+        if (!wasDocked) {
+          const rect = floatingBtn.getBoundingClientRect();
+          btnStartX = rect.left;
+          btnStartY = rect.top;
+        }
+
+        startX = e.clientX;
+        startY = e.clientY;
+        totalMovement = 0;
+        isDragging = true;
+        floatingBtn.classList.add("cs-dragging");
+      });
+
+      floatingBtn.addEventListener("pointermove", (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        totalMovement = Math.max(totalMovement, Math.abs(dx) + Math.abs(dy));
+
+        if (wasDocked && !undockedDuringDrag) {
+          if (totalMovement < DRAG_THRESHOLD) return;
+          undock();
+          btnStartX = wasDocked === "left" ? 0 : window.innerWidth - BTN_SIZE;
+          btnStartY = parseFloat(floatingBtn.style.top) || 0;
+          floatingBtn.style.left = btnStartX + "px";
+          floatingBtn.style.top = btnStartY + "px";
+          floatingBtn.style.bottom = "auto";
+          startX = e.clientX;
+          startY = e.clientY;
+          undockedDuringDrag = true;
+          return;
+        }
+
+        let newX = btnStartX + (e.clientX - startX);
+        let newY = btnStartY + (e.clientY - startY);
+        newX = Math.min(Math.max(0, newX), window.innerWidth - BTN_SIZE);
+        newY = clampY(newY);
+
+        floatingBtn.style.left = newX + "px";
+        floatingBtn.style.top = newY + "px";
+        floatingBtn.style.bottom = "auto";
+
+        const nearEdge = newX <= DOCK_THRESHOLD || newX >= window.innerWidth - BTN_SIZE - DOCK_THRESHOLD;
+        floatingBtn.style.opacity = nearEdge ? "0.5" : "1";
+      });
+
+      floatingBtn.addEventListener("pointerup", (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        floatingBtn.classList.remove("cs-dragging");
+        floatingBtn.style.opacity = "1";
+
+        if (totalMovement < DRAG_THRESHOLD) {
+          this.showCookieList();
+          wasDocked = null;
+          return;
+        }
+
+        const rect = floatingBtn.getBoundingClientRect();
+        const currentX = rect.left;
+        const currentY = rect.top;
+
+        if (currentX <= DOCK_THRESHOLD) {
+          applyDocked("left", currentY);
+          savePos(currentX, currentY, "left");
+        } else if (currentX >= window.innerWidth - BTN_SIZE - DOCK_THRESHOLD) {
+          applyDocked("right", currentY);
+          savePos(currentX, currentY, "right");
+        } else {
+          savePos(currentX, currentY, null);
+        }
+        wasDocked = null;
+      });
+
+      floatingBtn.addEventListener("pointercancel", () => {
+        isDragging = false;
+        undockedDuringDrag = false;
+        floatingBtn.classList.remove("cs-dragging");
+        floatingBtn.style.opacity = "1";
+      });
+
+      let resizeTimer;
+      const handleResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          if (!state.floatingButton) return;
+          const docked = state._floatingDocked;
+          if (docked) {
+            const currentTop = parseFloat(floatingBtn.style.top) || 0;
+            applyDocked(docked, clampY(currentTop));
+          } else {
+            let x = parseFloat(floatingBtn.style.left) || 0;
+            let y = parseFloat(floatingBtn.style.top);
+            if (isNaN(y)) y = window.innerHeight - BTN_SIZE - 20;
+            x = Math.min(Math.max(0, x), window.innerWidth - BTN_SIZE);
+            y = clampY(y);
+            floatingBtn.style.left = x + "px";
+            floatingBtn.style.top = y + "px";
+          }
+        }, 100);
+      };
+      window.addEventListener("resize", handleResize);
+      state._floatingResizeHandler = handleResize;
+
       fullscreenManager.updateFloatingButtonVisibility();
     },
 
     refreshFloatingButton() {
+      if (state._floatingResizeHandler) {
+        window.removeEventListener("resize", state._floatingResizeHandler);
+        state._floatingResizeHandler = null;
+      }
+      state._floatingDocked = null;
       const existingBtn = getShadowWrapper()?.querySelector(".cookie-share-floating-btn");
       if (existingBtn) {
         existingBtn.remove();

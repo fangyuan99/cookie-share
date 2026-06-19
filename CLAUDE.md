@@ -57,7 +57,7 @@ Single-file, no build step. Key sections in order:
 6. Database helpers (`upsertCookieRecord`, `getCookieRecord`, etc.)
 7. Validation/normalization (`validateId`, `normalizeUrl`, `normalizeCookie`)
 8. Crypto layer (`encryptPayload`, `decryptPayload`, `deriveAesKey`)
-9. Inline admin page HTML (Pico CSS) with embedded JS that mirrors the server-side crypto
+9. Inline admin page HTML (DaisyUI + Tailwind CSS) with embedded JS that mirrors the server-side crypto
 
 ### Userscript Structure
 
@@ -78,7 +78,7 @@ TypeScript with modular files:
 - `crypto.ts` — encryption/decryption (same PBKDF2/AES-GCM protocol)
 - `db.ts` — `node:sqlite` wrapper
 - `store.ts` — CRUD operations on cookie records
-- `admin-page.ts` — inline HTML template (DaisyUI on dev branch, Pico CSS on main)
+- `admin-page.ts` — inline HTML template (DaisyUI + Tailwind CSS)
 - `validation.ts` — input normalization matching `_worker.js` logic
 
 ## CI/CD

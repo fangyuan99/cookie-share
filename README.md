@@ -277,7 +277,7 @@ To access the admin page, navigate to `https://your-backend-address/{PATH_SECRET
 - Run `POST /send-cookies -> GET /receive-cookies/{id} -> GET /admin/list-cookies -> GET /admin/list-cookies-by-host/{host} -> PUT /admin/update -> DELETE /admin/delete -> GET /admin/export-all -> POST /admin/import-all`
 - Verify that userscript cloud actions fail clearly when `TRANSPORT_SECRET` is missing or incorrect
 - Verify invalid IDs, missing keys, invalid URLs, malformed cookie payloads, and wrong admin passwords all return the expected 4xx responses
-- Open `/{PATH_SECRET}/admin` and confirm the Pico CSS admin page can refresh, delete, export, and import correctly
+- Open `/{PATH_SECRET}/admin` and confirm the DaisyUI admin page can refresh, delete, export, and import correctly
 - Confirm the userscript still shows combined local/cloud data and no longer crashes on an empty list state
 
 </details>

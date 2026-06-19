@@ -916,141 +916,184 @@ async function handleRequestError(error, routeSecret, useEncryptedResponse) {
 
 function handleAdminPage(basePath, runtimeConfig) {
   const devHint = runtimeConfig.isLocalDevFallback
-    ? "<p><small>localhost dev 默认值：<code>PATH_SECRET=dev</code>、<code>ADMIN_PASSWORD=dev-password</code>、<code>TRANSPORT_SECRET=dev-transport-secret</code>。</small></p>"
+    ? '<p class="text-sm opacity-60">localhost dev 默认值：<code>PATH_SECRET=dev</code>、<code>ADMIN_PASSWORD=dev-password</code>、<code>TRANSPORT_SECRET=dev-transport-secret</code>。</p>'
     : "";
 
   return htmlResponse(`<!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="nord">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cookie Share Admin</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-    >
+    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/daisyui@5/dist/full.min.css">
+    <script src="https://fastly.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   </head>
-  <body>
-    <main class="container">
-      <header>
-        <h1>Cookie Share 管理页</h1>
-        <p>管理页 HTML 明文返回，所有 <code>/admin/*</code> JSON API 都使用 <code>ADMIN_PASSWORD</code> 做鉴权与加密。</p>
-        ${devHint}
-      </header>
+  <body class="min-h-screen bg-base-200">
+    <div class="navbar bg-base-100 shadow-sm sticky top-0 z-50">
+      <div class="flex-1">
+        <span class="text-xl font-bold px-2">Cookie Share</span>
+        <span class="badge badge-soft badge-primary ml-2">Admin</span>
+      </div>
+      <div class="flex-none">
+        <select id="themeSelect" class="select select-bordered select-sm w-auto">
+          <option value="nord">Nord</option>
+          <option value="corporate">Corporate</option>
+          <option value="cupcake">Cupcake</option>
+          <option value="emerald">Emerald</option>
+          <option value="dark">Dark</option>
+          <option value="dracula">Dracula</option>
+        </select>
+      </div>
+    </div>
 
-      <section>
-        <h2>凭据</h2>
-        <label>
-          管理员密码
-          <input id="adminPassword" type="password" placeholder="X-Admin-Password">
-        </label>
-        <button id="saveCredentials" type="button">保存并加载</button>
-        <p id="status" role="status"></p>
-      </section>
+    <main class="container mx-auto px-4 py-6 max-w-5xl">
+      ${devHint}
+
+      <div class="card bg-base-100 shadow-sm mb-6">
+        <div class="card-body">
+          <h2 class="card-title text-lg">凭据</h2>
+          <p class="text-sm opacity-60">所有 <kbd class="kbd kbd-sm">/admin/*</kbd> API 使用 ADMIN_PASSWORD 鉴权与加密。</p>
+          <div class="flex flex-col sm:flex-row gap-3 mt-2">
+            <input id="adminPassword" type="password" placeholder="管理员密码" class="input input-bordered flex-1">
+            <button id="saveCredentials" type="button" class="btn btn-primary">保存并加载</button>
+          </div>
+          <p id="status" role="status" class="text-sm mt-2"></p>
+        </div>
+      </div>
 
       <section id="panels" hidden>
-        <div class="grid">
-          <article>
-            <h3>创建</h3>
-            <form id="createForm">
-              <label>
-                ID
-                <input id="createId" required>
-              </label>
-              <label>
-                URL
-                <input id="createUrl" required>
-              </label>
-              <label>
-                Cookies JSON
-                <textarea id="createCookies" required></textarea>
-              </label>
-              <button type="submit">创建</button>
-            </form>
-          </article>
+        <div class="card bg-base-100 shadow-sm mb-6">
+          <div class="card-body">
+            <div role="tablist" class="tabs tabs-bordered mb-4">
+              <button role="tab" class="tab tab-active" data-tab="create">创建</button>
+              <button role="tab" class="tab" data-tab="update">更新</button>
+              <button role="tab" class="tab" data-tab="delete">删除</button>
+            </div>
 
-          <article>
-            <h3>更新</h3>
-            <form id="updateForm">
-              <label>
-                ID
-                <input id="updateId" required>
-              </label>
-              <label>
-                URL
-                <input id="updateUrl" placeholder="留空则保留原值">
-              </label>
-              <label>
-                Cookies JSON
-                <textarea id="updateCookies" required></textarea>
-              </label>
-              <button type="submit">更新</button>
-            </form>
-          </article>
+            <div id="tab-create" class="tab-content">
+              <form id="createForm" class="space-y-3 max-w-lg">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">ID</span></label>
+                  <input id="createId" required class="input input-bordered w-full">
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">URL</span></label>
+                  <input id="createUrl" required class="input input-bordered w-full">
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Cookies JSON</span></label>
+                  <textarea id="createCookies" required class="textarea textarea-bordered w-full h-28" placeholder="[...]"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">创建</button>
+              </form>
+            </div>
 
-          <article>
-            <h3>删除</h3>
-            <form id="deleteForm">
-              <label>
-                ID
-                <input id="deleteId" required>
-              </label>
-              <button type="submit" class="contrast">删除</button>
-            </form>
-          </article>
+            <div id="tab-update" class="tab-content hidden">
+              <form id="updateForm" class="space-y-3 max-w-lg">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">ID</span></label>
+                  <input id="updateId" required class="input input-bordered w-full">
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">URL</span></label>
+                  <input id="updateUrl" class="input input-bordered w-full" placeholder="留空则保留原值">
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text">Cookies JSON</span></label>
+                  <textarea id="updateCookies" required class="textarea textarea-bordered w-full h-28" placeholder="[...]"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">更新</button>
+              </form>
+            </div>
+
+            <div id="tab-delete" class="tab-content hidden">
+              <form id="deleteForm" class="space-y-3 max-w-lg">
+                <div class="form-control">
+                  <label class="label"><span class="label-text">ID</span></label>
+                  <input id="deleteId" required class="input input-bordered w-full">
+                </div>
+                <button type="submit" class="btn btn-error">删除</button>
+              </form>
+            </div>
+          </div>
         </div>
 
-        <article>
-          <h3>导入 / 导出</h3>
-          <div class="grid">
-            <button id="exportAll" type="button" class="secondary">导出全部数据</button>
-            <input id="importFile" type="file" accept=".json,application/json">
-            <button id="importAll" type="button">导入全部数据</button>
+        <div class="card bg-base-100 shadow-sm mb-6">
+          <div class="card-body">
+            <h2 class="card-title text-lg">导入 / 导出</h2>
+            <p class="text-sm opacity-60">导出文件为加密 JSON；导入策略为按 ID 覆盖合并，不会清空现有数据。</p>
+            <div class="flex flex-col sm:flex-row gap-3 mt-3 items-center">
+              <button id="exportAll" type="button" class="btn btn-outline">导出全部数据</button>
+              <input id="importFile" type="file" accept=".json,application/json" class="file-input file-input-bordered flex-1">
+              <button id="importAll" type="button" class="btn btn-primary">导入全部数据</button>
+            </div>
           </div>
-          <p><small>导出文件为加密 JSON；导入策略为按 ID 覆盖合并，不会清空现有数据。</small></p>
-        </article>
+        </div>
 
-        <article>
-          <div class="grid">
-            <div>
-              <h3>已存储记录</h3>
-              <p><small>按最近更新时间倒序排列。</small></p>
+        <div class="card bg-base-100 shadow-sm mb-6">
+          <div class="card-body">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h2 class="card-title text-lg">已存储记录</h2>
+                <p class="text-sm opacity-60">按最近更新时间倒序排列</p>
+              </div>
+              <button id="refreshList" type="button" class="btn btn-outline btn-sm">刷新列表</button>
             </div>
-            <div>
-              <button id="refreshList" type="button" class="secondary">刷新列表</button>
+            <div class="overflow-x-auto mt-4">
+              <table class="table table-zebra">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>URL</th>
+                    <th>Cookie 原文</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="cookieTableBody"></tbody>
+              </table>
             </div>
           </div>
-          <figure>
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">ID</th>
-                  <th scope="col">URL</th>
-                  <th scope="col">Cookie 原文</th>
-                  <th scope="col">操作</th>
-                </tr>
-              </thead>
-              <tbody id="cookieTableBody"></tbody>
-            </table>
-          </figure>
-        </article>
+        </div>
       </section>
-
-      <dialog id="cookieRawDialog">
-        <article style="width:min(1200px, 92vw); max-width:1200px;">
-          <header>
-            <button id="closeRawDialog" aria-label="Close" rel="prev"></button>
-            <h3 id="cookieRawTitle">Cookie 原文</h3>
-          </header>
-          <p>
-            <button id="copyRawDialog" type="button" class="secondary">复制原文</button>
-          </p>
-          <pre id="cookieRawContent"></pre>
-        </article>
-      </dialog>
     </main>
 
+    <dialog id="cookieRawDialog" class="modal">
+      <div class="modal-box w-11/12 max-w-4xl">
+        <h3 id="cookieRawTitle" class="text-lg font-bold">Cookie 原文</h3>
+        <div class="mt-3">
+          <button id="copyRawDialog" type="button" class="btn btn-outline btn-sm">复制原文</button>
+        </div>
+        <pre id="cookieRawContent" class="bg-base-200 p-4 rounded-lg mt-4 overflow-auto max-h-96 text-sm whitespace-pre-wrap break-all"></pre>
+        <div class="modal-action">
+          <button id="closeRawDialog" class="btn">关闭</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
     <script>
+      (function() {
+        var sel = document.getElementById("themeSelect");
+        var saved = localStorage.getItem("cookie-share-theme");
+        if (saved) {
+          document.documentElement.setAttribute("data-theme", saved);
+          sel.value = saved;
+        }
+        sel.addEventListener("change", function() {
+          document.documentElement.setAttribute("data-theme", this.value);
+          localStorage.setItem("cookie-share-theme", this.value);
+        });
+      })();
+
+      document.querySelectorAll("[data-tab]").forEach(function(tab) {
+        tab.addEventListener("click", function() {
+          document.querySelectorAll("[data-tab]").forEach(function(t) { t.classList.remove("tab-active"); });
+          document.querySelectorAll(".tab-content").forEach(function(c) { c.classList.add("hidden"); });
+          this.classList.add("tab-active");
+          document.getElementById("tab-" + this.dataset.tab).classList.remove("hidden");
+        });
+      });
+
       const API_BASE = ${JSON.stringify(basePath)};
       const PASSWORD_KEY = "cookie-share-admin-password";
       const VERSION = ${JSON.stringify(ENCRYPTION_VERSION)};
@@ -1096,7 +1139,7 @@ function handleAdminPage(basePath, runtimeConfig) {
       function setStatus(message, isError = false) {
         const node = document.getElementById("status");
         node.textContent = message || "";
-        node.dataset.state = isError ? "error" : "ok";
+        node.className = "text-sm mt-2 " + (isError ? "text-error" : "text-success");
       }
 
       function showError(error) {
@@ -1286,6 +1329,7 @@ function handleAdminPage(basePath, runtimeConfig) {
           const cell = document.createElement("td");
           cell.colSpan = 4;
           cell.textContent = "暂无数据";
+          cell.className = "text-center opacity-60";
           row.appendChild(cell);
           tbody.appendChild(row);
           setStatus("列表已刷新。");
@@ -1304,14 +1348,14 @@ function handleAdminPage(basePath, runtimeConfig) {
           idCell.textContent = cookie.id;
           urlCell.textContent = cookie.url;
           rawButton.type = "button";
-          rawButton.className = "secondary";
+          rawButton.className = "btn btn-ghost btn-xs";
           rawButton.textContent = "查看原文";
           rawButton.addEventListener("click", () => {
             showRawCookie(cookie.id, cookie.cookiesJson);
           });
           rawCell.appendChild(rawButton);
           button.type = "button";
-          button.className = "contrast";
+          button.className = "btn btn-error btn-xs";
           button.textContent = "删除";
           button.addEventListener("click", () => deleteCookieById(cookie.id).catch(showError));
           actionCell.appendChild(button);

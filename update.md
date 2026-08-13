@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.3] - 2026-08-13
+
+Userscript only — no backend changes.
+仅油猴脚本变更 — 后端无改动。
+
+### Added
+
+- Cookie List: search box (filters by ID or URL), per-record URL display, and a Copy ID button
+- Clear error notification with a link to the README setup guide when the userscript manager does not support `GM_cookie` (e.g. Violentmonkey), instead of a silent ReferenceError
+- Esc key closes open modals; modals now fade in/out (previously the close delay waited on a transition that never ran due to `display: none` toggling)
+- Cookie List：新增搜索框（按 ID 或 URL 过滤）、每条记录显示 URL、新增"复制 ID"按钮
+- 脚本管理器不支持 `GM_cookie` 时（如 Violentmonkey），显示明确的错误通知并附 README 授权说明链接，不再静默抛 ReferenceError
+- Esc 键可关闭弹窗；弹窗新增淡入淡出动画（此前 `display: none` 切换导致过渡从未生效，关闭延迟是空等）
+
+### Fixed
+
+- Receiving cookies now snapshots current cookies in memory and restores them automatically if the import fails, instead of leaving the user logged out
+- Cookie IDs are validated client-side against the backend rule (`/^[A-Za-z0-9]{1,64}$/`) in all flows; the Cookie List renders IDs via `textContent` instead of `innerHTML`, closing a self-XSS vector from locally saved records
+- macOS `Option+Shift+L/C` shortcuts work now: matching switched from `event.key` (which becomes a special character with Option+Shift) to `event.code`; shortcuts are also ignored while typing in editable elements
+- Two server messages ("Updated successfully" / "Import completed") were hardcoded in Chinese regardless of UI language
+- 接收 Cookie 前先在内存中快照当前 Cookie，导入失败自动恢复，不再让用户处于登出状态
+- 所有流程的 Cookie ID 客户端校验与后端规则一致（`/^[A-Za-z0-9]{1,64}$/`）；Cookie List 改用 `textContent` 渲染 ID（原 `innerHTML`），消除本地记录的自 XSS 风险
+- 修复 macOS `Option+Shift+L/C` 快捷键：匹配从 `event.key`（Option+Shift 下变为特殊字符）改为 `event.code`；焦点在可编辑元素中时快捷键不再触发
+- 修复两条服务器消息（"更新成功"/"导入成功"）无论界面语言均硬编码为中文的问题
+
+### Changed
+
+- Language switching takes effect immediately (menu commands re-registered via `GM_unregisterMenuCommand`, open modal re-rendered); managers without unregister support keep old menu labels until the next page load
+- Send/Receive/Add Account/Clear buttons are disabled while an operation is running, preventing duplicate requests from double clicks
+- Removed vestigial admin-password storage key, its config export entry and unused translations; removed unused `@grant GM_addStyle`; old exported configs still import cleanly (obsolete keys are skipped)
+- 切换语言即时生效（通过 `GM_unregisterMenuCommand` 重注册菜单命令，已打开的弹窗自动重建）；不支持 unregister 的管理器菜单文字保持旧语言直到下次刷新
+- 发送/接收/新增账号/清除按钮在操作进行中禁用，防止连点触发重复请求
+- 移除残留的管理密码存储键、其配置导出条目及无引用翻译文案；移除未使用的 `@grant GM_addStyle`；旧版导出的配置仍可正常导入（废弃键自动跳过）
+
+---
+
 ## [0.6.2] - 2026-07-05
 
 Backend/admin-page only — no userscript release for this version.

@@ -52,12 +52,16 @@ Many websites don't support multi-account switching, and sharing login sessions 
 
 - Save cookies locally without backend (v0.1.0+)
 - Manage cookies with Cookie List (local and cloud data)
+- Search the Cookie List by ID or URL, with per-record copy button (v0.6.3+)
+- Failed receives automatically restore your original cookies (v0.6.3+)
 - Cloud storage via self-hosted Cloudflare Worker (D1) or Node.js server
 
 ### UI & Themes
 
 - Dual theme support: Claude (warm light) and Dark (luxury gold) with one-click switching (v0.4.0+)
 - Userscript config export/import via Base64 clipboard (v0.3.1+)
+- Instant language switching without page reload (v0.6.3+)
+- If your userscript manager lacks `GM_cookie` support, the script shows a clear error with a link to the setup guide instead of failing silently (v0.6.3+)
 
 ---
 

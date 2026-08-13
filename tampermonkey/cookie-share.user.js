@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.6.1
+// @version      0.6.3
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -10,8 +10,8 @@
 // @grant        GM_listValues
 // @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
-// @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
+// @grant        GM_unregisterMenuCommand
 // @grant        GM_cookie
 // @updateURL    https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js
 // @connect      *
@@ -24,7 +24,6 @@
   // ===================== Constants =====================
   const STORAGE_KEYS = {
     CUSTOM_URL: "cookie_share_custom_url",
-    ADMIN_PASSWORD: "cookie_share_admin_password",
     TRANSPORT_SECRET: "cookie_share_transport_secret",
     SHOW_FLOATING_BUTTON: "cookie_share_show_floating_button",
     AUTO_HIDE_FULLSCREEN: "cookie_share_auto_hide_fullscreen",
@@ -35,6 +34,19 @@
   };
 
   const THEMES = { DARK: "dark", CLAUDE: "claude" };
+
+  // Must stay in sync with the backend's validateId rule.
+  const COOKIE_ID_PATTERN = /^[A-Za-z0-9]{1,64}$/;
+
+  const GM_COOKIE_SUPPORTED =
+    typeof GM_cookie !== "undefined" &&
+    GM_cookie &&
+    typeof GM_cookie.list === "function";
+
+  const GM_COOKIE_HELP_URLS = {
+    en: "https://github.com/fangyuan99/cookie-share#faq",
+    zh: "https://github.com/fangyuan99/cookie-share/blob/main/README_CN.md#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98",
+  };
 
   // ===================== i18n =====================
   const LANGUAGES = {
@@ -91,8 +103,10 @@
       failed: "failed",
       placeholderCookieId: "Cookie ID",
       placeholderServerAddress: "Server Address (e.g., https://example.com)",
-      placeholderAdminPassword: "Enter admin password",
       placeholderTransportSecret: "Enter transport secret",
+      copyButton: "Copy",
+      searchPlaceholder: "Search by ID or URL",
+      listFilterEmpty: "No records match your search",
       settingsShowFloatingButton: `Show Floating Button (${getShortcutLabel("L")})`,
       settingsAutoHideFullscreen:
         "Auto Hide in Fullscreen (Not Available For Safari)",
@@ -108,8 +122,10 @@
       themeClaude: "Claude",
       menuShowShare: `Show Cookie Share (${getShortcutLabel("C")})`,
       menuShowList: `Show Cookie List (${getShortcutLabel("L")})`,
-      menuSwitchLanguage: "Switch Language (Refresh Required)",
+      menuSwitchLanguage: "Switch Language",
       notificationEnterCookieId: "Please enter or generate a Cookie ID",
+      notificationInvalidCookieId:
+        "Cookie ID can only contain letters and digits (max 64 chars)",
       notificationNoCookiesToSave: "No cookies to save on the current page",
       notificationSavedLocally: "Cookie saved locally successfully",
       notificationEnterServer: "Please enter the server address",
@@ -126,8 +142,6 @@
       notificationReceiveFailed:
         "Receive {{source}} cookie failed: {{message}}",
       notificationLocalDeleted: "Local cookie deleted",
-      notificationNeedAdminCreds:
-        "Deleting cloud cookies requires server address and admin password",
       notificationNeedTransportSecret:
         "Cloud operations require a transport secret",
       notificationCloudDeleted: "Cloud cookie deleted",
@@ -137,7 +151,6 @@
       notificationLoadCloudFailed:
         "Failed to load cloud cookies: {{message}} (Local cookies will still be shown)",
       notificationLoadLocalFailed: "Failed to load local cookies: {{message}}",
-      notificationInvalidPassword: "Invalid admin password",
       notificationAdminPermission:
         "Invalid admin password or insufficient permissions",
       notificationServerDeleteFailed: "Server returned delete failure",
@@ -155,6 +168,15 @@
       notificationConfigImported: "Config imported successfully",
       notificationConfigEmpty: "Please enter a Base64 config",
       notificationConfigInvalid: "Invalid config payload",
+      notificationUpdatedSuccess: "Updated successfully",
+      notificationImportCompleted: "Import completed",
+      notificationReceiveRestored: "original cookies have been restored",
+      notificationGmCookieUnsupported:
+        "Your userscript manager does not support GM_cookie. Please use Tampermonkey and allow cookie access for this script.",
+      notificationGmCookieHelp: "View setup guide",
+      notificationIdCopied: "Cookie ID copied to clipboard",
+      notificationCopyFailed: "Copy failed",
+      notificationLanguageSwitched: "Language switched",
       confirmDeleteMessage: "Are you sure you want to delete this cookie?",
       listEmpty: "No local or cloud cookies found related to {{host}}",
       listEmptyLocalOnly: "No local cookies found related to {{host}}",
@@ -189,8 +211,10 @@
       failed: "失败",
       placeholderCookieId: "Cookie ID",
       placeholderServerAddress: "服务器地址 (例如 https://example.com)",
-      placeholderAdminPassword: "输入管理密码",
       placeholderTransportSecret: "输入传输密钥",
+      copyButton: "复制",
+      searchPlaceholder: "按 ID 或 URL 搜索",
+      listFilterEmpty: "没有匹配的记录",
       settingsShowFloatingButton: `显示悬浮按钮 (${getShortcutLabel("L")})`,
       settingsAutoHideFullscreen: "全屏时自动隐藏 (Safari 不可用)",
       settingsSaveLocally: "优先本地保存 (勾选后'发送'将仅保存本地)",
@@ -204,8 +228,9 @@
       themeClaude: "Claude",
       menuShowShare: `显示 Cookie 分享面板 (${getShortcutLabel("C")})`,
       menuShowList: `显示 Cookie 列表 (${getShortcutLabel("L")})`,
-      menuSwitchLanguage: "切换语言 (需刷新页面)",
+      menuSwitchLanguage: "切换语言",
       notificationEnterCookieId: "请输入或生成一个 Cookie ID",
+      notificationInvalidCookieId: "Cookie ID 只能包含字母和数字（最长 64 位）",
       notificationNoCookiesToSave: "当前页面没有可保存的 Cookie",
       notificationSavedLocally: "Cookie 已成功保存到本地",
       notificationEnterServer: "请输入服务器地址",
@@ -219,7 +244,6 @@
       notificationNeedServerAddress: "请先设置服务器地址",
       notificationReceiveFailed: "接收 {{source}} Cookie 失败: {{message}}",
       notificationLocalDeleted: "本地 Cookie 已删除",
-      notificationNeedAdminCreds: "删除云端 Cookie 需要服务器地址和管理密码",
       notificationNeedTransportSecret: "云端操作需要传输密钥",
       notificationCloudDeleted: "云端 Cookie 已删除",
       notificationDeleteFailed: "删除 {{source}} Cookie 失败: {{message}}",
@@ -227,7 +251,6 @@
       notificationLoadCloudFailed:
         "加载云端 Cookie 失败: {{message}} (本地 Cookie 仍会显示)",
       notificationLoadLocalFailed: "加载本地 Cookie 失败: {{message}}",
-      notificationInvalidPassword: "无效的管理密码",
       notificationAdminPermission: "管理密码无效或权限不足",
       notificationServerDeleteFailed: "服务器返回删除失败",
       notificationNetworkError: "网络请求失败",
@@ -242,6 +265,15 @@
       notificationConfigImported: "配置导入成功",
       notificationConfigEmpty: "请输入 Base64 配置",
       notificationConfigInvalid: "配置内容无效",
+      notificationUpdatedSuccess: "更新成功",
+      notificationImportCompleted: "导入成功",
+      notificationReceiveRestored: "已恢复原有 Cookie",
+      notificationGmCookieUnsupported:
+        "当前脚本管理器不支持 GM_cookie，请使用 Tampermonkey 并为脚本开启 Cookie 访问权限。",
+      notificationGmCookieHelp: "查看授权说明",
+      notificationIdCopied: "Cookie ID 已复制到剪贴板",
+      notificationCopyFailed: "复制失败",
+      notificationLanguageSwitched: "已切换语言",
       confirmDeleteMessage: "您确定要删除此 Cookie 吗？",
       listEmpty: "未找到与 {{host}} 相关的本地或云端 Cookie",
       listEmptyLocalOnly: "未找到与 {{host}} 相关的本地 Cookie",
@@ -280,8 +312,6 @@
   const CONFIG_NORMALIZERS = {
     [STORAGE_KEYS.CUSTOM_URL]: (value) =>
       typeof value === "string" ? value.replace(/\/+$/, "") : "",
-    [STORAGE_KEYS.ADMIN_PASSWORD]: (value) =>
-      typeof value === "string" ? value : "",
     [STORAGE_KEYS.TRANSPORT_SECRET]: (value) =>
       typeof value === "string" ? value : "",
     [STORAGE_KEYS.SHOW_FLOATING_BUTTON]: (value) =>
@@ -494,9 +524,9 @@
           source: t("sourceCloud"),
           message: t("apiErrorInvalidData"),
         }),
-        "Cookies and URL updated successfully": "更新成功",
+        "Cookies and URL updated successfully": t("notificationUpdatedSuccess"),
         "Data deleted successfully": t("notificationCloudDeleted"),
-        "Import completed": "导入成功",
+        "Import completed": t("notificationImportCompleted"),
         Unauthorized: t("notificationAdminPermission"),
         "Invalid encrypted payload": t("notificationDecryptFailed"),
         "Transport secret mismatch or corrupted payload": t(
@@ -837,16 +867,29 @@
         if (!response?.success || !Array.isArray(response.cookies)) {
           throw new Error(t("apiErrorInvalidData"));
         }
+        // Snapshot current cookies in memory so a failed import can be
+        // rolled back instead of leaving the user logged out.
+        const snapshot = await cookieManager.getAll();
         await cookieManager.clearAll();
-        let importedCount = 0;
-        for (const cookie of response.cookies) {
-          if (cookie?.name && cookie?.value) {
-            await cookieManager.set(cookie);
-            importedCount++;
+        try {
+          let importedCount = 0;
+          for (const cookie of response.cookies) {
+            if (cookie?.name && cookie?.value) {
+              await cookieManager.set(cookie);
+              importedCount++;
+            }
           }
-        }
-        if (importedCount === 0) {
-          throw new Error(t("apiErrorNoImport"));
+          if (importedCount === 0) {
+            throw new Error(t("apiErrorNoImport"));
+          }
+        } catch (importError) {
+          await cookieManager.clearAll();
+          for (const cookie of snapshot) {
+            await cookieManager.set(cookie);
+          }
+          throw new Error(
+            `${importError.message} (${t("notificationReceiveRestored")})`,
+          );
         }
         setTimeout(() => window.location.reload(), 500);
         return { success: true, message: t("notificationReceivedSuccess") };
@@ -859,7 +902,7 @@
 
   // ===================== Notification =====================
   const notification = {
-    show(message, type = "success") {
+    show(message, type = "success", link = null) {
       const root = getShadowWrapper();
       if (!root) return;
       const existingNotification = root.querySelector(
@@ -871,15 +914,57 @@
       const notificationEl = document.createElement("div");
       notificationEl.className = `cookie-share-notification ${type}`;
       notificationEl.textContent = message;
+      if (link) {
+        const anchor = document.createElement("a");
+        anchor.className = "cookie-share-notification-link";
+        anchor.href = link.url;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        anchor.textContent = link.text;
+        notificationEl.appendChild(anchor);
+      }
       root.appendChild(notificationEl);
       notificationEl.offsetHeight;
       notificationEl.classList.add("show");
+      // Give the user extra time to click when a link is attached.
+      const duration = link ? 8000 : 3000;
       setTimeout(() => {
         notificationEl.classList.remove("show");
         setTimeout(() => notificationEl.remove(), 300);
-      }, 3000);
+      }, duration);
     },
   };
+
+  function ensureGmCookieSupport() {
+    if (GM_COOKIE_SUPPORTED) return true;
+    notification.show(t("notificationGmCookieUnsupported"), "error", {
+      text: t("notificationGmCookieHelp"),
+      url: GM_COOKIE_HELP_URLS[currentLanguage] || GM_COOKIE_HELP_URLS.en,
+    });
+    return false;
+  }
+
+  function validateCookieIdInput(cookieId) {
+    if (!cookieId) {
+      notification.show(t("notificationEnterCookieId"), "error");
+      return false;
+    }
+    if (!COOKIE_ID_PATTERN.test(cookieId)) {
+      notification.show(t("notificationInvalidCookieId"), "error");
+      return false;
+    }
+    return true;
+  }
+
+  async function runWithButtonLoading(button, task) {
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      await task();
+    } finally {
+      button.disabled = false;
+    }
+  }
 
   // ===================== UI Components =====================
   const ui = {
@@ -888,6 +973,7 @@
         const root = getShadowWrapper();
         if (!root) { resolve(false); return; }
         const container = document.createElement("div");
+        container.className = "cookie-share-confirm-layer";
         container.style.cssText = `
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           display: flex; align-items: center; justify-content: center;
@@ -939,6 +1025,7 @@
         const root = getShadowWrapper();
         if (!root) { resolve(false); return; }
         const container = document.createElement("div");
+        container.className = "cookie-share-confirm-layer";
         container.style.cssText = `
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           display: flex; align-items: center; justify-content: center;
@@ -1114,13 +1201,18 @@
           backdrop-filter: blur(4px) !important;
           -webkit-backdrop-filter: blur(4px) !important;
           z-index: 2147483646 !important;
-          display: none !important;
-          pointer-events: auto !important;
-        }
-        .cookie-share-overlay.visible {
           display: flex !important;
           justify-content: center !important;
           align-items: center !important;
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+          transition: opacity 0.2s ease, visibility 0.2s ease !important;
+        }
+        .cookie-share-overlay.visible {
+          opacity: 1 !important;
+          visibility: visible !important;
+          pointer-events: auto !important;
         }
 
         /* ===== Modal ===== */
@@ -1133,12 +1225,16 @@
           max-height: 90vh !important;
           overflow-y: auto !important;
           position: relative !important;
-          display: none !important;
+          display: block !important;
           z-index: 2147483647 !important;
           padding: 0 !important;
+          opacity: 0 !important;
+          transform: scale(0.96) translateY(8px) !important;
+          transition: opacity 0.2s ease, transform 0.2s ease !important;
         }
         .cookie-share-modal.visible {
-          display: block !important;
+          opacity: 1 !important;
+          transform: none !important;
         }
         .cookie-list-modal {
           width: min(560px, 90vw) !important;
@@ -1499,8 +1595,11 @@
         }
 
         /* ===== Cookie List ===== */
-        .cookie-list-container {
+        .cookie-share-container input.cookie-share-search {
           margin-top: 16px !important;
+        }
+        .cookie-list-container {
+          margin-top: 10px !important;
           max-height: 400px !important;
           overflow-y: auto !important;
           margin-bottom: 14px !important;
@@ -1520,10 +1619,36 @@
         .cookie-share-item:hover {
           background: var(--cs-surface-hover) !important;
         }
+        .cookie-share-item-info {
+          flex: 1 !important;
+          min-width: 0 !important;
+          margin-right: 10px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 2px !important;
+        }
+        .cookie-share-item-id {
+          font-size: 13px !important;
+          font-weight: 500 !important;
+          word-break: break-all !important;
+        }
+        .cookie-share-item-source {
+          color: var(--cs-text-muted) !important;
+          font-weight: 400 !important;
+        }
+        .cookie-share-item-url {
+          font-size: 12px !important;
+          color: var(--cs-text-muted) !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+        }
         .cookie-share-buttons {
           display: flex !important;
           gap: 6px !important;
+          flex-shrink: 0 !important;
         }
+        .cookie-share-copy,
         .cookie-share-receive,
         .cookie-share-delete {
           padding: 5px 10px !important;
@@ -1538,6 +1663,13 @@
           min-width: auto !important;
           margin: 0 !important;
         }
+        .cookie-share-copy {
+          background: var(--cs-btn-secondary-bg) !important;
+          color: var(--cs-btn-secondary-text) !important;
+        }
+        .cookie-share-copy:hover {
+          background: var(--cs-btn-secondary-hover) !important;
+        }
         .cookie-share-receive {
           background: var(--cs-accent) !important;
           color: #FFF !important;
@@ -1551,6 +1683,13 @@
         }
         .cookie-share-delete:hover {
           background: var(--cs-btn-danger-hover) !important;
+        }
+        .cs-hidden {
+          display: none !important;
+        }
+        .cookie-share-container button:disabled {
+          opacity: 0.55 !important;
+          cursor: not-allowed !important;
         }
         .cookie-share-error {
           color: var(--cs-danger) !important;
@@ -1657,6 +1796,13 @@
         }
         .cookie-share-notification.error {
           border-left: 3px solid var(--cs-error-border) !important;
+        }
+        .cookie-share-notification-link {
+          display: block !important;
+          margin-top: 6px !important;
+          color: var(--cs-accent) !important;
+          text-decoration: underline !important;
+          font-size: 13px !important;
         }
 
         /* ===== Animations ===== */
@@ -1937,6 +2083,7 @@
         try {
           await configManager.importFromBase64(transferInput.value);
           detectLanguage();
+          registerMenuCommands();
           themeManager.init();
           this.refreshFloatingButton();
           this.showModal({
@@ -2233,17 +2380,15 @@
       getShadowWrapper().appendChild(overlay);
 
       // Event listeners
-      sendBtn.onclick = async () => {
+      sendBtn.onclick = () => runWithButtonLoading(sendBtn, async () => {
         try {
+          if (!ensureGmCookieSupport()) return;
           const saveLocally = GM_getValue(STORAGE_KEYS.SAVE_LOCALLY, false);
           const cookieId = idInput.value.trim();
           const serverUrl = serverInput.value.trim();
           const transportSecret = transportInput.value.trim();
 
-          if (!cookieId) {
-            notification.show(t("notificationEnterCookieId"), "error");
-            return;
-          }
+          if (!validateCookieIdInput(cookieId)) return;
 
           if (saveLocally) {
             const cookies = await cookieManager.getAll();
@@ -2298,18 +2443,16 @@
             "error",
           );
         }
-      };
+      });
 
-      receiveBtn.onclick = async () => {
+      receiveBtn.onclick = () => runWithButtonLoading(receiveBtn, async () => {
         try {
+          if (!ensureGmCookieSupport()) return;
           if (!serverInput.value.trim()) {
             notification.show(t("notificationEnterServer"), "error");
             return;
           }
-          if (!idInput.value.trim()) {
-            notification.show(t("notificationEnterCookieId"), "error");
-            return;
-          }
+          if (!validateCookieIdInput(idInput.value.trim())) return;
           if (!transportInput.value.trim()) {
             notification.show(t("notificationNeedTransportSecret"), "error");
             return;
@@ -2338,9 +2481,10 @@
             "error",
           );
         }
-      };
+      });
 
-      addAccountBtn.onclick = async () => {
+      addAccountBtn.onclick = () => runWithButtonLoading(addAccountBtn, async () => {
+        if (!ensureGmCookieSupport()) return;
         if (!(await this.confirmAddAccount())) {
           return;
         }
@@ -2350,10 +2494,7 @@
           const serverUrl = serverInput.value.trim();
           const transportSecret = transportInput.value.trim();
 
-          if (!cookieId) {
-            notification.show(t("notificationEnterCookieId"), "error");
-            return;
-          }
+          if (!validateCookieIdInput(cookieId)) return;
 
           if (saveLocally) {
             const cookies = await cookieManager.getAll();
@@ -2396,15 +2537,16 @@
           }
           notification.show(errorMessage, "error");
         }
-      };
+      });
 
-      clearBtn.onclick = async () => {
+      clearBtn.onclick = () => runWithButtonLoading(clearBtn, async () => {
+        if (!ensureGmCookieSupport()) return;
         if (await this.confirmDelete()) {
           await cookieManager.clearAll();
           notification.show(t("notificationClearedSuccess"), "success");
           setTimeout(() => window.location.reload(), 500);
         }
-      };
+      });
 
       serverInput.addEventListener("input", () => {
         let url = serverInput.value.trim().replace(/\/+$/, "");
@@ -2434,6 +2576,7 @@
       const overlay = root.querySelector(".cookie-share-overlay");
       const modal = root.querySelector(".cookie-share-modal");
       if (overlay && modal) {
+        overlay.offsetHeight; // force reflow so the fade-in transition runs
         overlay.classList.add("visible");
         modal.classList.add("visible");
       }
@@ -2443,7 +2586,8 @@
       const overlay = getShadowWrapper()?.querySelector(".cookie-share-overlay");
       if (overlay) {
         overlay.classList.remove("visible");
-        setTimeout(() => overlay.remove(), 300);
+        overlay.querySelector(".cookie-share-modal")?.classList.remove("visible");
+        setTimeout(() => overlay.remove(), 220);
       }
     },
 
@@ -2462,12 +2606,38 @@
           <div class="title-container">
             <h1>${t("cookiesListTitle")}</h1>
           </div>
+          <input type="text" id="cookieShareSearch" class="cookie-id-input cookie-share-search" placeholder="${t("searchPlaceholder")}" spellcheck="false">
           <div id="cookieShareList" class="cookie-list-container"></div>
           <div style="display: flex; justify-content: center;">
             <button id="cookieShareGoToMainBtn" class="generate-btn">${t("showPanelButton")}</button>
           </div>
         </div>
       `;
+
+      const searchInput = modal.querySelector("#cookieShareSearch");
+      const cookiesList = modal.querySelector("#cookieShareList");
+      searchInput.addEventListener("input", () => {
+        const query = searchInput.value.trim().toLowerCase();
+        const items = cookiesList.querySelectorAll(".cookie-share-item");
+        let visibleCount = 0;
+        items.forEach((item) => {
+          const matches =
+            !query || (item.dataset.searchText || "").includes(query);
+          item.classList.toggle("cs-hidden", !matches);
+          if (matches) visibleCount++;
+        });
+        let filterEmpty = cookiesList.querySelector(".cookie-share-filter-empty");
+        if (visibleCount === 0 && items.length > 0) {
+          if (!filterEmpty) {
+            filterEmpty = document.createElement("div");
+            filterEmpty.className = "cookie-share-empty cookie-share-filter-empty";
+            filterEmpty.textContent = t("listFilterEmpty");
+            cookiesList.appendChild(filterEmpty);
+          }
+        } else if (filterEmpty) {
+          filterEmpty.remove();
+        }
+      });
 
       modal.querySelector(".close-btn").onclick = () => this.hideCookieList();
       modal.querySelector("#cookieShareGoToMainBtn").onclick = () => {
@@ -2488,6 +2658,7 @@
       const existingOverlay = root.querySelector(".cookie-share-overlay");
       if (existingOverlay) existingOverlay.remove();
       const { overlay, modal } = this.createCookieListModal();
+      overlay.offsetHeight; // force reflow so the fade-in transition runs
       overlay.classList.add("visible");
       modal.classList.add("visible");
       const cookiesList = modal.querySelector("#cookieShareList");
@@ -2501,7 +2672,7 @@
       if (overlay && modal) {
         overlay.classList.remove("visible");
         modal.classList.remove("visible");
-        setTimeout(() => overlay.remove(), 300);
+        setTimeout(() => overlay.remove(), 220);
       }
     },
 
@@ -2648,16 +2819,49 @@
         combinedCookies.forEach((cookie) => {
           const item = document.createElement("div");
           item.className = "cookie-share-item";
+          item.dataset.searchText =
+            `${cookie.id} ${cookie.url || ""}`.toLowerCase();
           const sourceText = t(
             cookie.source === "local" ? "sourceLocal" : "sourceCloud",
           );
-          item.innerHTML = `
-            <span style="font-size: 13px; font-weight: 500;">ID: ${cookie.id} <span style="color: var(--cs-text-muted); font-weight: 400;">(${sourceText})</span></span>
-            <div class="cookie-share-buttons">
-              <button class="cookie-share-receive" data-id="${cookie.id}" data-source="${cookie.source}">${t("receiveButton")}</button>
-              <button class="cookie-share-delete" data-id="${cookie.id}" data-source="${cookie.source}">${t("deleteButton")}</button>
-            </div>
-          `;
+
+          const info = document.createElement("div");
+          info.className = "cookie-share-item-info";
+
+          const idLine = document.createElement("span");
+          idLine.className = "cookie-share-item-id";
+          idLine.textContent = `ID: ${cookie.id} `;
+          const sourceSpan = document.createElement("span");
+          sourceSpan.className = "cookie-share-item-source";
+          sourceSpan.textContent = `(${sourceText})`;
+          idLine.appendChild(sourceSpan);
+          info.appendChild(idLine);
+
+          if (cookie.url) {
+            const urlLine = document.createElement("div");
+            urlLine.className = "cookie-share-item-url";
+            urlLine.textContent = cookie.url;
+            urlLine.title = cookie.url;
+            info.appendChild(urlLine);
+          }
+
+          const buttons = document.createElement("div");
+          buttons.className = "cookie-share-buttons";
+          const makeButton = (className, labelKey) => {
+            const button = document.createElement("button");
+            button.className = className;
+            button.textContent = t(labelKey);
+            button.dataset.id = cookie.id;
+            button.dataset.source = cookie.source;
+            buttons.appendChild(button);
+            return button;
+          };
+          makeButton("cookie-share-copy", "copyButton");
+          makeButton("cookie-share-receive", "receiveButton");
+          makeButton("cookie-share-delete", "deleteButton");
+
+          item.appendChild(info);
+          item.appendChild(buttons);
           cookiesList.appendChild(item);
         });
 
@@ -2666,8 +2870,20 @@
     },
 
     attachButtonListeners(container) {
-      container.querySelectorAll(".cookie-share-receive").forEach((button) => {
+      container.querySelectorAll(".cookie-share-copy").forEach((button) => {
         button.onclick = async () => {
+          try {
+            await utils.copyToClipboard(button.dataset.id);
+            notification.show(t("notificationIdCopied"), "success");
+          } catch (error) {
+            notification.show(t("notificationCopyFailed"), "error");
+          }
+        };
+      });
+
+      container.querySelectorAll(".cookie-share-receive").forEach((button) => {
+        button.onclick = () => runWithButtonLoading(button, async () => {
+          if (!ensureGmCookieSupport()) return;
           const cookieId = button.dataset.id;
           const source = button.dataset.source;
           const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
@@ -2725,11 +2941,11 @@
               "error",
             );
           }
-        };
+        });
       });
 
       container.querySelectorAll(".cookie-share-delete").forEach((button) => {
-        button.onclick = async () => {
+        button.onclick = () => runWithButtonLoading(button, async () => {
           const cookieId = button.dataset.id;
           const source = button.dataset.source;
           const sourceText = t(
@@ -2781,7 +2997,7 @@
               );
             }
           }
-        };
+        });
       });
     },
   };
@@ -2819,10 +3035,12 @@
       fullscreenManager.handleFullscreenChange(),
     );
 
+    // Match on event.code (physical key): on macOS Option+Shift+letter
+    // produces a special character in event.key, which used to break the
+    // advertised Option+Shift shortcuts.
     const matchesShortcut = (event, actionKey) => {
-      const key = event.key.toLowerCase();
-      const expectedKey = actionKey.toLowerCase();
-      if (key !== expectedKey || !event.shiftKey) return false;
+      if (event.code !== `Key${actionKey.toUpperCase()}`) return false;
+      if (!event.shiftKey) return false;
       const hasMacShortcut =
         isMacOS && !event.ctrlKey && (event.metaKey || event.altKey);
       const hasDefaultShortcut =
@@ -2830,9 +3048,37 @@
       return hasMacShortcut || hasDefaultShortcut;
     };
 
+    const isEditableTarget = (event) => {
+      const target = event.composedPath ? event.composedPath()[0] : event.target;
+      if (!target || target.nodeType !== 1) return false;
+      const tag = target.tagName;
+      return (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        target.isContentEditable === true
+      );
+    };
+
     const handleKeyboardShortcuts = (e) => {
       const root = getShadowWrapper();
       if (!root) return;
+      if (e.key === "Escape") {
+        // A confirm dialog is on top; let its own buttons handle dismissal.
+        if (root.querySelector(".cookie-share-confirm-layer")) return;
+        const overlay = root.querySelector(".cookie-share-overlay.visible");
+        if (!overlay) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (overlay.querySelector(".cookie-list-modal")) {
+          ui.hideCookieList();
+        } else {
+          ui.hideModal();
+        }
+        return;
+      }
+      // Don't hijack typing: Option+Shift+letter types special chars on macOS.
+      if (isEditableTarget(e)) return;
       if (matchesShortcut(e, "l")) {
         e.preventDefault();
         e.stopPropagation();
@@ -2861,23 +3107,57 @@
       }
     };
 
-    document.removeEventListener("keydown", handleKeyboardShortcuts);
     document.addEventListener("keydown", handleKeyboardShortcuts, {
       capture: true,
     });
 
-    GM_registerMenuCommand(t("menuShowShare"), () => ui.showModal());
-    GM_registerMenuCommand(t("menuShowList"), () => ui.showCookieList());
-    GM_registerMenuCommand(t("menuSwitchLanguage"), switchLanguage);
+    registerMenuCommands();
   }
 
-  init();
+  let registeredMenuCommandIds = [];
+
+  function registerMenuCommands() {
+    // GM_unregisterMenuCommand is unavailable in some managers; menu labels
+    // then keep the previous language until the next page load.
+    if (typeof GM_unregisterMenuCommand === "function") {
+      registeredMenuCommandIds.forEach((commandId) => {
+        try {
+          GM_unregisterMenuCommand(commandId);
+        } catch (e) {
+          // ignore
+        }
+      });
+      registeredMenuCommandIds = [];
+    }
+    registeredMenuCommandIds = [
+      GM_registerMenuCommand(t("menuShowShare"), () => ui.showModal()),
+      GM_registerMenuCommand(t("menuShowList"), () => ui.showCookieList()),
+      GM_registerMenuCommand(t("menuSwitchLanguage"), switchLanguage),
+    ];
+  }
 
   function switchLanguage() {
     const newLanguage =
       currentLanguage === LANGUAGES.EN ? LANGUAGES.ZH : LANGUAGES.EN;
     GM_setValue(STORAGE_KEYS.LANGUAGE_PREFERENCE, newLanguage);
     currentLanguage = newLanguage;
-    notification.show(t("menuSwitchLanguage"), "success");
+    registerMenuCommands();
+
+    // Re-open whichever modal is showing so its text updates immediately.
+    const root = getShadowWrapper();
+    const overlay = root?.querySelector(".cookie-share-overlay");
+    if (overlay) {
+      const isListModal = Boolean(overlay.querySelector(".cookie-list-modal"));
+      const cookieId = overlay.querySelector(".cookie-id-input")?.value || "";
+      overlay.remove();
+      if (isListModal) {
+        ui.showCookieList();
+      } else {
+        ui.showModal({ cookieId });
+      }
+    }
+    notification.show(t("notificationLanguageSwitched"), "success");
   }
+
+  init();
 })();

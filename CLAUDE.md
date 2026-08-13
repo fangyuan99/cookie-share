@@ -97,9 +97,22 @@ Two suites, both gated in CI on every PR:
 - `.github/workflows/ci.yml` — On every PR and push to `main`: Worker tests + `wrangler deploy --dry-run`, and server build + tests.
 - `.github/workflows/release.yml` — Auto-creates a GitHub Release when `tampermonkey/cookie-share.user.js` is pushed to `main` with a new `@version`. Tag extracted from the userscript header.
 
-## Git Workflow
+## Development Workflow
 
-Use `gh` CLI for all GitHub operations (PRs, issues, releases).
+- GitHub Flow: create short-lived branches off `main`, named `feat/*`, `fix/*`, `chore/*`, or `docs/*`.
+- Features and fixes go through a PR to `main`. Both CI checks ("Worker tests + deploy dry-run" and "Node server build + tests") must pass; they are enforced by branch protection.
+- Default merge strategy is **squash merge** (one commit per feature on `main`). Head branches are auto-deleted after merge.
+- The maintainer may push directly to `main` only for docs/trivial changes; code changes always go through a PR.
+- Abandoned branches: tag the tip as `archive/<name>`, then delete the branch.
+- Use `gh` CLI for all GitHub operations (PRs, issues, releases).
+
+## Commit & Branch Conventions
+
+- Conventional Commits: `type(scope): subject`. Common scopes: `userscript`, `server`, `worker`. Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`.
+- Keep commits atomic — do not mix security fixes, features, and cleanup in one commit.
+- Commit messages are written in English.
+- Do NOT add AI co-author trailers (e.g. `Co-authored-by: Cursor`).
+- Never force-push `main`; force-pushing your own feature branch is fine.
 
 ## Important Conventions
 

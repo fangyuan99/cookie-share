@@ -48,6 +48,8 @@
     zh: "https://github.com/fangyuan99/cookie-share/blob/main/README_CN.md#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98",
   };
 
+  const CLOSE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+
   // ===================== i18n =====================
   const LANGUAGES = {
     EN: "en",
@@ -83,7 +85,6 @@
       cookieShareTitle: "Cookie Share",
       cookiesListTitle: "Cookies List",
       confirmDeleteTitle: "Confirm Delete",
-      closeButton: "×",
       cancelButton: "Cancel",
       deleteButton: "Delete",
       receiveButton: "Receive",
@@ -178,6 +179,13 @@
       notificationIdCopied: "Cookie ID copied to clipboard",
       notificationCopyFailed: "Copy failed",
       notificationLanguageSwitched: "Language switched",
+      floatMenuPanel: "Open panel",
+      floatMenuList: "Open list",
+      hideFloatingConfirmTitle: "Hide Floating Ball",
+      hideFloatingConfirmMessage:
+        "Hide the floating ball permanently? You can re-enable it in Settings, or open the panel with {{shortcut}}.",
+      hideForeverButton: "Hide Permanently",
+      hideSessionButton: "Just This Time",
       confirmDeleteMessage: "Are you sure you want to delete this cookie?",
       listEmpty: "No local or cloud cookies found related to {{host}}",
       listEmptyLocalOnly: "No local cookies found related to {{host}}",
@@ -192,7 +200,6 @@
       cookieShareTitle: "Cookie Share",
       cookiesListTitle: "Cookie List",
       confirmDeleteTitle: "确认删除",
-      closeButton: "×",
       cancelButton: "取消",
       deleteButton: "删除",
       receiveButton: "接收",
@@ -276,6 +283,13 @@
       notificationIdCopied: "Cookie ID 已复制到剪贴板",
       notificationCopyFailed: "复制失败",
       notificationLanguageSwitched: "已切换语言",
+      floatMenuPanel: "打开面板",
+      floatMenuList: "打开列表",
+      hideFloatingConfirmTitle: "隐藏悬浮球",
+      hideFloatingConfirmMessage:
+        "要永久隐藏悬浮球吗？可在设置中重新开启，或使用 {{shortcut}} 打开面板。",
+      hideForeverButton: "永久隐藏",
+      hideSessionButton: "仅本次隐藏",
       confirmDeleteMessage: "您确定要删除此 Cookie 吗？",
       listEmpty: "未找到与 {{host}} 相关的本地或云端 Cookie",
       listEmptyLocalOnly: "未找到与 {{host}} 相关的本地 Cookie",
@@ -310,6 +324,10 @@
     receiveModal: null,
     settingsModal: null,
   };
+
+  // "Hide for this session" from the floating ball's × bubble; reset when the
+  // user re-enables the floating button in settings.
+  let floatingSessionHidden = false;
 
   const CONFIG_NORMALIZERS = {
     [STORAGE_KEYS.CUSTOM_URL]: (value) =>
@@ -421,9 +439,15 @@
         STORAGE_KEYS.AUTO_HIDE_FULLSCREEN,
         true,
       );
-      const shouldHide = state.isFullscreen && autoHideFullscreen;
-      state.floatingButton.style.display =
-        !shouldHide && showFloatingButton ? "flex" : "none";
+      const shouldHide =
+        (state.isFullscreen && autoHideFullscreen) || floatingSessionHidden;
+      // Inline !important is required to beat the stylesheet's
+      // `display: flex !important` on the float group.
+      state.floatingButton.style.setProperty(
+        "display",
+        !shouldHide && showFloatingButton ? "flex" : "none",
+        "important",
+      );
     },
   };
 
@@ -1277,7 +1301,6 @@
           right: 16px !important; top: 16px !important;
           width: 28px !important; height: 28px !important;
           background: none !important; border: none !important;
-          font-size: 20px !important;
           color: var(--cs-text-muted) !important;
           cursor: pointer !important;
           display: flex !important;
@@ -1286,6 +1309,13 @@
           border-radius: 6px !important;
           transition: all 0.15s ease !important;
           line-height: 1 !important;
+          margin: 0 !important;
+        }
+        .cookie-share-container .close-btn svg,
+        .cookie-share-container .settings-btn svg {
+          width: 16px !important;
+          height: 16px !important;
+          display: block !important;
         }
         .cookie-share-container .close-btn:hover {
           color: var(--cs-text) !important;
@@ -1743,16 +1773,28 @@
           animation: cs-spin 0.8s linear infinite !important;
         }
 
-        /* ===== Floating Button ===== */
-        .cookie-share-floating-btn {
+        /* ===== Floating Ball ===== */
+        .cookie-share-float-group {
           position: fixed !important;
+          width: 36px !important; height: 36px !important;
+          z-index: 2147483645 !important;
+          pointer-events: auto !important;
+          display: flex !important;
+          transition: left 0.25s ease-out, top 0.25s ease-out, opacity 0.3s ease !important;
+        }
+        .cookie-share-float-group.cs-dragging {
+          transition: opacity 0.3s ease !important;
+        }
+        .cookie-share-float-group.cs-idle {
+          opacity: 0.4 !important;
+        }
+        .cookie-share-floating-btn {
           width: 36px !important; height: 36px !important;
           background: var(--cs-float-bg) !important;
           border: var(--cs-float-border) !important;
-          border-radius: 10px !important;
+          border-radius: 50% !important;
           cursor: grab !important;
-          z-index: 2147483645 !important;
-          transition: transform 0.25s ease-out, box-shadow 0.15s ease, opacity 0.15s ease, left 0.25s ease-out, top 0.25s ease-out, border-radius 0.25s ease-out !important;
+          transition: transform 0.2s ease-out, box-shadow 0.15s ease !important;
           box-shadow: var(--cs-float-shadow) !important;
           padding: 0 !important;
           display: flex !important;
@@ -1760,27 +1802,18 @@
           justify-content: center !important;
           backdrop-filter: blur(8px) !important;
           -webkit-backdrop-filter: blur(8px) !important;
-          pointer-events: auto !important;
           touch-action: none !important;
           user-select: none !important;
           -webkit-user-select: none !important;
         }
         .cookie-share-floating-btn:hover {
-          transform: scale(1.1) !important;
+          transform: scale(1.08) !important;
         }
-        .cookie-share-floating-btn.cs-dragging {
+        .cookie-share-float-group.cs-dragging .cookie-share-floating-btn {
           cursor: grabbing !important;
-          transition: opacity 0.15s ease !important;
         }
-        .cookie-share-floating-btn.cs-docked {
-          border-radius: 0 10px 10px 0 !important;
+        .cookie-share-float-group.cs-docked .cookie-share-floating-btn {
           cursor: pointer !important;
-        }
-        .cookie-share-floating-btn.cs-docked.cs-docked-right {
-          border-radius: 10px 0 0 10px !important;
-        }
-        .cookie-share-floating-btn.cs-docked:hover {
-          transform: none !important;
         }
         .cookie-share-floating-btn svg {
           width: 20px !important; height: 20px !important;
@@ -1790,6 +1823,82 @@
         }
         .cookie-share-floating-btn svg circle {
           fill: var(--cs-text-secondary) !important;
+        }
+
+        /* Quick actions revealed on hover while docked */
+        .cs-float-menu {
+          position: absolute !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          display: none !important;
+          flex-direction: column !important;
+          gap: 6px !important;
+          padding: 6px 0 !important;
+        }
+        .cookie-share-float-group.cs-expanded .cs-float-menu {
+          display: flex !important;
+        }
+        .cookie-share-float-group.cs-menu-above .cs-float-menu {
+          bottom: 100% !important;
+        }
+        .cookie-share-float-group.cs-menu-below .cs-float-menu {
+          top: 100% !important;
+        }
+        .cs-float-action {
+          width: 32px !important; height: 32px !important;
+          border-radius: 50% !important;
+          background: var(--cs-float-bg) !important;
+          border: var(--cs-float-border) !important;
+          box-shadow: var(--cs-float-shadow) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          cursor: pointer !important;
+          padding: 0 !important;
+          backdrop-filter: blur(8px) !important;
+          -webkit-backdrop-filter: blur(8px) !important;
+          transition: transform 0.15s ease !important;
+        }
+        .cs-float-action:hover {
+          transform: scale(1.1) !important;
+        }
+        .cs-float-action svg {
+          width: 16px !important; height: 16px !important;
+          stroke: var(--cs-accent) !important;
+        }
+
+        /* Small × bubble to hide the ball */
+        .cs-float-hide {
+          position: absolute !important;
+          top: 50% !important;
+          transform: translateY(-50%) !important;
+          width: 18px !important; height: 18px !important;
+          border-radius: 50% !important;
+          background: var(--cs-float-bg) !important;
+          border: var(--cs-float-border) !important;
+          box-shadow: var(--cs-float-shadow) !important;
+          display: none !important;
+          align-items: center !important;
+          justify-content: center !important;
+          cursor: pointer !important;
+          padding: 0 !important;
+          color: var(--cs-text-secondary) !important;
+        }
+        .cs-float-hide:hover {
+          color: var(--cs-danger) !important;
+        }
+        .cookie-share-float-group.cs-expanded .cs-float-hide {
+          display: flex !important;
+        }
+        .cookie-share-float-group.cs-docked-right .cs-float-hide {
+          left: -22px !important;
+        }
+        .cookie-share-float-group.cs-docked-left .cs-float-hide {
+          right: -22px !important;
+        }
+        .cs-float-hide svg {
+          width: 10px !important; height: 10px !important;
+          stroke: currentColor !important;
         }
 
         /* ===== Notification ===== */
@@ -1853,7 +1962,7 @@
         STORAGE_KEYS.SHOW_FLOATING_BUTTON,
         true,
       );
-      if (!showFloatingButton) return;
+      if (!showFloatingButton || floatingSessionHidden) return;
 
       const cookieSvg = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -1863,89 +1972,185 @@
           <circle cx="14" cy="15" r="1.5"/>
         </svg>
       `;
+      const panelSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/></svg>`;
+      const listSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`;
+      const xSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+
+      const group = document.createElement("div");
+      group.className = "cookie-share-float-group";
+
+      const menu = document.createElement("div");
+      menu.className = "cs-float-menu";
+
+      const makeAction = (svg, titleKey, onClick) => {
+        const button = document.createElement("button");
+        button.className = "cs-float-action";
+        button.innerHTML = svg;
+        button.title = t(titleKey);
+        button.onclick = (e) => {
+          e.stopPropagation();
+          collapse();
+          onClick();
+        };
+        menu.appendChild(button);
+      };
+      makeAction(panelSvg, "floatMenuPanel", () => ui.showModal());
+      makeAction(listSvg, "floatMenuList", () => ui.showCookieList());
 
       const floatingBtn = document.createElement("button");
       floatingBtn.innerHTML = cookieSvg;
       floatingBtn.className = "cookie-share-floating-btn";
-      getShadowWrapper().appendChild(floatingBtn);
-      state.floatingButton = floatingBtn;
+
+      const hideBtn = document.createElement("button");
+      hideBtn.className = "cs-float-hide";
+      hideBtn.innerHTML = xSvg;
+      hideBtn.title = t("hideFloatingConfirmTitle");
+      hideBtn.onclick = async (e) => {
+        e.stopPropagation();
+        collapse();
+        const choice = await ui.confirmHideFloating();
+        if (choice === "permanent") {
+          GM_setValue(STORAGE_KEYS.SHOW_FLOATING_BUTTON, false);
+          ui.refreshFloatingButton();
+        } else if (choice === "session") {
+          floatingSessionHidden = true;
+          fullscreenManager.updateFloatingButtonVisibility();
+        }
+      };
+
+      group.appendChild(menu);
+      group.appendChild(floatingBtn);
+      group.appendChild(hideBtn);
+      getShadowWrapper().appendChild(group);
+      state.floatingButton = group;
 
       const BTN_SIZE = 36;
       const DOCK_THRESHOLD = 20;
-      const DOCK_VISIBLE = 10;
       const DRAG_THRESHOLD = 5;
+      const IDLE_DELAY = 3000;
 
-      floatingBtn.style.top = (window.innerHeight - BTN_SIZE - 20) + "px";
-      floatingBtn.style.left = (window.innerWidth - BTN_SIZE - 20) + "px";
-
-      const savedPos = GM_getValue(STORAGE_KEYS.FLOATING_BUTTON_POS, null);
-      if (savedPos && savedPos.docked) {
-        const y = clampY(savedPos.y);
-        if (savedPos.docked === "left") {
-          applyDocked("left", y);
-        } else {
-          applyDocked("right", y);
-        }
-      } else if (savedPos) {
-        const x = Math.min(Math.max(0, savedPos.x), window.innerWidth - BTN_SIZE);
-        const y = clampY(savedPos.y);
-        floatingBtn.style.left = x + "px";
-        floatingBtn.style.top = y + "px";
-        floatingBtn.style.bottom = "auto";
+      function clampX(x) {
+        return Math.min(Math.max(0, x), window.innerWidth - BTN_SIZE);
       }
 
       function clampY(y) {
         return Math.min(Math.max(0, y), window.innerHeight - BTN_SIZE);
       }
 
+      function setPos(x, y) {
+        group.style.left = x + "px";
+        group.style.top = y + "px";
+      }
+
+      // Idle fade (docked only)
+      let idleTimer = null;
+      function cancelIdle() {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+        group.classList.remove("cs-idle");
+      }
+      function armIdleFade() {
+        cancelIdle();
+        if (!state._floatingDocked) return;
+        idleTimer = setTimeout(() => group.classList.add("cs-idle"), IDLE_DELAY);
+      }
+
+      // Hover-expanded quick actions (docked only)
+      let collapseTimer = null;
+      function expand() {
+        if (!state._floatingDocked) return;
+        clearTimeout(collapseTimer);
+        const rect = group.getBoundingClientRect();
+        const openBelow = rect.top < window.innerHeight / 2;
+        group.classList.toggle("cs-menu-below", openBelow);
+        group.classList.toggle("cs-menu-above", !openBelow);
+        group.classList.add("cs-expanded");
+        cancelIdle();
+      }
+      function collapse() {
+        clearTimeout(collapseTimer);
+        group.classList.remove("cs-expanded");
+        armIdleFade();
+      }
+      function scheduleCollapse() {
+        clearTimeout(collapseTimer);
+        collapseTimer = setTimeout(collapse, 200);
+      }
+
       function applyDocked(side, y) {
-        floatingBtn.classList.add("cs-docked");
-        floatingBtn.classList.remove("cs-docked-right");
-        if (side === "left") {
-          floatingBtn.style.left = -(BTN_SIZE - DOCK_VISIBLE) + "px";
-        } else {
-          floatingBtn.style.left = (window.innerWidth - DOCK_VISIBLE) + "px";
-          floatingBtn.classList.add("cs-docked-right");
-        }
-        floatingBtn.style.top = y + "px";
-        floatingBtn.style.bottom = "auto";
+        group.classList.add("cs-docked");
+        group.classList.toggle("cs-docked-left", side === "left");
+        group.classList.toggle("cs-docked-right", side === "right");
+        setPos(side === "left" ? 0 : window.innerWidth - BTN_SIZE, clampY(y));
         state._floatingDocked = side;
+        armIdleFade();
       }
 
       function undock() {
-        floatingBtn.classList.remove("cs-docked", "cs-docked-right");
+        group.classList.remove(
+          "cs-docked",
+          "cs-docked-left",
+          "cs-docked-right",
+          "cs-expanded",
+        );
         state._floatingDocked = null;
+        cancelIdle();
       }
 
       function savePos(x, y, docked) {
         GM_setValue(STORAGE_KEYS.FLOATING_BUTTON_POS, { x, y, docked: docked || null });
       }
 
+      // Initial position
+      setPos(window.innerWidth - BTN_SIZE - 20, window.innerHeight - BTN_SIZE - 20);
+      const savedPos = GM_getValue(STORAGE_KEYS.FLOATING_BUTTON_POS, null);
+      if (savedPos && savedPos.docked) {
+        applyDocked(savedPos.docked === "left" ? "left" : "right", savedPos.y);
+      } else if (savedPos) {
+        setPos(clampX(savedPos.x), clampY(savedPos.y));
+      }
+
+      // Hover interactions (mouse)
+      group.addEventListener("mouseenter", () => {
+        cancelIdle();
+        if (state._floatingDocked) expand();
+      });
+      group.addEventListener("mouseleave", () => {
+        if (group.classList.contains("cs-expanded")) {
+          scheduleCollapse();
+        } else {
+          armIdleFade();
+        }
+      });
+
+      // Tap outside collapses the menu (touch)
+      const outsideHandler = (e) => {
+        if (!group.classList.contains("cs-expanded")) return;
+        const path = e.composedPath ? e.composedPath() : [];
+        if (!path.includes(group)) collapse();
+      };
+      document.addEventListener("pointerdown", outsideHandler, true);
+      state._floatingOutsideHandler = outsideHandler;
+
+      // Drag
       let isDragging = false;
+      let dragStarted = false;
       let startX, startY, btnStartX, btnStartY;
       let totalMovement = 0;
-      let wasDocked = null;
-      let undockedDuringDrag = false;
 
       floatingBtn.addEventListener("pointerdown", (e) => {
-        if (e.button !== 0) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
         e.preventDefault();
         floatingBtn.setPointerCapture(e.pointerId);
-
-        wasDocked = state._floatingDocked;
-        undockedDuringDrag = false;
-
-        if (!wasDocked) {
-          const rect = floatingBtn.getBoundingClientRect();
-          btnStartX = rect.left;
-          btnStartY = rect.top;
-        }
-
+        const rect = group.getBoundingClientRect();
+        btnStartX = rect.left;
+        btnStartY = rect.top;
         startX = e.clientX;
         startY = e.clientY;
         totalMovement = 0;
         isDragging = true;
-        floatingBtn.classList.add("cs-dragging");
+        dragStarted = false;
+        cancelIdle();
       });
 
       floatingBtn.addEventListener("pointermove", (e) => {
@@ -1954,67 +2159,65 @@
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
         totalMovement = Math.max(totalMovement, Math.abs(dx) + Math.abs(dy));
+        if (totalMovement < DRAG_THRESHOLD) return;
 
-        if (wasDocked && !undockedDuringDrag) {
-          if (totalMovement < DRAG_THRESHOLD) return;
+        if (!dragStarted) {
+          dragStarted = true;
+          group.classList.add("cs-dragging");
           undock();
-          btnStartX = wasDocked === "left" ? 0 : window.innerWidth - BTN_SIZE;
-          btnStartY = parseFloat(floatingBtn.style.top) || 0;
-          floatingBtn.style.left = btnStartX + "px";
-          floatingBtn.style.top = btnStartY + "px";
-          floatingBtn.style.bottom = "auto";
-          startX = e.clientX;
-          startY = e.clientY;
-          undockedDuringDrag = true;
-          return;
         }
 
-        let newX = btnStartX + (e.clientX - startX);
-        let newY = btnStartY + (e.clientY - startY);
-        newX = Math.min(Math.max(0, newX), window.innerWidth - BTN_SIZE);
-        newY = clampY(newY);
+        const newX = clampX(btnStartX + dx);
+        const newY = clampY(btnStartY + dy);
+        setPos(newX, newY);
 
-        floatingBtn.style.left = newX + "px";
-        floatingBtn.style.top = newY + "px";
-        floatingBtn.style.bottom = "auto";
-
-        const nearEdge = newX <= DOCK_THRESHOLD || newX >= window.innerWidth - BTN_SIZE - DOCK_THRESHOLD;
-        floatingBtn.style.opacity = nearEdge ? "0.5" : "1";
+        const nearEdge =
+          newX <= DOCK_THRESHOLD ||
+          newX >= window.innerWidth - BTN_SIZE - DOCK_THRESHOLD;
+        group.style.opacity = nearEdge ? "0.5" : "";
       });
 
       floatingBtn.addEventListener("pointerup", (e) => {
         if (!isDragging) return;
         isDragging = false;
-        floatingBtn.classList.remove("cs-dragging");
-        floatingBtn.style.opacity = "1";
+        group.classList.remove("cs-dragging");
+        group.style.opacity = "";
 
         if (totalMovement < DRAG_THRESHOLD) {
-          this.showCookieList();
-          wasDocked = null;
+          // Tap/click. Touch has no hover: first tap expands the docked menu.
+          if (
+            e.pointerType === "touch" &&
+            state._floatingDocked &&
+            !group.classList.contains("cs-expanded")
+          ) {
+            expand();
+          } else {
+            collapse();
+            ui.showCookieList();
+          }
           return;
         }
 
-        const rect = floatingBtn.getBoundingClientRect();
+        const rect = group.getBoundingClientRect();
         const currentX = rect.left;
         const currentY = rect.top;
 
         if (currentX <= DOCK_THRESHOLD) {
           applyDocked("left", currentY);
-          savePos(currentX, currentY, "left");
+          savePos(0, currentY, "left");
         } else if (currentX >= window.innerWidth - BTN_SIZE - DOCK_THRESHOLD) {
           applyDocked("right", currentY);
-          savePos(currentX, currentY, "right");
+          savePos(window.innerWidth - BTN_SIZE, currentY, "right");
         } else {
           savePos(currentX, currentY, null);
         }
-        wasDocked = null;
       });
 
       floatingBtn.addEventListener("pointercancel", () => {
         isDragging = false;
-        undockedDuringDrag = false;
-        floatingBtn.classList.remove("cs-dragging");
-        floatingBtn.style.opacity = "1";
+        dragStarted = false;
+        group.classList.remove("cs-dragging");
+        group.style.opacity = "";
       });
 
       let resizeTimer;
@@ -2024,16 +2227,13 @@
           if (!state.floatingButton) return;
           const docked = state._floatingDocked;
           if (docked) {
-            const currentTop = parseFloat(floatingBtn.style.top) || 0;
-            applyDocked(docked, clampY(currentTop));
+            const currentTop = parseFloat(group.style.top) || 0;
+            applyDocked(docked, currentTop);
           } else {
-            let x = parseFloat(floatingBtn.style.left) || 0;
-            let y = parseFloat(floatingBtn.style.top);
+            let x = parseFloat(group.style.left) || 0;
+            let y = parseFloat(group.style.top);
             if (isNaN(y)) y = window.innerHeight - BTN_SIZE - 20;
-            x = Math.min(Math.max(0, x), window.innerWidth - BTN_SIZE);
-            y = clampY(y);
-            floatingBtn.style.left = x + "px";
-            floatingBtn.style.top = y + "px";
+            setPos(clampX(x), clampY(y));
           }
         }, 100);
       };
@@ -2041,6 +2241,7 @@
       state._floatingResizeHandler = handleResize;
 
       fullscreenManager.updateFloatingButtonVisibility();
+      armIdleFade();
     },
 
     refreshFloatingButton() {
@@ -2048,10 +2249,18 @@
         window.removeEventListener("resize", state._floatingResizeHandler);
         state._floatingResizeHandler = null;
       }
+      if (state._floatingOutsideHandler) {
+        document.removeEventListener(
+          "pointerdown",
+          state._floatingOutsideHandler,
+          true,
+        );
+        state._floatingOutsideHandler = null;
+      }
       state._floatingDocked = null;
-      const existingBtn = getShadowWrapper()?.querySelector(".cookie-share-floating-btn");
-      if (existingBtn) {
-        existingBtn.remove();
+      const existingGroup = getShadowWrapper()?.querySelector(".cookie-share-float-group");
+      if (existingGroup) {
+        existingGroup.remove();
       }
       state.floatingButton = null;
       if (GM_getValue(STORAGE_KEYS.SHOW_FLOATING_BUTTON, true)) {
@@ -2059,6 +2268,58 @@
       } else {
         fullscreenManager.updateFloatingButtonVisibility();
       }
+    },
+
+    confirmHideFloating() {
+      return new Promise((resolve) => {
+        const root = getShadowWrapper();
+        if (!root) { resolve(null); return; }
+        const container = document.createElement("div");
+        container.className = "cookie-share-confirm-layer";
+        container.style.cssText = `
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: var(--cs-overlay); backdrop-filter: blur(4px);
+          z-index: 2147483647; pointer-events: auto;
+        `;
+
+        const dialog = document.createElement("div");
+        dialog.style.cssText = `
+          background: var(--cs-surface); padding: 24px;
+          border-radius: var(--cs-radius-lg); text-align: center;
+          max-width: min(400px, 90vw); border: var(--cs-card-border);
+          box-shadow: var(--cs-shadow);
+          font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+          color: var(--cs-text);
+        `;
+
+        dialog.innerHTML = `
+          <h3 style="margin: 0 0 16px 0; color: var(--cs-heading); font-size: 18px; font-weight: 600;">${t("hideFloatingConfirmTitle")}</h3>
+          <p style="margin: 0 0 24px 0; color: var(--cs-text-secondary);">${t("hideFloatingConfirmMessage", { shortcut: getShortcutLabel("C") })}</p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button id="sessionBtn" class="cs-btn cs-btn-secondary" style="min-width: 100px; margin: 0 !important;">${t("hideSessionButton")}</button>
+            <button id="permanentBtn" class="cs-btn cs-btn-danger" style="min-width: 100px; margin: 0 !important;">${t("hideForeverButton")}</button>
+          </div>
+        `;
+
+        container.appendChild(dialog);
+        root.appendChild(container);
+
+        dialog.querySelector("#sessionBtn").onclick = () => {
+          container.remove();
+          resolve("session");
+        };
+        dialog.querySelector("#permanentBtn").onclick = () => {
+          container.remove();
+          resolve("permanent");
+        };
+        container.onclick = (e) => {
+          if (e.target === container) {
+            container.remove();
+            resolve(null);
+          }
+        };
+      });
     },
 
     createConfigTransferView(context = {}) {
@@ -2233,7 +2494,8 @@
         createToggle(
           "settingsShowFloatingButton",
           STORAGE_KEYS.SHOW_FLOATING_BUTTON,
-          () => {
+          (checked) => {
+            if (checked) floatingSessionHidden = false;
             ui.refreshFloatingButton();
           },
         ),
@@ -2275,7 +2537,8 @@
       // Close button
       const closeBtn = document.createElement("button");
       closeBtn.className = "close-btn";
-      closeBtn.textContent = t("closeButton");
+      closeBtn.innerHTML = CLOSE_ICON_SVG;
+      closeBtn.setAttribute("aria-label", "Close");
       closeBtn.onclick = () => ui.hideModal();
 
       // Settings gear button
@@ -2657,7 +2920,7 @@
       modal.className = "cookie-share-modal cookie-list-modal";
       modal.innerHTML = `
         <div class="cookie-share-container">
-          <button class="close-btn" onclick="return false;">${t("closeButton")}</button>
+          <button class="close-btn" aria-label="Close" onclick="return false;">${CLOSE_ICON_SVG}</button>
           <div class="title-container">
             <h1>${t("cookiesListTitle")}</h1>
           </div>

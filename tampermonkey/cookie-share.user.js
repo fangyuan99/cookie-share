@@ -1815,6 +1815,16 @@
         .cookie-share-float-group.cs-docked .cookie-share-floating-btn {
           cursor: pointer !important;
         }
+        /* Docked ball sits flush with the screen edge; nudge it inward on
+           hover/expand so the scaled-up circle isn't clipped by the edge. */
+        .cookie-share-float-group.cs-docked-left:hover .cookie-share-floating-btn,
+        .cookie-share-float-group.cs-docked-left.cs-expanded .cookie-share-floating-btn {
+          transform: translateX(6px) scale(1.08) !important;
+        }
+        .cookie-share-float-group.cs-docked-right:hover .cookie-share-floating-btn,
+        .cookie-share-float-group.cs-docked-right.cs-expanded .cookie-share-floating-btn {
+          transform: translateX(-6px) scale(1.08) !important;
+        }
         .cookie-share-floating-btn svg {
           width: 20px !important; height: 20px !important;
         }
@@ -1843,6 +1853,13 @@
         }
         .cookie-share-float-group.cs-menu-below .cs-float-menu {
           top: 100% !important;
+        }
+        /* Keep the menu aligned with the ball nudged inward from the edge */
+        .cookie-share-float-group.cs-docked-left.cs-expanded .cs-float-menu {
+          transform: translateX(calc(-50% + 6px)) !important;
+        }
+        .cookie-share-float-group.cs-docked-right.cs-expanded .cs-float-menu {
+          transform: translateX(calc(-50% - 6px)) !important;
         }
         .cs-float-action {
           width: 32px !important; height: 32px !important;

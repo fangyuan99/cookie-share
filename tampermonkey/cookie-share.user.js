@@ -515,6 +515,35 @@
         });
       });
     },
+
+    // Replaces all cookies with the given list. Snapshots current cookies in
+    // memory first and restores them if the import fails, so a bad import
+    // doesn't leave the user logged out. Returns the imported count.
+    async replaceAll(cookies, emptyErrorMessage) {
+      const snapshot = await this.getAll();
+      await this.clearAll();
+      try {
+        let importedCount = 0;
+        for (const cookie of cookies) {
+          if (cookie?.name && cookie?.value) {
+            await this.set(cookie);
+            importedCount++;
+          }
+        }
+        if (importedCount === 0) {
+          throw new Error(emptyErrorMessage);
+        }
+        return importedCount;
+      } catch (importError) {
+        await this.clearAll();
+        for (const cookie of snapshot) {
+          await this.set(cookie);
+        }
+        throw new Error(
+          `${importError.message} (${t("notificationReceiveRestored")})`,
+        );
+      }
+    },
   };
 
   // ===================== Utility Functions =====================
@@ -893,30 +922,7 @@
         if (!response?.success || !Array.isArray(response.cookies)) {
           throw new Error(t("apiErrorInvalidData"));
         }
-        // Snapshot current cookies in memory so a failed import can be
-        // rolled back instead of leaving the user logged out.
-        const snapshot = await cookieManager.getAll();
-        await cookieManager.clearAll();
-        try {
-          let importedCount = 0;
-          for (const cookie of response.cookies) {
-            if (cookie?.name && cookie?.value) {
-              await cookieManager.set(cookie);
-              importedCount++;
-            }
-          }
-          if (importedCount === 0) {
-            throw new Error(t("apiErrorNoImport"));
-          }
-        } catch (importError) {
-          await cookieManager.clearAll();
-          for (const cookie of snapshot) {
-            await cookieManager.set(cookie);
-          }
-          throw new Error(
-            `${importError.message} (${t("notificationReceiveRestored")})`,
-          );
-        }
+        await cookieManager.replaceAll(response.cookies, t("apiErrorNoImport"));
         setTimeout(() => window.location.reload(), 500);
         return { success: true, message: t("notificationReceivedSuccess") };
       } catch (error) {
@@ -3226,16 +3232,10 @@
               const cookieData = JSON.parse(rawData);
               if (!Array.isArray(cookieData.cookies))
                 throw new Error(t("notificationLocalDataInvalid"));
-              await cookieManager.clearAll();
-              let importedCount = 0;
-              for (const cookie of cookieData.cookies) {
-                if (cookie?.name && cookie?.value) {
-                  await cookieManager.set(cookie);
-                  importedCount++;
-                }
-              }
-              if (importedCount === 0)
-                throw new Error(t("notificationLocalImportFailed"));
+              const importedCount = await cookieManager.replaceAll(
+                cookieData.cookies,
+                t("notificationLocalImportFailed"),
+              );
               notification.show(
                 t("notificationImportSuccess", { count: importedCount }),
                 "success",
@@ -3444,8 +3444,13 @@
 
   function registerMenuCommands() {
     // GM_unregisterMenuCommand is unavailable in some managers; menu labels
-    // then keep the previous language until the next page load.
-    if (typeof GM_unregisterMenuCommand === "function") {
+    // then keep the previous language until the next page load. Skip
+    // re-registration there, otherwise entries would stack up as duplicates.
+    const canUnregister = typeof GM_unregisterMenuCommand === "function";
+    if (registeredMenuCommandIds.length > 0 && !canUnregister) {
+      return;
+    }
+    if (canUnregister) {
       registeredMenuCommandIds.forEach((commandId) => {
         try {
           GM_unregisterMenuCommand(commandId);

@@ -17,9 +17,11 @@ Userscript only — no backend changes.
 - Cookie List: search box (filters by ID or URL), per-record URL display, and a Copy ID button
 - Clear error notification with a link to the README setup guide when the userscript manager does not support `GM_cookie` (e.g. Violentmonkey), instead of a silent ReferenceError
 - Esc key closes open modals; modals now fade in/out (previously the close delay waited on a transition that never ran due to `display: none` toggling)
+- Language selector (English / 中文) in the settings panel
 - Cookie List：新增搜索框（按 ID 或 URL 过滤）、每条记录显示 URL、新增"复制 ID"按钮
 - 脚本管理器不支持 `GM_cookie` 时（如 Violentmonkey），显示明确的错误通知并附 README 授权说明链接，不再静默抛 ReferenceError
 - Esc 键可关闭弹窗；弹窗新增淡入淡出动画（此前 `display: none` 切换导致过渡从未生效，关闭延迟是空等）
+- 设置面板新增语言选择器（English / 中文）
 
 ### Fixed
 
@@ -35,9 +37,11 @@ Userscript only — no backend changes.
 ### Changed
 
 - Language switching takes effect immediately (menu commands re-registered via `GM_unregisterMenuCommand`, open modal re-rendered); managers without unregister support keep old menu labels until the next page load
+- Settings opens as a swapped view (main controls hidden while open) instead of stacking below them, so the panel no longer overflows into a scrollbar; scrolling, when needed, moved inside the container with a slim scrollbar so the modal's rounded corners stay intact
 - Send/Receive/Add Account/Clear buttons are disabled while an operation is running, preventing duplicate requests from double clicks
 - Removed vestigial admin-password storage key, its config export entry and unused translations; removed unused `@grant GM_addStyle`; old exported configs still import cleanly (obsolete keys are skipped)
 - 切换语言即时生效（通过 `GM_unregisterMenuCommand` 重注册菜单命令，已打开的弹窗自动重建）；不支持 unregister 的管理器菜单文字保持旧语言直到下次刷新
+- 设置面板改为切换视图（打开时隐藏主界面控件），不再叠加在下方导致滚动条；确需滚动时改为容器内部细滚动条，弹窗圆角不再被遮挡
 - 发送/接收/新增账号/清除按钮在操作进行中禁用，防止连点触发重复请求
 - 移除残留的管理密码存储键、其配置导出条目及无引用翻译文案；移除未使用的 `@grant GM_addStyle`；旧版导出的配置仍可正常导入（废弃键自动跳过）
 

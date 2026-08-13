@@ -118,6 +118,7 @@
       settingsExportConfigButton: "Export Config",
       settingsImportConfigButton: "Import Config",
       settingsTheme: "Theme",
+      settingsLanguage: "Language",
       themeDark: "Dark",
       themeClaude: "Claude",
       menuShowShare: `Show Cookie Share (${getShortcutLabel("C")})`,
@@ -224,6 +225,7 @@
       settingsExportConfigButton: "导出配置",
       settingsImportConfigButton: "导入配置",
       settingsTheme: "主题",
+      settingsLanguage: "语言",
       themeDark: "Dark",
       themeClaude: "Claude",
       menuShowShare: `显示 Cookie 分享面板 (${getShortcutLabel("C")})`,
@@ -1223,7 +1225,8 @@
           box-shadow: var(--cs-shadow) !important;
           width: min(480px, 90vw) !important;
           max-height: 90vh !important;
-          overflow-y: auto !important;
+          /* Clip children (incl. any inner scrollbar) to the rounded corners */
+          overflow: hidden !important;
           position: relative !important;
           display: block !important;
           z-index: 2147483647 !important;
@@ -1245,6 +1248,27 @@
           font-family: -apple-system, system-ui, 'Segoe UI', sans-serif !important;
           padding: 28px !important;
           color: var(--cs-text) !important;
+          max-height: 90vh !important;
+          overflow-y: auto !important;
+          scrollbar-width: thin !important;
+          scrollbar-color: var(--cs-input-border) transparent !important;
+        }
+        .cookie-share-container::-webkit-scrollbar {
+          width: 6px !important;
+        }
+        .cookie-share-container::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+        .cookie-share-container::-webkit-scrollbar-thumb {
+          background: var(--cs-input-border) !important;
+          border-radius: 3px !important;
+        }
+
+        /* Settings acts as a swapped view: hide the main controls while open */
+        .cookie-share-container.cs-settings-open .id-input-container,
+        .cookie-share-container.cs-settings-open .action-buttons,
+        .cookie-share-container.cs-settings-open .bottom-buttons {
+          display: none !important;
         }
 
         /* ===== Close Button ===== */
@@ -2088,6 +2112,7 @@
           this.refreshFloatingButton();
           this.showModal({
             cookieId: idInput?.value || "",
+            openSettings: true,
             openConfigTransfer: true,
             configTransferValue: transferInput.value.trim(),
           });
@@ -2180,7 +2205,30 @@
       themeRow.appendChild(themeLabel);
       themeRow.appendChild(themeSelector);
 
+      // Language selector
+      const langRow = document.createElement("div");
+      langRow.className = "cs-setting-row";
+      const langLabel = document.createElement("span");
+      langLabel.className = "cs-setting-label";
+      langLabel.textContent = t("settingsLanguage");
+      const langSelector = document.createElement("div");
+      langSelector.className = "cs-theme-selector";
+
+      const createLangBtn = (language, label) => {
+        const btn = document.createElement("button");
+        btn.className = `cs-theme-btn${currentLanguage === language ? " active" : ""}`;
+        btn.textContent = label;
+        btn.onclick = () => setLanguage(language);
+        return btn;
+      };
+
+      langSelector.appendChild(createLangBtn(LANGUAGES.EN, "English"));
+      langSelector.appendChild(createLangBtn(LANGUAGES.ZH, "中文"));
+      langRow.appendChild(langLabel);
+      langRow.appendChild(langSelector);
+
       settingsContainer.appendChild(themeRow);
+      settingsContainer.appendChild(langRow);
       settingsContainer.appendChild(
         createToggle(
           "settingsShowFloatingButton",
@@ -2239,6 +2287,7 @@
         if (panel) {
           panel.classList.toggle("visible");
           settingsBtn.classList.toggle("active");
+          container.classList.toggle("cs-settings-open");
         }
       };
 
@@ -2565,6 +2614,12 @@
       });
       settingsPanel.appendChild(configTransferView);
       container.appendChild(settingsPanel);
+
+      if (options.openSettings) {
+        settingsPanel.classList.add("visible");
+        settingsBtn.classList.add("active");
+        container.classList.add("cs-settings-open");
+      }
     },
 
     showModal(options = {}) {
@@ -3136,27 +3191,49 @@
     ];
   }
 
-  function switchLanguage() {
-    const newLanguage =
-      currentLanguage === LANGUAGES.EN ? LANGUAGES.ZH : LANGUAGES.EN;
+  function setLanguage(newLanguage) {
+    if (newLanguage !== LANGUAGES.EN && newLanguage !== LANGUAGES.ZH) return;
+    if (newLanguage === currentLanguage) return;
     GM_setValue(STORAGE_KEYS.LANGUAGE_PREFERENCE, newLanguage);
     currentLanguage = newLanguage;
     registerMenuCommands();
 
-    // Re-open whichever modal is showing so its text updates immediately.
+    // Re-open whichever modal is showing so its text updates immediately,
+    // preserving input and settings/config-transfer state.
     const root = getShadowWrapper();
     const overlay = root?.querySelector(".cookie-share-overlay");
     if (overlay) {
       const isListModal = Boolean(overlay.querySelector(".cookie-list-modal"));
-      const cookieId = overlay.querySelector(".cookie-id-input")?.value || "";
-      overlay.remove();
       if (isListModal) {
+        overlay.remove();
         ui.showCookieList();
       } else {
-        ui.showModal({ cookieId });
+        const cookieId =
+          overlay.querySelector(".cookie-id-input")?.value || "";
+        const openSettings = Boolean(
+          overlay.querySelector(".cookie-share-container.cs-settings-open"),
+        );
+        const transferDetails = overlay.querySelector(
+          ".cookie-share-config-transfer",
+        );
+        const openConfigTransfer = Boolean(transferDetails?.open);
+        const configTransferValue =
+          transferDetails?.querySelector(".cookie-share-config-textarea")
+            ?.value || "";
+        overlay.remove();
+        ui.showModal({
+          cookieId,
+          openSettings,
+          openConfigTransfer,
+          configTransferValue,
+        });
       }
     }
     notification.show(t("notificationLanguageSwitched"), "success");
+  }
+
+  function switchLanguage() {
+    setLanguage(currentLanguage === LANGUAGES.EN ? LANGUAGES.ZH : LANGUAGES.EN);
   }
 
   init();

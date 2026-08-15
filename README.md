@@ -292,7 +292,7 @@ Contributions welcome! Feel free to submit Pull Requests.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=fangyuan99/cookie-share&type=Date)](https://star-history.com/#fangyuan99/cookie-share&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=fangyuan99/cookie-share&type=Date)](https://star-history.dera.page/#fangyuan99/cookie-share&type=Date)
 
 ## License
 

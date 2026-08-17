@@ -300,7 +300,13 @@ v0.4.1 将存储从 Cloudflare KV 切换到了 D1 数据库，数据格式不兼
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=fangyuan99/cookie-share&type=Date)](https://star-history.com/#fangyuan99/cookie-share&Date)
+<a href="https://www.star-history.com/?type=date&repos=fangyuan99%2Fcookie-share">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=fangyuan99/cookie-share&type=date&theme=dark&legend=top-left&sealed_token=oGqW-9N6vVVIFpnVCkxwiJUm3aKjPyWUw-eslF1LmhGkuP6VvZW6WWHiyu_8p9D5Q8wVR5H-gfI30cQls2xY1atB4Ve9b8trVVm0VChT3qYgGEXkNU4zuA" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=fangyuan99/cookie-share&type=date&legend=top-left&sealed_token=oGqW-9N6vVVIFpnVCkxwiJUm3aKjPyWUw-eslF1LmhGkuP6VvZW6WWHiyu_8p9D5Q8wVR5H-gfI30cQls2xY1atB4Ve9b8trVVm0VChT3qYgGEXkNU4zuA" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=fangyuan99/cookie-share&type=date&legend=top-left&sealed_token=oGqW-9N6vVVIFpnVCkxwiJUm3aKjPyWUw-eslF1LmhGkuP6VvZW6WWHiyu_8p9D5Q8wVR5H-gfI30cQls2xY1atB4Ve9b8trVVm0VChT3qYgGEXkNU4zuA" />
+ </picture>
+</a>
 
 ## License
 

@@ -52,12 +52,16 @@ Many websites don't support multi-account switching, and sharing login sessions 
 
 - Save cookies locally without backend (v0.1.0+)
 - Manage cookies with Cookie List (local and cloud data)
+- Search the Cookie List by ID or URL, with per-record copy button (v0.6.3+)
+- Failed receives automatically restore your original cookies (v0.6.3+)
 - Cloud storage via self-hosted Cloudflare Worker (D1) or Node.js server
 
 ### UI & Themes
 
 - Dual theme support: Claude (warm light) and Dark (luxury gold) with one-click switching (v0.4.0+)
 - Userscript config export/import via Base64 clipboard (v0.3.1+)
+- Instant language switching without page reload (v0.6.3+)
+- If your userscript manager lacks `GM_cookie` support, the script shows a clear error with a link to the setup guide instead of failing silently (v0.6.3+)
 
 ---
 
@@ -292,7 +296,13 @@ Contributions welcome! Feel free to submit Pull Requests.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=fangyuan99/cookie-share&type=Date)](https://star-history.com/#fangyuan99/cookie-share&Date)
+<a href="https://www.star-history.com/?type=date&repos=fangyuan99%2Fcookie-share">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=fangyuan99/cookie-share&type=date&theme=dark&legend=top-left&sealed_token=oGqW-9N6vVVIFpnVCkxwiJUm3aKjPyWUw-eslF1LmhGkuP6VvZW6WWHiyu_8p9D5Q8wVR5H-gfI30cQls2xY1atB4Ve9b8trVVm0VChT3qYgGEXkNU4zuA" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=fangyuan99/cookie-share&type=date&legend=top-left&sealed_token=oGqW-9N6vVVIFpnVCkxwiJUm3aKjPyWUw-eslF1LmhGkuP6VvZW6WWHiyu_8p9D5Q8wVR5H-gfI30cQls2xY1atB4Ve9b8trVVm0VChT3qYgGEXkNU4zuA" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=fangyuan99/cookie-share&type=date&legend=top-left&sealed_token=oGqW-9N6vVVIFpnVCkxwiJUm3aKjPyWUw-eslF1LmhGkuP6VvZW6WWHiyu_8p9D5Q8wVR5H-gfI30cQls2xY1atB4Ve9b8trVVm0VChT3qYgGEXkNU4zuA" />
+ </picture>
+</a>
 
 ## License
 

@@ -58,12 +58,16 @@
 
 - 在本地保存 Cookie，无需后端（v0.1.0+）
 - 通过 Cookie List 管理 Cookie（区分本地与云端数据）
+- Cookie List 支持按 ID 或 URL 搜索，并提供单条记录的复制按钮（v0.6.3+）
+- 接收失败时自动恢复原有 Cookie，不会再被登出（v0.6.3+）
 - 云端存储通过自建 Cloudflare Worker (D1) 或 Node.js 服务器
 
 ### 界面与主题
 
 - 双主题支持：Claude（暖色浅色）和 Dark（奢华金色暗色），一键切换（v0.4.0+）
 - 油猴脚本配置导出 / 导入，Base64 剪贴板传递（v0.3.1+）
+- 切换语言即时生效，无需刷新页面（v0.6.3+）
+- 脚本管理器不支持 `GM_cookie` 时给出明确报错并附授权说明链接，不再静默失败（v0.6.3+）
 
 ---
 
@@ -296,7 +300,13 @@ v0.4.1 将存储从 Cloudflare KV 切换到了 D1 数据库，数据格式不兼
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=fangyuan99/cookie-share&type=Date)](https://star-history.com/#fangyuan99/cookie-share&Date)
+<a href="https://www.star-history.com/?type=date&repos=fangyuan99%2Fcookie-share">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=fangyuan99/cookie-share&type=date&theme=dark&legend=top-left&sealed_token=oGqW-9N6vVVIFpnVCkxwiJUm3aKjPyWUw-eslF1LmhGkuP6VvZW6WWHiyu_8p9D5Q8wVR5H-gfI30cQls2xY1atB4Ve9b8trVVm0VChT3qYgGEXkNU4zuA" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=fangyuan99/cookie-share&type=date&legend=top-left&sealed_token=oGqW-9N6vVVIFpnVCkxwiJUm3aKjPyWUw-eslF1LmhGkuP6VvZW6WWHiyu_8p9D5Q8wVR5H-gfI30cQls2xY1atB4Ve9b8trVVm0VChT3qYgGEXkNU4zuA" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=fangyuan99/cookie-share&type=date&legend=top-left&sealed_token=oGqW-9N6vVVIFpnVCkxwiJUm3aKjPyWUw-eslF1LmhGkuP6VvZW6WWHiyu_8p9D5Q8wVR5H-gfI30cQls2xY1atB4Ve9b8trVVm0VChT3qYgGEXkNU4zuA" />
+ </picture>
+</a>
 
 ## License
 

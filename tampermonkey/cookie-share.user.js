@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.6.1
+// @version      0.6.3
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -10,8 +10,8 @@
 // @grant        GM_listValues
 // @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
-// @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
+// @grant        GM_unregisterMenuCommand
 // @grant        GM_cookie
 // @updateURL    https://github.com/fangyuan99/cookie-share/raw/refs/heads/main/tampermonkey/cookie-share.user.js
 // @connect      *
@@ -24,7 +24,6 @@
   // ===================== Constants =====================
   const STORAGE_KEYS = {
     CUSTOM_URL: "cookie_share_custom_url",
-    ADMIN_PASSWORD: "cookie_share_admin_password",
     TRANSPORT_SECRET: "cookie_share_transport_secret",
     SHOW_FLOATING_BUTTON: "cookie_share_show_floating_button",
     AUTO_HIDE_FULLSCREEN: "cookie_share_auto_hide_fullscreen",
@@ -35,6 +34,21 @@
   };
 
   const THEMES = { DARK: "dark", CLAUDE: "claude" };
+
+  // Must stay in sync with the backend's validateId rule.
+  const COOKIE_ID_PATTERN = /^[A-Za-z0-9]{1,64}$/;
+
+  const GM_COOKIE_SUPPORTED =
+    typeof GM_cookie !== "undefined" &&
+    GM_cookie &&
+    typeof GM_cookie.list === "function";
+
+  const GM_COOKIE_HELP_URLS = {
+    en: "https://github.com/fangyuan99/cookie-share#faq",
+    zh: "https://github.com/fangyuan99/cookie-share/blob/main/README_CN.md#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98",
+  };
+
+  const CLOSE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 
   // ===================== i18n =====================
   const LANGUAGES = {
@@ -71,7 +85,6 @@
       cookieShareTitle: "Cookie Share",
       cookiesListTitle: "Cookies List",
       confirmDeleteTitle: "Confirm Delete",
-      closeButton: "×",
       cancelButton: "Cancel",
       deleteButton: "Delete",
       receiveButton: "Receive",
@@ -91,8 +104,10 @@
       failed: "failed",
       placeholderCookieId: "Cookie ID",
       placeholderServerAddress: "Server Address (e.g., https://example.com)",
-      placeholderAdminPassword: "Enter admin password",
       placeholderTransportSecret: "Enter transport secret",
+      copyButton: "Copy",
+      searchPlaceholder: "Search by ID or URL",
+      listFilterEmpty: "No records match your search",
       settingsShowFloatingButton: `Show Floating Button (${getShortcutLabel("L")})`,
       settingsAutoHideFullscreen:
         "Auto Hide in Fullscreen (Not Available For Safari)",
@@ -104,12 +119,15 @@
       settingsExportConfigButton: "Export Config",
       settingsImportConfigButton: "Import Config",
       settingsTheme: "Theme",
+      settingsLanguage: "Language",
       themeDark: "Dark",
       themeClaude: "Claude",
       menuShowShare: `Show Cookie Share (${getShortcutLabel("C")})`,
       menuShowList: `Show Cookie List (${getShortcutLabel("L")})`,
-      menuSwitchLanguage: "Switch Language (Refresh Required)",
+      menuSwitchLanguage: "Switch Language",
       notificationEnterCookieId: "Please enter or generate a Cookie ID",
+      notificationInvalidCookieId:
+        "Cookie ID can only contain letters and digits (max 64 chars)",
       notificationNoCookiesToSave: "No cookies to save on the current page",
       notificationSavedLocally: "Cookie saved locally successfully",
       notificationEnterServer: "Please enter the server address",
@@ -126,8 +144,6 @@
       notificationReceiveFailed:
         "Receive {{source}} cookie failed: {{message}}",
       notificationLocalDeleted: "Local cookie deleted",
-      notificationNeedAdminCreds:
-        "Deleting cloud cookies requires server address and admin password",
       notificationNeedTransportSecret:
         "Cloud operations require a transport secret",
       notificationCloudDeleted: "Cloud cookie deleted",
@@ -137,7 +153,6 @@
       notificationLoadCloudFailed:
         "Failed to load cloud cookies: {{message}} (Local cookies will still be shown)",
       notificationLoadLocalFailed: "Failed to load local cookies: {{message}}",
-      notificationInvalidPassword: "Invalid admin password",
       notificationAdminPermission:
         "Invalid admin password or insufficient permissions",
       notificationServerDeleteFailed: "Server returned delete failure",
@@ -155,6 +170,22 @@
       notificationConfigImported: "Config imported successfully",
       notificationConfigEmpty: "Please enter a Base64 config",
       notificationConfigInvalid: "Invalid config payload",
+      notificationUpdatedSuccess: "Updated successfully",
+      notificationImportCompleted: "Import completed",
+      notificationReceiveRestored: "original cookies have been restored",
+      notificationGmCookieUnsupported:
+        "Your userscript manager does not support GM_cookie. Please use Tampermonkey and allow cookie access for this script.",
+      notificationGmCookieHelp: "View setup guide",
+      notificationIdCopied: "Cookie ID copied to clipboard",
+      notificationCopyFailed: "Copy failed",
+      notificationLanguageSwitched: "Language switched",
+      floatMenuPanel: "Open panel",
+      floatMenuList: "Open list",
+      hideFloatingConfirmTitle: "Hide Floating Ball",
+      hideFloatingConfirmMessage:
+        "Hide the floating ball permanently? You can re-enable it in Settings, or open the panel with {{shortcut}}.",
+      hideForeverButton: "Hide Permanently",
+      hideSessionButton: "Just This Time",
       confirmDeleteMessage: "Are you sure you want to delete this cookie?",
       listEmpty: "No local or cloud cookies found related to {{host}}",
       listEmptyLocalOnly: "No local cookies found related to {{host}}",
@@ -169,7 +200,6 @@
       cookieShareTitle: "Cookie Share",
       cookiesListTitle: "Cookie List",
       confirmDeleteTitle: "确认删除",
-      closeButton: "×",
       cancelButton: "取消",
       deleteButton: "删除",
       receiveButton: "接收",
@@ -189,8 +219,10 @@
       failed: "失败",
       placeholderCookieId: "Cookie ID",
       placeholderServerAddress: "服务器地址 (例如 https://example.com)",
-      placeholderAdminPassword: "输入管理密码",
       placeholderTransportSecret: "输入传输密钥",
+      copyButton: "复制",
+      searchPlaceholder: "按 ID 或 URL 搜索",
+      listFilterEmpty: "没有匹配的记录",
       settingsShowFloatingButton: `显示悬浮按钮 (${getShortcutLabel("L")})`,
       settingsAutoHideFullscreen: "全屏时自动隐藏 (Safari 不可用)",
       settingsSaveLocally: "优先本地保存 (勾选后'发送'将仅保存本地)",
@@ -200,12 +232,14 @@
       settingsExportConfigButton: "导出配置",
       settingsImportConfigButton: "导入配置",
       settingsTheme: "主题",
+      settingsLanguage: "语言",
       themeDark: "Dark",
       themeClaude: "Claude",
       menuShowShare: `显示 Cookie 分享面板 (${getShortcutLabel("C")})`,
       menuShowList: `显示 Cookie 列表 (${getShortcutLabel("L")})`,
-      menuSwitchLanguage: "切换语言 (需刷新页面)",
+      menuSwitchLanguage: "切换语言",
       notificationEnterCookieId: "请输入或生成一个 Cookie ID",
+      notificationInvalidCookieId: "Cookie ID 只能包含字母和数字（最长 64 位）",
       notificationNoCookiesToSave: "当前页面没有可保存的 Cookie",
       notificationSavedLocally: "Cookie 已成功保存到本地",
       notificationEnterServer: "请输入服务器地址",
@@ -219,7 +253,6 @@
       notificationNeedServerAddress: "请先设置服务器地址",
       notificationReceiveFailed: "接收 {{source}} Cookie 失败: {{message}}",
       notificationLocalDeleted: "本地 Cookie 已删除",
-      notificationNeedAdminCreds: "删除云端 Cookie 需要服务器地址和管理密码",
       notificationNeedTransportSecret: "云端操作需要传输密钥",
       notificationCloudDeleted: "云端 Cookie 已删除",
       notificationDeleteFailed: "删除 {{source}} Cookie 失败: {{message}}",
@@ -227,7 +260,6 @@
       notificationLoadCloudFailed:
         "加载云端 Cookie 失败: {{message}} (本地 Cookie 仍会显示)",
       notificationLoadLocalFailed: "加载本地 Cookie 失败: {{message}}",
-      notificationInvalidPassword: "无效的管理密码",
       notificationAdminPermission: "管理密码无效或权限不足",
       notificationServerDeleteFailed: "服务器返回删除失败",
       notificationNetworkError: "网络请求失败",
@@ -242,6 +274,22 @@
       notificationConfigImported: "配置导入成功",
       notificationConfigEmpty: "请输入 Base64 配置",
       notificationConfigInvalid: "配置内容无效",
+      notificationUpdatedSuccess: "更新成功",
+      notificationImportCompleted: "导入成功",
+      notificationReceiveRestored: "已恢复原有 Cookie",
+      notificationGmCookieUnsupported:
+        "当前脚本管理器不支持 GM_cookie，请使用 Tampermonkey 并为脚本开启 Cookie 访问权限。",
+      notificationGmCookieHelp: "查看授权说明",
+      notificationIdCopied: "Cookie ID 已复制到剪贴板",
+      notificationCopyFailed: "复制失败",
+      notificationLanguageSwitched: "已切换语言",
+      floatMenuPanel: "打开面板",
+      floatMenuList: "打开列表",
+      hideFloatingConfirmTitle: "隐藏悬浮球",
+      hideFloatingConfirmMessage:
+        "要永久隐藏悬浮球吗？可在设置中重新开启，或使用 {{shortcut}} 打开面板。",
+      hideForeverButton: "永久隐藏",
+      hideSessionButton: "仅本次隐藏",
       confirmDeleteMessage: "您确定要删除此 Cookie 吗？",
       listEmpty: "未找到与 {{host}} 相关的本地或云端 Cookie",
       listEmptyLocalOnly: "未找到与 {{host}} 相关的本地 Cookie",
@@ -277,11 +325,13 @@
     settingsModal: null,
   };
 
+  // "Hide for this session" from the floating ball's × bubble; reset when the
+  // user re-enables the floating button in settings.
+  let floatingSessionHidden = false;
+
   const CONFIG_NORMALIZERS = {
     [STORAGE_KEYS.CUSTOM_URL]: (value) =>
       typeof value === "string" ? value.replace(/\/+$/, "") : "",
-    [STORAGE_KEYS.ADMIN_PASSWORD]: (value) =>
-      typeof value === "string" ? value : "",
     [STORAGE_KEYS.TRANSPORT_SECRET]: (value) =>
       typeof value === "string" ? value : "",
     [STORAGE_KEYS.SHOW_FLOATING_BUTTON]: (value) =>
@@ -389,9 +439,15 @@
         STORAGE_KEYS.AUTO_HIDE_FULLSCREEN,
         true,
       );
-      const shouldHide = state.isFullscreen && autoHideFullscreen;
-      state.floatingButton.style.display =
-        !shouldHide && showFloatingButton ? "flex" : "none";
+      const shouldHide =
+        (state.isFullscreen && autoHideFullscreen) || floatingSessionHidden;
+      // Inline !important is required to beat the stylesheet's
+      // `display: flex !important` on the float group.
+      state.floatingButton.style.setProperty(
+        "display",
+        !shouldHide && showFloatingButton ? "flex" : "none",
+        "important",
+      );
     },
   };
 
@@ -459,6 +515,35 @@
         });
       });
     },
+
+    // Replaces all cookies with the given list. Snapshots current cookies in
+    // memory first and restores them if the import fails, so a bad import
+    // doesn't leave the user logged out. Returns the imported count.
+    async replaceAll(cookies, emptyErrorMessage) {
+      const snapshot = await this.getAll();
+      await this.clearAll();
+      try {
+        let importedCount = 0;
+        for (const cookie of cookies) {
+          if (cookie?.name && cookie?.value) {
+            await this.set(cookie);
+            importedCount++;
+          }
+        }
+        if (importedCount === 0) {
+          throw new Error(emptyErrorMessage);
+        }
+        return importedCount;
+      } catch (importError) {
+        await this.clearAll();
+        for (const cookie of snapshot) {
+          await this.set(cookie);
+        }
+        throw new Error(
+          `${importError.message} (${t("notificationReceiveRestored")})`,
+        );
+      }
+    },
   };
 
   // ===================== Utility Functions =====================
@@ -494,9 +579,9 @@
           source: t("sourceCloud"),
           message: t("apiErrorInvalidData"),
         }),
-        "Cookies and URL updated successfully": "更新成功",
+        "Cookies and URL updated successfully": t("notificationUpdatedSuccess"),
         "Data deleted successfully": t("notificationCloudDeleted"),
-        "Import completed": "导入成功",
+        "Import completed": t("notificationImportCompleted"),
         Unauthorized: t("notificationAdminPermission"),
         "Invalid encrypted payload": t("notificationDecryptFailed"),
         "Transport secret mismatch or corrupted payload": t(
@@ -837,17 +922,7 @@
         if (!response?.success || !Array.isArray(response.cookies)) {
           throw new Error(t("apiErrorInvalidData"));
         }
-        await cookieManager.clearAll();
-        let importedCount = 0;
-        for (const cookie of response.cookies) {
-          if (cookie?.name && cookie?.value) {
-            await cookieManager.set(cookie);
-            importedCount++;
-          }
-        }
-        if (importedCount === 0) {
-          throw new Error(t("apiErrorNoImport"));
-        }
+        await cookieManager.replaceAll(response.cookies, t("apiErrorNoImport"));
         setTimeout(() => window.location.reload(), 500);
         return { success: true, message: t("notificationReceivedSuccess") };
       } catch (error) {
@@ -859,7 +934,7 @@
 
   // ===================== Notification =====================
   const notification = {
-    show(message, type = "success") {
+    show(message, type = "success", link = null) {
       const root = getShadowWrapper();
       if (!root) return;
       const existingNotification = root.querySelector(
@@ -871,15 +946,57 @@
       const notificationEl = document.createElement("div");
       notificationEl.className = `cookie-share-notification ${type}`;
       notificationEl.textContent = message;
+      if (link) {
+        const anchor = document.createElement("a");
+        anchor.className = "cookie-share-notification-link";
+        anchor.href = link.url;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        anchor.textContent = link.text;
+        notificationEl.appendChild(anchor);
+      }
       root.appendChild(notificationEl);
       notificationEl.offsetHeight;
       notificationEl.classList.add("show");
+      // Give the user extra time to click when a link is attached.
+      const duration = link ? 8000 : 3000;
       setTimeout(() => {
         notificationEl.classList.remove("show");
         setTimeout(() => notificationEl.remove(), 300);
-      }, 3000);
+      }, duration);
     },
   };
+
+  function ensureGmCookieSupport() {
+    if (GM_COOKIE_SUPPORTED) return true;
+    notification.show(t("notificationGmCookieUnsupported"), "error", {
+      text: t("notificationGmCookieHelp"),
+      url: GM_COOKIE_HELP_URLS[currentLanguage] || GM_COOKIE_HELP_URLS.en,
+    });
+    return false;
+  }
+
+  function validateCookieIdInput(cookieId) {
+    if (!cookieId) {
+      notification.show(t("notificationEnterCookieId"), "error");
+      return false;
+    }
+    if (!COOKIE_ID_PATTERN.test(cookieId)) {
+      notification.show(t("notificationInvalidCookieId"), "error");
+      return false;
+    }
+    return true;
+  }
+
+  async function runWithButtonLoading(button, task) {
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      await task();
+    } finally {
+      button.disabled = false;
+    }
+  }
 
   // ===================== UI Components =====================
   const ui = {
@@ -888,6 +1005,7 @@
         const root = getShadowWrapper();
         if (!root) { resolve(false); return; }
         const container = document.createElement("div");
+        container.className = "cookie-share-confirm-layer";
         container.style.cssText = `
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           display: flex; align-items: center; justify-content: center;
@@ -939,6 +1057,7 @@
         const root = getShadowWrapper();
         if (!root) { resolve(false); return; }
         const container = document.createElement("div");
+        container.className = "cookie-share-confirm-layer";
         container.style.cssText = `
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           display: flex; align-items: center; justify-content: center;
@@ -1114,13 +1233,18 @@
           backdrop-filter: blur(4px) !important;
           -webkit-backdrop-filter: blur(4px) !important;
           z-index: 2147483646 !important;
-          display: none !important;
-          pointer-events: auto !important;
-        }
-        .cookie-share-overlay.visible {
           display: flex !important;
           justify-content: center !important;
           align-items: center !important;
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+          transition: opacity 0.2s ease, visibility 0.2s ease !important;
+        }
+        .cookie-share-overlay.visible {
+          opacity: 1 !important;
+          visibility: visible !important;
+          pointer-events: auto !important;
         }
 
         /* ===== Modal ===== */
@@ -1131,14 +1255,19 @@
           box-shadow: var(--cs-shadow) !important;
           width: min(480px, 90vw) !important;
           max-height: 90vh !important;
-          overflow-y: auto !important;
+          /* Clip children (incl. any inner scrollbar) to the rounded corners */
+          overflow: hidden !important;
           position: relative !important;
-          display: none !important;
+          display: block !important;
           z-index: 2147483647 !important;
           padding: 0 !important;
+          opacity: 0 !important;
+          transform: scale(0.96) translateY(8px) !important;
+          transition: opacity 0.2s ease, transform 0.2s ease !important;
         }
         .cookie-share-modal.visible {
-          display: block !important;
+          opacity: 1 !important;
+          transform: none !important;
         }
         .cookie-list-modal {
           width: min(560px, 90vw) !important;
@@ -1149,6 +1278,27 @@
           font-family: -apple-system, system-ui, 'Segoe UI', sans-serif !important;
           padding: 28px !important;
           color: var(--cs-text) !important;
+          max-height: 90vh !important;
+          overflow-y: auto !important;
+          scrollbar-width: thin !important;
+          scrollbar-color: var(--cs-input-border) transparent !important;
+        }
+        .cookie-share-container::-webkit-scrollbar {
+          width: 6px !important;
+        }
+        .cookie-share-container::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+        .cookie-share-container::-webkit-scrollbar-thumb {
+          background: var(--cs-input-border) !important;
+          border-radius: 3px !important;
+        }
+
+        /* Settings acts as a swapped view: hide the main controls while open */
+        .cookie-share-container.cs-settings-open .id-input-container,
+        .cookie-share-container.cs-settings-open .action-buttons,
+        .cookie-share-container.cs-settings-open .bottom-buttons {
+          display: none !important;
         }
 
         /* ===== Close Button ===== */
@@ -1157,7 +1307,6 @@
           right: 16px !important; top: 16px !important;
           width: 28px !important; height: 28px !important;
           background: none !important; border: none !important;
-          font-size: 20px !important;
           color: var(--cs-text-muted) !important;
           cursor: pointer !important;
           display: flex !important;
@@ -1166,6 +1315,13 @@
           border-radius: 6px !important;
           transition: all 0.15s ease !important;
           line-height: 1 !important;
+          margin: 0 !important;
+        }
+        .cookie-share-container .close-btn svg,
+        .cookie-share-container .settings-btn svg {
+          width: 16px !important;
+          height: 16px !important;
+          display: block !important;
         }
         .cookie-share-container .close-btn:hover {
           color: var(--cs-text) !important;
@@ -1499,8 +1655,11 @@
         }
 
         /* ===== Cookie List ===== */
-        .cookie-list-container {
+        .cookie-share-container input.cookie-share-search {
           margin-top: 16px !important;
+        }
+        .cookie-list-container {
+          margin-top: 10px !important;
           max-height: 400px !important;
           overflow-y: auto !important;
           margin-bottom: 14px !important;
@@ -1520,10 +1679,36 @@
         .cookie-share-item:hover {
           background: var(--cs-surface-hover) !important;
         }
+        .cookie-share-item-info {
+          flex: 1 !important;
+          min-width: 0 !important;
+          margin-right: 10px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 2px !important;
+        }
+        .cookie-share-item-id {
+          font-size: 13px !important;
+          font-weight: 500 !important;
+          word-break: break-all !important;
+        }
+        .cookie-share-item-source {
+          color: var(--cs-text-muted) !important;
+          font-weight: 400 !important;
+        }
+        .cookie-share-item-url {
+          font-size: 12px !important;
+          color: var(--cs-text-muted) !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+        }
         .cookie-share-buttons {
           display: flex !important;
           gap: 6px !important;
+          flex-shrink: 0 !important;
         }
+        .cookie-share-copy,
         .cookie-share-receive,
         .cookie-share-delete {
           padding: 5px 10px !important;
@@ -1538,6 +1723,13 @@
           min-width: auto !important;
           margin: 0 !important;
         }
+        .cookie-share-copy {
+          background: var(--cs-btn-secondary-bg) !important;
+          color: var(--cs-btn-secondary-text) !important;
+        }
+        .cookie-share-copy:hover {
+          background: var(--cs-btn-secondary-hover) !important;
+        }
         .cookie-share-receive {
           background: var(--cs-accent) !important;
           color: #FFF !important;
@@ -1551,6 +1743,13 @@
         }
         .cookie-share-delete:hover {
           background: var(--cs-btn-danger-hover) !important;
+        }
+        .cs-hidden {
+          display: none !important;
+        }
+        .cookie-share-container button:disabled {
+          opacity: 0.55 !important;
+          cursor: not-allowed !important;
         }
         .cookie-share-error {
           color: var(--cs-danger) !important;
@@ -1580,16 +1779,28 @@
           animation: cs-spin 0.8s linear infinite !important;
         }
 
-        /* ===== Floating Button ===== */
-        .cookie-share-floating-btn {
+        /* ===== Floating Ball ===== */
+        .cookie-share-float-group {
           position: fixed !important;
+          width: 36px !important; height: 36px !important;
+          z-index: 2147483645 !important;
+          pointer-events: auto !important;
+          display: flex !important;
+          transition: left 0.25s ease-out, top 0.25s ease-out, opacity 0.3s ease !important;
+        }
+        .cookie-share-float-group.cs-dragging {
+          transition: opacity 0.3s ease !important;
+        }
+        .cookie-share-float-group.cs-idle {
+          opacity: 0.4 !important;
+        }
+        .cookie-share-floating-btn {
           width: 36px !important; height: 36px !important;
           background: var(--cs-float-bg) !important;
           border: var(--cs-float-border) !important;
-          border-radius: 10px !important;
+          border-radius: 50% !important;
           cursor: grab !important;
-          z-index: 2147483645 !important;
-          transition: transform 0.25s ease-out, box-shadow 0.15s ease, opacity 0.15s ease, left 0.25s ease-out, top 0.25s ease-out, border-radius 0.25s ease-out !important;
+          transition: transform 0.2s ease-out, box-shadow 0.15s ease !important;
           box-shadow: var(--cs-float-shadow) !important;
           padding: 0 !important;
           display: flex !important;
@@ -1597,27 +1808,26 @@
           justify-content: center !important;
           backdrop-filter: blur(8px) !important;
           -webkit-backdrop-filter: blur(8px) !important;
-          pointer-events: auto !important;
           touch-action: none !important;
           user-select: none !important;
           -webkit-user-select: none !important;
         }
         .cookie-share-floating-btn:hover {
-          transform: scale(1.1) !important;
+          transform: scale(1.08) !important;
         }
-        .cookie-share-floating-btn.cs-dragging {
+        .cookie-share-float-group.cs-dragging .cookie-share-floating-btn {
           cursor: grabbing !important;
-          transition: opacity 0.15s ease !important;
         }
-        .cookie-share-floating-btn.cs-docked {
-          border-radius: 0 10px 10px 0 !important;
+        .cookie-share-float-group.cs-docked .cookie-share-floating-btn {
           cursor: pointer !important;
         }
-        .cookie-share-floating-btn.cs-docked.cs-docked-right {
-          border-radius: 10px 0 0 10px !important;
+        /* Docked ball sits flush with the screen edge; scale from the edge
+           side so the enlarged circle only grows inward, never off-screen. */
+        .cookie-share-float-group.cs-docked-left .cookie-share-floating-btn {
+          transform-origin: left center !important;
         }
-        .cookie-share-floating-btn.cs-docked:hover {
-          transform: none !important;
+        .cookie-share-float-group.cs-docked-right .cookie-share-floating-btn {
+          transform-origin: right center !important;
         }
         .cookie-share-floating-btn svg {
           width: 20px !important; height: 20px !important;
@@ -1627,6 +1837,82 @@
         }
         .cookie-share-floating-btn svg circle {
           fill: var(--cs-text-secondary) !important;
+        }
+
+        /* Quick actions revealed on hover while docked */
+        .cs-float-menu {
+          position: absolute !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          display: none !important;
+          flex-direction: column !important;
+          gap: 6px !important;
+          padding: 6px 0 !important;
+        }
+        .cookie-share-float-group.cs-expanded .cs-float-menu {
+          display: flex !important;
+        }
+        .cookie-share-float-group.cs-menu-above .cs-float-menu {
+          bottom: 100% !important;
+        }
+        .cookie-share-float-group.cs-menu-below .cs-float-menu {
+          top: 100% !important;
+        }
+        .cs-float-action {
+          width: 32px !important; height: 32px !important;
+          border-radius: 50% !important;
+          background: var(--cs-float-bg) !important;
+          border: var(--cs-float-border) !important;
+          box-shadow: var(--cs-float-shadow) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          cursor: pointer !important;
+          padding: 0 !important;
+          backdrop-filter: blur(8px) !important;
+          -webkit-backdrop-filter: blur(8px) !important;
+          transition: transform 0.15s ease !important;
+        }
+        .cs-float-action:hover {
+          transform: scale(1.1) !important;
+        }
+        .cs-float-action svg {
+          width: 16px !important; height: 16px !important;
+          stroke: var(--cs-accent) !important;
+        }
+
+        /* Small × bubble to hide the ball */
+        .cs-float-hide {
+          position: absolute !important;
+          top: 50% !important;
+          transform: translateY(-50%) !important;
+          width: 18px !important; height: 18px !important;
+          border-radius: 50% !important;
+          background: var(--cs-float-bg) !important;
+          border: var(--cs-float-border) !important;
+          box-shadow: var(--cs-float-shadow) !important;
+          display: none !important;
+          align-items: center !important;
+          justify-content: center !important;
+          cursor: pointer !important;
+          padding: 0 !important;
+          color: var(--cs-text-secondary) !important;
+        }
+        .cs-float-hide:hover {
+          color: var(--cs-danger) !important;
+        }
+        .cookie-share-float-group.cs-expanded .cs-float-hide {
+          display: flex !important;
+        }
+        .cookie-share-float-group.cs-docked-right .cs-float-hide {
+          left: -22px !important;
+        }
+        .cookie-share-float-group.cs-docked-left .cs-float-hide {
+          right: -22px !important;
+        }
+        .cs-float-hide svg {
+          width: 10px !important; height: 10px !important;
+          stroke: currentColor !important;
         }
 
         /* ===== Notification ===== */
@@ -1658,6 +1944,13 @@
         .cookie-share-notification.error {
           border-left: 3px solid var(--cs-error-border) !important;
         }
+        .cookie-share-notification-link {
+          display: block !important;
+          margin-top: 6px !important;
+          color: var(--cs-accent) !important;
+          text-decoration: underline !important;
+          font-size: 13px !important;
+        }
 
         /* ===== Animations ===== */
         @keyframes cs-spin {
@@ -1683,7 +1976,7 @@
         STORAGE_KEYS.SHOW_FLOATING_BUTTON,
         true,
       );
-      if (!showFloatingButton) return;
+      if (!showFloatingButton || floatingSessionHidden) return;
 
       const cookieSvg = `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -1693,89 +1986,185 @@
           <circle cx="14" cy="15" r="1.5"/>
         </svg>
       `;
+      const panelSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/></svg>`;
+      const listSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`;
+      const xSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+
+      const group = document.createElement("div");
+      group.className = "cookie-share-float-group";
+
+      const menu = document.createElement("div");
+      menu.className = "cs-float-menu";
+
+      const makeAction = (svg, titleKey, onClick) => {
+        const button = document.createElement("button");
+        button.className = "cs-float-action";
+        button.innerHTML = svg;
+        button.title = t(titleKey);
+        button.onclick = (e) => {
+          e.stopPropagation();
+          collapse();
+          onClick();
+        };
+        menu.appendChild(button);
+      };
+      makeAction(panelSvg, "floatMenuPanel", () => ui.showModal());
+      makeAction(listSvg, "floatMenuList", () => ui.showCookieList());
 
       const floatingBtn = document.createElement("button");
       floatingBtn.innerHTML = cookieSvg;
       floatingBtn.className = "cookie-share-floating-btn";
-      getShadowWrapper().appendChild(floatingBtn);
-      state.floatingButton = floatingBtn;
+
+      const hideBtn = document.createElement("button");
+      hideBtn.className = "cs-float-hide";
+      hideBtn.innerHTML = xSvg;
+      hideBtn.title = t("hideFloatingConfirmTitle");
+      hideBtn.onclick = async (e) => {
+        e.stopPropagation();
+        collapse();
+        const choice = await ui.confirmHideFloating();
+        if (choice === "permanent") {
+          GM_setValue(STORAGE_KEYS.SHOW_FLOATING_BUTTON, false);
+          ui.refreshFloatingButton();
+        } else if (choice === "session") {
+          floatingSessionHidden = true;
+          fullscreenManager.updateFloatingButtonVisibility();
+        }
+      };
+
+      group.appendChild(menu);
+      group.appendChild(floatingBtn);
+      group.appendChild(hideBtn);
+      getShadowWrapper().appendChild(group);
+      state.floatingButton = group;
 
       const BTN_SIZE = 36;
       const DOCK_THRESHOLD = 20;
-      const DOCK_VISIBLE = 10;
       const DRAG_THRESHOLD = 5;
+      const IDLE_DELAY = 3000;
 
-      floatingBtn.style.top = (window.innerHeight - BTN_SIZE - 20) + "px";
-      floatingBtn.style.left = (window.innerWidth - BTN_SIZE - 20) + "px";
-
-      const savedPos = GM_getValue(STORAGE_KEYS.FLOATING_BUTTON_POS, null);
-      if (savedPos && savedPos.docked) {
-        const y = clampY(savedPos.y);
-        if (savedPos.docked === "left") {
-          applyDocked("left", y);
-        } else {
-          applyDocked("right", y);
-        }
-      } else if (savedPos) {
-        const x = Math.min(Math.max(0, savedPos.x), window.innerWidth - BTN_SIZE);
-        const y = clampY(savedPos.y);
-        floatingBtn.style.left = x + "px";
-        floatingBtn.style.top = y + "px";
-        floatingBtn.style.bottom = "auto";
+      function clampX(x) {
+        return Math.min(Math.max(0, x), window.innerWidth - BTN_SIZE);
       }
 
       function clampY(y) {
         return Math.min(Math.max(0, y), window.innerHeight - BTN_SIZE);
       }
 
+      function setPos(x, y) {
+        group.style.left = x + "px";
+        group.style.top = y + "px";
+      }
+
+      // Idle fade (docked only)
+      let idleTimer = null;
+      function cancelIdle() {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+        group.classList.remove("cs-idle");
+      }
+      function armIdleFade() {
+        cancelIdle();
+        if (!state._floatingDocked) return;
+        idleTimer = setTimeout(() => group.classList.add("cs-idle"), IDLE_DELAY);
+      }
+
+      // Hover-expanded quick actions (docked only)
+      let collapseTimer = null;
+      function expand() {
+        if (!state._floatingDocked) return;
+        clearTimeout(collapseTimer);
+        const rect = group.getBoundingClientRect();
+        const openBelow = rect.top < window.innerHeight / 2;
+        group.classList.toggle("cs-menu-below", openBelow);
+        group.classList.toggle("cs-menu-above", !openBelow);
+        group.classList.add("cs-expanded");
+        cancelIdle();
+      }
+      function collapse() {
+        clearTimeout(collapseTimer);
+        group.classList.remove("cs-expanded");
+        armIdleFade();
+      }
+      function scheduleCollapse() {
+        clearTimeout(collapseTimer);
+        collapseTimer = setTimeout(collapse, 200);
+      }
+
       function applyDocked(side, y) {
-        floatingBtn.classList.add("cs-docked");
-        floatingBtn.classList.remove("cs-docked-right");
-        if (side === "left") {
-          floatingBtn.style.left = -(BTN_SIZE - DOCK_VISIBLE) + "px";
-        } else {
-          floatingBtn.style.left = (window.innerWidth - DOCK_VISIBLE) + "px";
-          floatingBtn.classList.add("cs-docked-right");
-        }
-        floatingBtn.style.top = y + "px";
-        floatingBtn.style.bottom = "auto";
+        group.classList.add("cs-docked");
+        group.classList.toggle("cs-docked-left", side === "left");
+        group.classList.toggle("cs-docked-right", side === "right");
+        setPos(side === "left" ? 0 : window.innerWidth - BTN_SIZE, clampY(y));
         state._floatingDocked = side;
+        armIdleFade();
       }
 
       function undock() {
-        floatingBtn.classList.remove("cs-docked", "cs-docked-right");
+        group.classList.remove(
+          "cs-docked",
+          "cs-docked-left",
+          "cs-docked-right",
+          "cs-expanded",
+        );
         state._floatingDocked = null;
+        cancelIdle();
       }
 
       function savePos(x, y, docked) {
         GM_setValue(STORAGE_KEYS.FLOATING_BUTTON_POS, { x, y, docked: docked || null });
       }
 
+      // Initial position
+      setPos(window.innerWidth - BTN_SIZE - 20, window.innerHeight - BTN_SIZE - 20);
+      const savedPos = GM_getValue(STORAGE_KEYS.FLOATING_BUTTON_POS, null);
+      if (savedPos && savedPos.docked) {
+        applyDocked(savedPos.docked === "left" ? "left" : "right", savedPos.y);
+      } else if (savedPos) {
+        setPos(clampX(savedPos.x), clampY(savedPos.y));
+      }
+
+      // Hover interactions (mouse)
+      group.addEventListener("mouseenter", () => {
+        cancelIdle();
+        if (state._floatingDocked) expand();
+      });
+      group.addEventListener("mouseleave", () => {
+        if (group.classList.contains("cs-expanded")) {
+          scheduleCollapse();
+        } else {
+          armIdleFade();
+        }
+      });
+
+      // Tap outside collapses the menu (touch)
+      const outsideHandler = (e) => {
+        if (!group.classList.contains("cs-expanded")) return;
+        const path = e.composedPath ? e.composedPath() : [];
+        if (!path.includes(group)) collapse();
+      };
+      document.addEventListener("pointerdown", outsideHandler, true);
+      state._floatingOutsideHandler = outsideHandler;
+
+      // Drag
       let isDragging = false;
+      let dragStarted = false;
       let startX, startY, btnStartX, btnStartY;
       let totalMovement = 0;
-      let wasDocked = null;
-      let undockedDuringDrag = false;
 
       floatingBtn.addEventListener("pointerdown", (e) => {
-        if (e.button !== 0) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
         e.preventDefault();
         floatingBtn.setPointerCapture(e.pointerId);
-
-        wasDocked = state._floatingDocked;
-        undockedDuringDrag = false;
-
-        if (!wasDocked) {
-          const rect = floatingBtn.getBoundingClientRect();
-          btnStartX = rect.left;
-          btnStartY = rect.top;
-        }
-
+        const rect = group.getBoundingClientRect();
+        btnStartX = rect.left;
+        btnStartY = rect.top;
         startX = e.clientX;
         startY = e.clientY;
         totalMovement = 0;
         isDragging = true;
-        floatingBtn.classList.add("cs-dragging");
+        dragStarted = false;
+        cancelIdle();
       });
 
       floatingBtn.addEventListener("pointermove", (e) => {
@@ -1784,67 +2173,65 @@
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
         totalMovement = Math.max(totalMovement, Math.abs(dx) + Math.abs(dy));
+        if (totalMovement < DRAG_THRESHOLD) return;
 
-        if (wasDocked && !undockedDuringDrag) {
-          if (totalMovement < DRAG_THRESHOLD) return;
+        if (!dragStarted) {
+          dragStarted = true;
+          group.classList.add("cs-dragging");
           undock();
-          btnStartX = wasDocked === "left" ? 0 : window.innerWidth - BTN_SIZE;
-          btnStartY = parseFloat(floatingBtn.style.top) || 0;
-          floatingBtn.style.left = btnStartX + "px";
-          floatingBtn.style.top = btnStartY + "px";
-          floatingBtn.style.bottom = "auto";
-          startX = e.clientX;
-          startY = e.clientY;
-          undockedDuringDrag = true;
-          return;
         }
 
-        let newX = btnStartX + (e.clientX - startX);
-        let newY = btnStartY + (e.clientY - startY);
-        newX = Math.min(Math.max(0, newX), window.innerWidth - BTN_SIZE);
-        newY = clampY(newY);
+        const newX = clampX(btnStartX + dx);
+        const newY = clampY(btnStartY + dy);
+        setPos(newX, newY);
 
-        floatingBtn.style.left = newX + "px";
-        floatingBtn.style.top = newY + "px";
-        floatingBtn.style.bottom = "auto";
-
-        const nearEdge = newX <= DOCK_THRESHOLD || newX >= window.innerWidth - BTN_SIZE - DOCK_THRESHOLD;
-        floatingBtn.style.opacity = nearEdge ? "0.5" : "1";
+        const nearEdge =
+          newX <= DOCK_THRESHOLD ||
+          newX >= window.innerWidth - BTN_SIZE - DOCK_THRESHOLD;
+        group.style.opacity = nearEdge ? "0.5" : "";
       });
 
       floatingBtn.addEventListener("pointerup", (e) => {
         if (!isDragging) return;
         isDragging = false;
-        floatingBtn.classList.remove("cs-dragging");
-        floatingBtn.style.opacity = "1";
+        group.classList.remove("cs-dragging");
+        group.style.opacity = "";
 
         if (totalMovement < DRAG_THRESHOLD) {
-          this.showCookieList();
-          wasDocked = null;
+          // Tap/click. Touch has no hover: first tap expands the docked menu.
+          if (
+            e.pointerType === "touch" &&
+            state._floatingDocked &&
+            !group.classList.contains("cs-expanded")
+          ) {
+            expand();
+          } else {
+            collapse();
+            ui.showCookieList();
+          }
           return;
         }
 
-        const rect = floatingBtn.getBoundingClientRect();
+        const rect = group.getBoundingClientRect();
         const currentX = rect.left;
         const currentY = rect.top;
 
         if (currentX <= DOCK_THRESHOLD) {
           applyDocked("left", currentY);
-          savePos(currentX, currentY, "left");
+          savePos(0, currentY, "left");
         } else if (currentX >= window.innerWidth - BTN_SIZE - DOCK_THRESHOLD) {
           applyDocked("right", currentY);
-          savePos(currentX, currentY, "right");
+          savePos(window.innerWidth - BTN_SIZE, currentY, "right");
         } else {
           savePos(currentX, currentY, null);
         }
-        wasDocked = null;
       });
 
       floatingBtn.addEventListener("pointercancel", () => {
         isDragging = false;
-        undockedDuringDrag = false;
-        floatingBtn.classList.remove("cs-dragging");
-        floatingBtn.style.opacity = "1";
+        dragStarted = false;
+        group.classList.remove("cs-dragging");
+        group.style.opacity = "";
       });
 
       let resizeTimer;
@@ -1854,16 +2241,13 @@
           if (!state.floatingButton) return;
           const docked = state._floatingDocked;
           if (docked) {
-            const currentTop = parseFloat(floatingBtn.style.top) || 0;
-            applyDocked(docked, clampY(currentTop));
+            const currentTop = parseFloat(group.style.top) || 0;
+            applyDocked(docked, currentTop);
           } else {
-            let x = parseFloat(floatingBtn.style.left) || 0;
-            let y = parseFloat(floatingBtn.style.top);
+            let x = parseFloat(group.style.left) || 0;
+            let y = parseFloat(group.style.top);
             if (isNaN(y)) y = window.innerHeight - BTN_SIZE - 20;
-            x = Math.min(Math.max(0, x), window.innerWidth - BTN_SIZE);
-            y = clampY(y);
-            floatingBtn.style.left = x + "px";
-            floatingBtn.style.top = y + "px";
+            setPos(clampX(x), clampY(y));
           }
         }, 100);
       };
@@ -1871,6 +2255,7 @@
       state._floatingResizeHandler = handleResize;
 
       fullscreenManager.updateFloatingButtonVisibility();
+      armIdleFade();
     },
 
     refreshFloatingButton() {
@@ -1878,10 +2263,18 @@
         window.removeEventListener("resize", state._floatingResizeHandler);
         state._floatingResizeHandler = null;
       }
+      if (state._floatingOutsideHandler) {
+        document.removeEventListener(
+          "pointerdown",
+          state._floatingOutsideHandler,
+          true,
+        );
+        state._floatingOutsideHandler = null;
+      }
       state._floatingDocked = null;
-      const existingBtn = getShadowWrapper()?.querySelector(".cookie-share-floating-btn");
-      if (existingBtn) {
-        existingBtn.remove();
+      const existingGroup = getShadowWrapper()?.querySelector(".cookie-share-float-group");
+      if (existingGroup) {
+        existingGroup.remove();
       }
       state.floatingButton = null;
       if (GM_getValue(STORAGE_KEYS.SHOW_FLOATING_BUTTON, true)) {
@@ -1889,6 +2282,58 @@
       } else {
         fullscreenManager.updateFloatingButtonVisibility();
       }
+    },
+
+    confirmHideFloating() {
+      return new Promise((resolve) => {
+        const root = getShadowWrapper();
+        if (!root) { resolve(null); return; }
+        const container = document.createElement("div");
+        container.className = "cookie-share-confirm-layer";
+        container.style.cssText = `
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: var(--cs-overlay); backdrop-filter: blur(4px);
+          z-index: 2147483647; pointer-events: auto;
+        `;
+
+        const dialog = document.createElement("div");
+        dialog.style.cssText = `
+          background: var(--cs-surface); padding: 24px;
+          border-radius: var(--cs-radius-lg); text-align: center;
+          max-width: min(400px, 90vw); border: var(--cs-card-border);
+          box-shadow: var(--cs-shadow);
+          font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+          color: var(--cs-text);
+        `;
+
+        dialog.innerHTML = `
+          <h3 style="margin: 0 0 16px 0; color: var(--cs-heading); font-size: 18px; font-weight: 600;">${t("hideFloatingConfirmTitle")}</h3>
+          <p style="margin: 0 0 24px 0; color: var(--cs-text-secondary);">${t("hideFloatingConfirmMessage", { shortcut: getShortcutLabel("C") })}</p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button id="sessionBtn" class="cs-btn cs-btn-secondary" style="min-width: 100px; margin: 0 !important;">${t("hideSessionButton")}</button>
+            <button id="permanentBtn" class="cs-btn cs-btn-danger" style="min-width: 100px; margin: 0 !important;">${t("hideForeverButton")}</button>
+          </div>
+        `;
+
+        container.appendChild(dialog);
+        root.appendChild(container);
+
+        dialog.querySelector("#sessionBtn").onclick = () => {
+          container.remove();
+          resolve("session");
+        };
+        dialog.querySelector("#permanentBtn").onclick = () => {
+          container.remove();
+          resolve("permanent");
+        };
+        container.onclick = (e) => {
+          if (e.target === container) {
+            container.remove();
+            resolve(null);
+          }
+        };
+      });
     },
 
     createConfigTransferView(context = {}) {
@@ -1937,10 +2382,12 @@
         try {
           await configManager.importFromBase64(transferInput.value);
           detectLanguage();
+          registerMenuCommands();
           themeManager.init();
           this.refreshFloatingButton();
           this.showModal({
             cookieId: idInput?.value || "",
+            openSettings: true,
             openConfigTransfer: true,
             configTransferValue: transferInput.value.trim(),
           });
@@ -2033,12 +2480,36 @@
       themeRow.appendChild(themeLabel);
       themeRow.appendChild(themeSelector);
 
+      // Language selector
+      const langRow = document.createElement("div");
+      langRow.className = "cs-setting-row";
+      const langLabel = document.createElement("span");
+      langLabel.className = "cs-setting-label";
+      langLabel.textContent = t("settingsLanguage");
+      const langSelector = document.createElement("div");
+      langSelector.className = "cs-theme-selector";
+
+      const createLangBtn = (language, label) => {
+        const btn = document.createElement("button");
+        btn.className = `cs-theme-btn${currentLanguage === language ? " active" : ""}`;
+        btn.textContent = label;
+        btn.onclick = () => setLanguage(language);
+        return btn;
+      };
+
+      langSelector.appendChild(createLangBtn(LANGUAGES.EN, "English"));
+      langSelector.appendChild(createLangBtn(LANGUAGES.ZH, "中文"));
+      langRow.appendChild(langLabel);
+      langRow.appendChild(langSelector);
+
       settingsContainer.appendChild(themeRow);
+      settingsContainer.appendChild(langRow);
       settingsContainer.appendChild(
         createToggle(
           "settingsShowFloatingButton",
           STORAGE_KEYS.SHOW_FLOATING_BUTTON,
-          () => {
+          (checked) => {
+            if (checked) floatingSessionHidden = false;
             ui.refreshFloatingButton();
           },
         ),
@@ -2080,7 +2551,8 @@
       // Close button
       const closeBtn = document.createElement("button");
       closeBtn.className = "close-btn";
-      closeBtn.textContent = t("closeButton");
+      closeBtn.innerHTML = CLOSE_ICON_SVG;
+      closeBtn.setAttribute("aria-label", "Close");
       closeBtn.onclick = () => ui.hideModal();
 
       // Settings gear button
@@ -2092,6 +2564,7 @@
         if (panel) {
           panel.classList.toggle("visible");
           settingsBtn.classList.toggle("active");
+          container.classList.toggle("cs-settings-open");
         }
       };
 
@@ -2233,17 +2706,15 @@
       getShadowWrapper().appendChild(overlay);
 
       // Event listeners
-      sendBtn.onclick = async () => {
+      sendBtn.onclick = () => runWithButtonLoading(sendBtn, async () => {
         try {
+          if (!ensureGmCookieSupport()) return;
           const saveLocally = GM_getValue(STORAGE_KEYS.SAVE_LOCALLY, false);
           const cookieId = idInput.value.trim();
           const serverUrl = serverInput.value.trim();
           const transportSecret = transportInput.value.trim();
 
-          if (!cookieId) {
-            notification.show(t("notificationEnterCookieId"), "error");
-            return;
-          }
+          if (!validateCookieIdInput(cookieId)) return;
 
           if (saveLocally) {
             const cookies = await cookieManager.getAll();
@@ -2298,18 +2769,16 @@
             "error",
           );
         }
-      };
+      });
 
-      receiveBtn.onclick = async () => {
+      receiveBtn.onclick = () => runWithButtonLoading(receiveBtn, async () => {
         try {
+          if (!ensureGmCookieSupport()) return;
           if (!serverInput.value.trim()) {
             notification.show(t("notificationEnterServer"), "error");
             return;
           }
-          if (!idInput.value.trim()) {
-            notification.show(t("notificationEnterCookieId"), "error");
-            return;
-          }
+          if (!validateCookieIdInput(idInput.value.trim())) return;
           if (!transportInput.value.trim()) {
             notification.show(t("notificationNeedTransportSecret"), "error");
             return;
@@ -2338,9 +2807,10 @@
             "error",
           );
         }
-      };
+      });
 
-      addAccountBtn.onclick = async () => {
+      addAccountBtn.onclick = () => runWithButtonLoading(addAccountBtn, async () => {
+        if (!ensureGmCookieSupport()) return;
         if (!(await this.confirmAddAccount())) {
           return;
         }
@@ -2350,10 +2820,7 @@
           const serverUrl = serverInput.value.trim();
           const transportSecret = transportInput.value.trim();
 
-          if (!cookieId) {
-            notification.show(t("notificationEnterCookieId"), "error");
-            return;
-          }
+          if (!validateCookieIdInput(cookieId)) return;
 
           if (saveLocally) {
             const cookies = await cookieManager.getAll();
@@ -2396,15 +2863,16 @@
           }
           notification.show(errorMessage, "error");
         }
-      };
+      });
 
-      clearBtn.onclick = async () => {
+      clearBtn.onclick = () => runWithButtonLoading(clearBtn, async () => {
+        if (!ensureGmCookieSupport()) return;
         if (await this.confirmDelete()) {
           await cookieManager.clearAll();
           notification.show(t("notificationClearedSuccess"), "success");
           setTimeout(() => window.location.reload(), 500);
         }
-      };
+      });
 
       serverInput.addEventListener("input", () => {
         let url = serverInput.value.trim().replace(/\/+$/, "");
@@ -2423,6 +2891,12 @@
       });
       settingsPanel.appendChild(configTransferView);
       container.appendChild(settingsPanel);
+
+      if (options.openSettings) {
+        settingsPanel.classList.add("visible");
+        settingsBtn.classList.add("active");
+        container.classList.add("cs-settings-open");
+      }
     },
 
     showModal(options = {}) {
@@ -2434,6 +2908,7 @@
       const overlay = root.querySelector(".cookie-share-overlay");
       const modal = root.querySelector(".cookie-share-modal");
       if (overlay && modal) {
+        overlay.offsetHeight; // force reflow so the fade-in transition runs
         overlay.classList.add("visible");
         modal.classList.add("visible");
       }
@@ -2443,7 +2918,8 @@
       const overlay = getShadowWrapper()?.querySelector(".cookie-share-overlay");
       if (overlay) {
         overlay.classList.remove("visible");
-        setTimeout(() => overlay.remove(), 300);
+        overlay.querySelector(".cookie-share-modal")?.classList.remove("visible");
+        setTimeout(() => overlay.remove(), 220);
       }
     },
 
@@ -2458,16 +2934,42 @@
       modal.className = "cookie-share-modal cookie-list-modal";
       modal.innerHTML = `
         <div class="cookie-share-container">
-          <button class="close-btn" onclick="return false;">${t("closeButton")}</button>
+          <button class="close-btn" aria-label="Close" onclick="return false;">${CLOSE_ICON_SVG}</button>
           <div class="title-container">
             <h1>${t("cookiesListTitle")}</h1>
           </div>
+          <input type="text" id="cookieShareSearch" class="cookie-id-input cookie-share-search" placeholder="${t("searchPlaceholder")}" spellcheck="false">
           <div id="cookieShareList" class="cookie-list-container"></div>
           <div style="display: flex; justify-content: center;">
             <button id="cookieShareGoToMainBtn" class="generate-btn">${t("showPanelButton")}</button>
           </div>
         </div>
       `;
+
+      const searchInput = modal.querySelector("#cookieShareSearch");
+      const cookiesList = modal.querySelector("#cookieShareList");
+      searchInput.addEventListener("input", () => {
+        const query = searchInput.value.trim().toLowerCase();
+        const items = cookiesList.querySelectorAll(".cookie-share-item");
+        let visibleCount = 0;
+        items.forEach((item) => {
+          const matches =
+            !query || (item.dataset.searchText || "").includes(query);
+          item.classList.toggle("cs-hidden", !matches);
+          if (matches) visibleCount++;
+        });
+        let filterEmpty = cookiesList.querySelector(".cookie-share-filter-empty");
+        if (visibleCount === 0 && items.length > 0) {
+          if (!filterEmpty) {
+            filterEmpty = document.createElement("div");
+            filterEmpty.className = "cookie-share-empty cookie-share-filter-empty";
+            filterEmpty.textContent = t("listFilterEmpty");
+            cookiesList.appendChild(filterEmpty);
+          }
+        } else if (filterEmpty) {
+          filterEmpty.remove();
+        }
+      });
 
       modal.querySelector(".close-btn").onclick = () => this.hideCookieList();
       modal.querySelector("#cookieShareGoToMainBtn").onclick = () => {
@@ -2488,6 +2990,7 @@
       const existingOverlay = root.querySelector(".cookie-share-overlay");
       if (existingOverlay) existingOverlay.remove();
       const { overlay, modal } = this.createCookieListModal();
+      overlay.offsetHeight; // force reflow so the fade-in transition runs
       overlay.classList.add("visible");
       modal.classList.add("visible");
       const cookiesList = modal.querySelector("#cookieShareList");
@@ -2501,7 +3004,7 @@
       if (overlay && modal) {
         overlay.classList.remove("visible");
         modal.classList.remove("visible");
-        setTimeout(() => overlay.remove(), 300);
+        setTimeout(() => overlay.remove(), 220);
       }
     },
 
@@ -2648,16 +3151,49 @@
         combinedCookies.forEach((cookie) => {
           const item = document.createElement("div");
           item.className = "cookie-share-item";
+          item.dataset.searchText =
+            `${cookie.id} ${cookie.url || ""}`.toLowerCase();
           const sourceText = t(
             cookie.source === "local" ? "sourceLocal" : "sourceCloud",
           );
-          item.innerHTML = `
-            <span style="font-size: 13px; font-weight: 500;">ID: ${cookie.id} <span style="color: var(--cs-text-muted); font-weight: 400;">(${sourceText})</span></span>
-            <div class="cookie-share-buttons">
-              <button class="cookie-share-receive" data-id="${cookie.id}" data-source="${cookie.source}">${t("receiveButton")}</button>
-              <button class="cookie-share-delete" data-id="${cookie.id}" data-source="${cookie.source}">${t("deleteButton")}</button>
-            </div>
-          `;
+
+          const info = document.createElement("div");
+          info.className = "cookie-share-item-info";
+
+          const idLine = document.createElement("span");
+          idLine.className = "cookie-share-item-id";
+          idLine.textContent = `ID: ${cookie.id} `;
+          const sourceSpan = document.createElement("span");
+          sourceSpan.className = "cookie-share-item-source";
+          sourceSpan.textContent = `(${sourceText})`;
+          idLine.appendChild(sourceSpan);
+          info.appendChild(idLine);
+
+          if (cookie.url) {
+            const urlLine = document.createElement("div");
+            urlLine.className = "cookie-share-item-url";
+            urlLine.textContent = cookie.url;
+            urlLine.title = cookie.url;
+            info.appendChild(urlLine);
+          }
+
+          const buttons = document.createElement("div");
+          buttons.className = "cookie-share-buttons";
+          const makeButton = (className, labelKey) => {
+            const button = document.createElement("button");
+            button.className = className;
+            button.textContent = t(labelKey);
+            button.dataset.id = cookie.id;
+            button.dataset.source = cookie.source;
+            buttons.appendChild(button);
+            return button;
+          };
+          makeButton("cookie-share-copy", "copyButton");
+          makeButton("cookie-share-receive", "receiveButton");
+          makeButton("cookie-share-delete", "deleteButton");
+
+          item.appendChild(info);
+          item.appendChild(buttons);
           cookiesList.appendChild(item);
         });
 
@@ -2666,8 +3202,20 @@
     },
 
     attachButtonListeners(container) {
-      container.querySelectorAll(".cookie-share-receive").forEach((button) => {
+      container.querySelectorAll(".cookie-share-copy").forEach((button) => {
         button.onclick = async () => {
+          try {
+            await utils.copyToClipboard(button.dataset.id);
+            notification.show(t("notificationIdCopied"), "success");
+          } catch (error) {
+            notification.show(t("notificationCopyFailed"), "error");
+          }
+        };
+      });
+
+      container.querySelectorAll(".cookie-share-receive").forEach((button) => {
+        button.onclick = () => runWithButtonLoading(button, async () => {
+          if (!ensureGmCookieSupport()) return;
           const cookieId = button.dataset.id;
           const source = button.dataset.source;
           const customUrl = GM_getValue(STORAGE_KEYS.CUSTOM_URL);
@@ -2684,16 +3232,10 @@
               const cookieData = JSON.parse(rawData);
               if (!Array.isArray(cookieData.cookies))
                 throw new Error(t("notificationLocalDataInvalid"));
-              await cookieManager.clearAll();
-              let importedCount = 0;
-              for (const cookie of cookieData.cookies) {
-                if (cookie?.name && cookie?.value) {
-                  await cookieManager.set(cookie);
-                  importedCount++;
-                }
-              }
-              if (importedCount === 0)
-                throw new Error(t("notificationLocalImportFailed"));
+              const importedCount = await cookieManager.replaceAll(
+                cookieData.cookies,
+                t("notificationLocalImportFailed"),
+              );
               notification.show(
                 t("notificationImportSuccess", { count: importedCount }),
                 "success",
@@ -2725,11 +3267,11 @@
               "error",
             );
           }
-        };
+        });
       });
 
       container.querySelectorAll(".cookie-share-delete").forEach((button) => {
-        button.onclick = async () => {
+        button.onclick = () => runWithButtonLoading(button, async () => {
           const cookieId = button.dataset.id;
           const source = button.dataset.source;
           const sourceText = t(
@@ -2781,7 +3323,7 @@
               );
             }
           }
-        };
+        });
       });
     },
   };
@@ -2819,10 +3361,12 @@
       fullscreenManager.handleFullscreenChange(),
     );
 
+    // Match on event.code (physical key): on macOS Option+Shift+letter
+    // produces a special character in event.key, which used to break the
+    // advertised Option+Shift shortcuts.
     const matchesShortcut = (event, actionKey) => {
-      const key = event.key.toLowerCase();
-      const expectedKey = actionKey.toLowerCase();
-      if (key !== expectedKey || !event.shiftKey) return false;
+      if (event.code !== `Key${actionKey.toUpperCase()}`) return false;
+      if (!event.shiftKey) return false;
       const hasMacShortcut =
         isMacOS && !event.ctrlKey && (event.metaKey || event.altKey);
       const hasDefaultShortcut =
@@ -2830,9 +3374,37 @@
       return hasMacShortcut || hasDefaultShortcut;
     };
 
+    const isEditableTarget = (event) => {
+      const target = event.composedPath ? event.composedPath()[0] : event.target;
+      if (!target || target.nodeType !== 1) return false;
+      const tag = target.tagName;
+      return (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        target.isContentEditable === true
+      );
+    };
+
     const handleKeyboardShortcuts = (e) => {
       const root = getShadowWrapper();
       if (!root) return;
+      if (e.key === "Escape") {
+        // A confirm dialog is on top; let its own buttons handle dismissal.
+        if (root.querySelector(".cookie-share-confirm-layer")) return;
+        const overlay = root.querySelector(".cookie-share-overlay.visible");
+        if (!overlay) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (overlay.querySelector(".cookie-list-modal")) {
+          ui.hideCookieList();
+        } else {
+          ui.hideModal();
+        }
+        return;
+      }
+      // Don't hijack typing: Option+Shift+letter types special chars on macOS.
+      if (isEditableTarget(e)) return;
       if (matchesShortcut(e, "l")) {
         e.preventDefault();
         e.stopPropagation();
@@ -2861,23 +3433,84 @@
       }
     };
 
-    document.removeEventListener("keydown", handleKeyboardShortcuts);
     document.addEventListener("keydown", handleKeyboardShortcuts, {
       capture: true,
     });
 
-    GM_registerMenuCommand(t("menuShowShare"), () => ui.showModal());
-    GM_registerMenuCommand(t("menuShowList"), () => ui.showCookieList());
-    GM_registerMenuCommand(t("menuSwitchLanguage"), switchLanguage);
+    registerMenuCommands();
+  }
+
+  let registeredMenuCommandIds = [];
+
+  function registerMenuCommands() {
+    // GM_unregisterMenuCommand is unavailable in some managers; menu labels
+    // then keep the previous language until the next page load. Skip
+    // re-registration there, otherwise entries would stack up as duplicates.
+    const canUnregister = typeof GM_unregisterMenuCommand === "function";
+    if (registeredMenuCommandIds.length > 0 && !canUnregister) {
+      return;
+    }
+    if (canUnregister) {
+      registeredMenuCommandIds.forEach((commandId) => {
+        try {
+          GM_unregisterMenuCommand(commandId);
+        } catch (e) {
+          // ignore
+        }
+      });
+      registeredMenuCommandIds = [];
+    }
+    registeredMenuCommandIds = [
+      GM_registerMenuCommand(t("menuShowShare"), () => ui.showModal()),
+      GM_registerMenuCommand(t("menuShowList"), () => ui.showCookieList()),
+      GM_registerMenuCommand(t("menuSwitchLanguage"), switchLanguage),
+    ];
+  }
+
+  function setLanguage(newLanguage) {
+    if (newLanguage !== LANGUAGES.EN && newLanguage !== LANGUAGES.ZH) return;
+    if (newLanguage === currentLanguage) return;
+    GM_setValue(STORAGE_KEYS.LANGUAGE_PREFERENCE, newLanguage);
+    currentLanguage = newLanguage;
+    registerMenuCommands();
+
+    // Re-open whichever modal is showing so its text updates immediately,
+    // preserving input and settings/config-transfer state.
+    const root = getShadowWrapper();
+    const overlay = root?.querySelector(".cookie-share-overlay");
+    if (overlay) {
+      const isListModal = Boolean(overlay.querySelector(".cookie-list-modal"));
+      if (isListModal) {
+        overlay.remove();
+        ui.showCookieList();
+      } else {
+        const cookieId =
+          overlay.querySelector(".cookie-id-input")?.value || "";
+        const openSettings = Boolean(
+          overlay.querySelector(".cookie-share-container.cs-settings-open"),
+        );
+        const transferDetails = overlay.querySelector(
+          ".cookie-share-config-transfer",
+        );
+        const openConfigTransfer = Boolean(transferDetails?.open);
+        const configTransferValue =
+          transferDetails?.querySelector(".cookie-share-config-textarea")
+            ?.value || "";
+        overlay.remove();
+        ui.showModal({
+          cookieId,
+          openSettings,
+          openConfigTransfer,
+          configTransferValue,
+        });
+      }
+    }
+    notification.show(t("notificationLanguageSwitched"), "success");
+  }
+
+  function switchLanguage() {
+    setLanguage(currentLanguage === LANGUAGES.EN ? LANGUAGES.ZH : LANGUAGES.EN);
   }
 
   init();
-
-  function switchLanguage() {
-    const newLanguage =
-      currentLanguage === LANGUAGES.EN ? LANGUAGES.ZH : LANGUAGES.EN;
-    GM_setValue(STORAGE_KEYS.LANGUAGE_PREFERENCE, newLanguage);
-    currentLanguage = newLanguage;
-    notification.show(t("menuSwitchLanguage"), "success");
-  }
 })();

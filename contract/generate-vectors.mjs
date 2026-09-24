@@ -95,7 +95,7 @@ const vectors = {
     plaintext: sendPlaintext,
     expected: {
       id: "contractVector1",
-      url: "https://example.com/Login?next=%2Fhome",
+      url: "https://example.com/Login",
       host: "example.com",
       cookie: expectedCookie,
     },
@@ -113,8 +113,8 @@ const vectors = {
   },
   urls: {
     valid: [
-      { input: "Example.com/Login?next=%2Fhome", normalized: "https://example.com/Login?next=%2Fhome", host: "example.com" },
-      { input: "  https://Sub.Example.com:8443/x?q=1  ", normalized: "https://sub.example.com:8443/x?q=1", host: "sub.example.com" },
+      { input: "Example.com/Login?next=%2Fhome", normalized: "https://example.com/Login", host: "example.com" },
+      { input: "  https://Sub.Example.com:8443/x?q=1  ", normalized: "https://sub.example.com:8443/x", host: "sub.example.com" },
       { input: "example.com", normalized: "https://example.com/", host: "example.com" },
     ],
     invalid: ["", "   ", "http://", "https://exa mple.com"],

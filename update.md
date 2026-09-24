@@ -1,3 +1,13 @@
+## 0.7.0 — security and compatibility hardening
+
+- Preserve legacy v1 endpoints, local storage keys and existing D1 records by default; add documented opt-in device tokens/v2 and D1 payload encryption.
+- Remove credential autofill into page DOM, reject synthetic privileged events and introduce safer normal/encrypted configuration export.
+- Reject Cookie API errors, validate before mutation, persist recovery snapshots, verify writes and report rollback failures honestly. Preserve empty values, host-only, unspecified SameSite and partition metadata on updated backends.
+- Add Worker admin sessions/CSRF, no-CDN management styling, independent encrypted backups, metadata pagination/detail loading and conditional writes.
+- Bound expensive input processing, reject unknown paths without PBKDF2, reduce URL metadata/log exposure and add a composite query index.
+- Render local/cloud lists independently, cancel stale list requests and clarify local/cloud mode, overwrite and refresh interactions.
+- Add native-JS/SQLite/GM fault-injection and workerd regression tests; see docs/SECURITY_UPGRADE.md for compatibility limits, optional-feature rollback and browser acceptance requirements.
+
 # Changelog
 
 All notable changes to Cookie-share will be documented in this file.

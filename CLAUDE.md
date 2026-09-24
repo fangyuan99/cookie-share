@@ -87,7 +87,7 @@ TypeScript with modular files:
 
 Two suites, both gated in CI on every PR:
 
-- **Worker integration tests** (`test/worker.test.js`, config in `vitest.config.mjs`) — run inside workerd via `@cloudflare/vitest-pool-workers`. `SELF.fetch()` exercises the real fetch handler with a real D1 binding. Test secrets are injected as miniflare bindings in `vitest.config.mjs`; `TRANSPORT_SECRET` must equal `contract/vectors.json`'s `secret`. Storage is not isolated between tests — the shared `beforeEach` wipes `cookie_records`.
+- **Worker integration tests** (`test/worker.test.js`, config in `vitest.config.mjs`) — run inside workerd via `@cloudflare/vitest-plugin`. `SELF.fetch()` exercises the real fetch handler with a real D1 binding. Test secrets are injected as miniflare bindings in `vitest.config.mjs`; `TRANSPORT_SECRET` must equal `contract/vectors.json`'s `secret`. Storage is not isolated between tests — the shared `beforeEach` wipes `cookie_records`.
 - **Server tests** (`server/test/*.test.ts`, config in `server/vitest.config.ts`) — spin up the Express app on an ephemeral port with a temp SQLite file.
 
 **Contract vectors** (`contract/vectors.json`): shared fixtures — a fixed encrypted envelope both backends must decrypt, plus ID/URL/cookie validation cases and invalid-envelope cases. Both suites replay them, which is what keeps the two backends' protocol in sync. When the protocol or validation rules change intentionally, regenerate with `node contract/generate-vectors.mjs` and make sure **both** suites pass; a vector failing on one backend but not the other means the implementations have drifted.

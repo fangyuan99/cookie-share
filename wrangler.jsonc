@@ -7,12 +7,12 @@
 		"enabled": true,
 		"logs": {
 			"enabled": true,
-			"invocation_logs": true,
+			"invocation_logs": false,
 			"head_sampling_rate": 1,
 			"persist": true
 		},
 		"traces": {
-			"enabled": true,
+			"enabled": false,
 			"head_sampling_rate": 1,
 			"persist": true
 		}

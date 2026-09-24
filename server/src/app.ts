@@ -115,6 +115,10 @@ export function createApp(config: RuntimeConfig, store: CookieStore): express.Ex
     next();
   });
 
+  app.get(`${config.basePath}/capabilities`, (_request, response) => {
+    sendJson(response, 200, { success: true, protocolVersions: [1], cookieAttributes: true, metadata: true });
+  });
+
   app.get(`${config.basePath}/admin`, (_request, response) => {
     sendHtml(response, renderAdminPage(config.basePath));
   });
@@ -157,6 +161,7 @@ export function createApp(config: RuntimeConfig, store: CookieStore): express.Ex
     sendEncryptedJson(response, 200, {
       success: true,
       cookies: record.cookies,
+      url: record.url, host: record.host,
     }, config.transportSecret);
   }));
 

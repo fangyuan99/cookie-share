@@ -1,5 +1,9 @@
 # Cookie-share
 
+## Security upgrade (0.7.0)
+
+Existing v1 clients, D1 records and userscript storage are retained by default. Read [the compatibility and security guide](docs/SECURITY_UPGRADE.md) before enabling device-only authentication or storage encryption. Shared transport secrets still grant instance-wide access in compatibility mode. The userscript is not a browser security boundary.
+
 ### Cross-device Cookie Sharing via Tampermonkey
 
 [![GitHub Stars](https://img.shields.io/github/stars/fangyuan99/cookie-share?style=social)](https://github.com/fangyuan99/cookie-share)

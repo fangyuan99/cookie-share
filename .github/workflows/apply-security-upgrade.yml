@@ -27,10 +27,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Refresh Worker lockfile within existing version ranges
+      - name: Resolve Worker dependencies within existing version ranges
         run: |
+          rm package-lock.json
+          npm install --package-lock-only --ignore-scripts
           npm ci
-          npm audit fix
           npm audit --audit-level=moderate
       - name: Validate Worker source and protocol compatibility
         run: |
@@ -40,9 +41,10 @@ jobs:
       - name: Upgrade vulnerable Node test runner and refresh transitive dependencies
         working-directory: server
         run: |
+          npm pkg set 'devDependencies.vitest=^4.1.11'
+          rm package-lock.json
+          npm install --package-lock-only --ignore-scripts
           npm ci
-          npm install --save-dev 'vitest@^4.1.11'
-          npm audit fix
           npm audit --audit-level=moderate
           npm run build
           npm test

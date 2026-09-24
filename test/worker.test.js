@@ -1,5 +1,5 @@
 // Integration tests for _worker.js, run inside workerd via
-// @cloudflare/vitest-pool-workers. SELF is the Worker under test; requests go
+// @cloudflare/vitest-plugin. SELF is the Worker under test; requests go
 // through the real fetch handler with a real (isolated) D1 binding.
 import { env, SELF } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";

@@ -13,8 +13,8 @@
     "test:security": "node --test test-node/*.test.mjs"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.18.0",
-    "vitest": "^4.1.9",
-    "wrangler": "^4.75.0"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.75.0",
+    "@cloudflare/vitest-plugin": "^1.0.0"
   }
 }

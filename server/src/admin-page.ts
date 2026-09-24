@@ -6,9 +6,10 @@ const WORKER_ADMIN_TEMPLATE = `<!doctype html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cookie Share Admin</title>
-    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/daisyui@5/daisyui.css">
-    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/daisyui@5/themes.css">
-    <script src="https://fastly.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>
+    <style>:root{color-scheme:light;--bg:#f3f5f7;--surface:#fff;--fg:#202a36;--muted:#546274;--line:#d7dee6;--accent:#285a86;--danger:#a12929}
+:root[data-theme=dark],:root[data-theme=dracula]{color-scheme:dark;--bg:#151922;--surface:#202733;--fg:#edf1f7;--muted:#afb9c7;--line:#445066;--accent:#91bee5;--danger:#f69b9b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,sans-serif}main{max-width:1050px;margin:auto;padding:24px 20px}h2,h3{margin:0 0 12px}p{margin:8px 0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:wait}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.navbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--line)}.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:22px}.card-body{padding:24px}.flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1;min-width:0}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-2{gap:8px}.gap-3{gap:12px}.input,.textarea,.select,.file-input{max-width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}.textarea{min-height:130px;font-family:ui-monospace,monospace}.btn{padding:9px 16px;border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent)}.btn-primary{background:var(--accent);color:var(--surface)}.btn-error,.text-error{color:var(--danger);border-color:var(--danger)}.btn-sm,.btn-xs{padding:5px 10px;font-size:14px}.btn+.btn{margin-left:6px}.label{display:block;margin:8px 0 4px}.w-full{width:100%}.max-w-lg{max-width:650px}.text-sm{font-size:14px}.text-xl{font-size:21px}.text-lg{font-size:18px}.font-bold{font-weight:700}.opacity-60{color:var(--muted)}.hidden,[hidden]{display:none!important}.space-y-3>*+*{margin-top:12px}.tabs{display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--line)}.tab{padding:10px 18px;border:0;background:transparent;color:var(--muted)}.tab-active{color:var(--accent);border-bottom:3px solid var(--accent)}.overflow-x-auto{overflow-x:auto}.table{width:100%;border-collapse:collapse;table-layout:fixed}.table th,.table td{padding:12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.table th:first-child{width:22%}.table th:last-child{width:24%}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.mt-4{margin-top:16px}.mb-4{margin-bottom:16px}.badge,.kbd{padding:2px 6px;background:var(--bg);border:1px solid var(--line);border-radius:5px}.modal{border:1px solid var(--line);border-radius:14px;padding:24px;width:min(900px,94vw);background:var(--surface);color:var(--fg)}.modal::backdrop{background:rgba(0,0,0,.55)}.modal-box{max-width:100%}.modal-action{text-align:right;margin-top:16px}.modal-backdrop{display:none}.modal pre{background:var(--bg);padding:16px;max-height:55vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.text-center{text-align:center}.text-success{color:var(--accent)}@media(min-width:640px){.sm\\:flex-row{flex-direction:row}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
   </head>
   <body class="min-h-screen bg-base-200">
     <div class="navbar bg-base-100 shadow-sm sticky top-0 z-50">
@@ -189,10 +190,11 @@ const WORKER_ADMIN_TEMPLATE = `<!doctype html>
 
       document.addEventListener("DOMContentLoaded", () => {
         adminPassword = localStorage.getItem(PASSWORD_KEY) || "";
+        localStorage.removeItem(PASSWORD_KEY);
         rawDialog = document.getElementById("cookieRawDialog");
         rawTitle = document.getElementById("cookieRawTitle");
         rawContent = document.getElementById("cookieRawContent");
-        document.getElementById("adminPassword").value = adminPassword;
+        document.getElementById("adminPassword").value = "";
         document.getElementById("saveCredentials").addEventListener("click", saveCredentials);
         document.getElementById("closeRawDialog").addEventListener("click", () => {
           rawDialog.close();
@@ -246,7 +248,8 @@ const WORKER_ADMIN_TEMPLATE = `<!doctype html>
         }
 
         adminPassword = password;
-        localStorage.setItem(PASSWORD_KEY, password);
+        localStorage.removeItem(PASSWORD_KEY);
+        document.getElementById("adminPassword").value = "";
         showPanels();
         setStatus("凭据已保存，正在加载列表。");
         loadCookies().catch(showError);

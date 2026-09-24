@@ -25,7 +25,7 @@
     },
     "expected": {
       "id": "contractVector1",
-      "url": "https://example.com/Login?next=%2Fhome",
+      "url": "https://example.com/Login",
       "host": "example.com",
       "cookie": {
         "domain": "example.com",
@@ -81,12 +81,12 @@
     "valid": [
       {
         "input": "Example.com/Login?next=%2Fhome",
-        "normalized": "https://example.com/Login?next=%2Fhome",
+        "normalized": "https://example.com/Login",
         "host": "example.com"
       },
       {
         "input": "  https://Sub.Example.com:8443/x?q=1  ",
-        "normalized": "https://sub.example.com:8443/x?q=1",
+        "normalized": "https://sub.example.com:8443/x",
         "host": "sub.example.com"
       },
       {

@@ -1,5 +1,9 @@
 # Cookie-share
 
+## 0.7.0 安全与兼容升级
+
+默认保留现有 v1 客户端、D1 数据和油猴存储。请先阅读[安全升级与兼容说明](docs/SECURITY_UPGRADE.md)，再选择开启设备令牌强制认证或存储加密；兼容模式的共享传输密钥仍有实例级数据权限。油猴不是独立的浏览器安全边界。
+
 ### 基于油猴脚本的跨设备 Cookie 共享工具
 
 [![GitHub Stars](https://img.shields.io/github/stars/fangyuan99/cookie-share?style=social)](https://github.com/fangyuan99/cookie-share)

@@ -219,10 +219,10 @@ describe("userscript endpoints (TRANSPORT_SECRET)", () => {
 });
 
 describe("admin endpoints (ADMIN_PASSWORD)", () => {
-  it("rejects missing and wrong admin passwords with encrypted 401", async () => {
+  it("rejects missing and wrong admin passwords (plain unauthenticated rejection)", async () => {
     const missing = await request("/admin/list-cookies");
     expect(missing.status).toBe(401);
-    expect(await decryptResponse(ADMIN_PASSWORD, missing)).toMatchObject({
+    expect(await missing.json()).toMatchObject({
       success: false,
       message: "Unauthorized",
     });
@@ -334,19 +334,19 @@ describe("routing and CORS", () => {
     expect(response.headers.get("Access-Control-Allow-Headers")).toContain("X-Admin-Password");
   });
 
-  it("returns encrypted 404 outside the path secret", async () => {
+  it("returns cheap plain 404 outside the path secret", async () => {
     const response = await SELF.fetch("https://cookie-share.test/wrong-path/send-cookies", {
       method: "POST",
       body: "{}",
     });
     expect(response.status).toBe(404);
-    expect(await decryptResponse(TRANSPORT_SECRET, response)).toMatchObject({
+    expect(await response.json()).toMatchObject({
       success: false,
       message: "Not Found",
     });
   });
 
-  it("returns encrypted 404 for unknown routes under the base path", async () => {
+  it("returns plain 404 for unknown routes under the base path", async () => {
     const response = await request("/nonexistent");
     expect(response.status).toBe(404);
   });
@@ -438,5 +438,44 @@ describe("protocol contract vectors", () => {
         message: "Invalid cookie format",
       });
     }
+  });
+});
+
+describe('backward-compatible hardening', () => {
+  it('supports atomic conditional writes without changing legacy upserts', async () => {
+    await sendCookies('conditional1');
+    const create = await request('/send-cookies', { method: 'POST', secret: TRANSPORT_SECRET,
+      body: { id: 'conditional1', url: 'https://example.com/', cookies: sampleCookies, createOnly: true } });
+    expect(create.status).toBe(409);
+    const stale = await request('/send-cookies', { method: 'POST', secret: TRANSPORT_SECRET,
+      body: { id: 'conditional1', url: 'https://example.com/', cookies: sampleCookies, expectedRevision: 99 } });
+    expect(stale.status).toBe(409);
+    const update = await request('/send-cookies', { method: 'POST', secret: TRANSPORT_SECRET,
+      body: { id: 'conditional1', url: 'https://example.com/', cookies: sampleCookies, expectedRevision: 1 } });
+    expect(update.status).toBe(200);
+  });
+  it('lists admin metadata without fetching cookie payloads', async () => {
+    await sendCookies('summary1');
+    const response = await request('/admin/list-cookies?summary=1&limit=1', { headers: adminHeaders() });
+    const payload = await decryptResponse(ADMIN_PASSWORD, response);
+    expect(payload.cookies).toHaveLength(1);
+    expect(payload.cookies[0].cookies).toBeUndefined();
+    expect(payload.cookies[0].cookiesJson).toBeUndefined();
+    expect(payload.cookies[0].revision).toBe(1);
+  });
+  it('returns no-store and a self-contained nonce-protected management page', async () => {
+    const response = await request('/admin');
+    const html = await response.text();
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'");
+    expect(html).not.toContain('jsdelivr');
+    expect(html).not.toContain('localStorage.setItem(PASSWORD_KEY');
+  });
+  it('preserves unspecified SameSite, empty values and partition attributes', async () => {
+    const cookie = { ...sampleCookies[0], value: '', sameSite: 'unspecified',
+      partitionKey: { topLevelSite: 'https://example.com', hasCrossSiteAncestor: false } };
+    expect((await sendCookies('attributes1', 'https://example.com/', [cookie])).status).toBe(200);
+    const payload = await decryptResponse(TRANSPORT_SECRET, await request('/receive-cookies/attributes1'));
+    expect(payload.cookies[0]).toMatchObject(cookie);
   });
 });

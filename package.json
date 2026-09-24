@@ -9,7 +9,8 @@
     "check": "wrangler deploy --dry-run",
     "deploy:dry": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
-    "db:migrate": "wrangler d1 migrations apply COOKIE_DB --remote"
+    "db:migrate": "wrangler d1 migrations apply COOKIE_DB --remote",
+    "test:security": "node --test test-node/*.test.mjs"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.18.0",

@@ -1,3 +1,10 @@
 ADMIN_PASSWORD=change-me
 PATH_SECRET=change-me
 TRANSPORT_SECRET=change-me
+
+# Optional: defaults preserve legacy clients. See docs/SECURITY_UPGRADE.md.
+# DEVICE_TOKENS=[]
+# REQUIRE_CLIENT_AUTH=false
+# DISABLE_LEGACY_ADMIN=false
+# STORAGE_KEY_ID=
+# STORAGE_KEYS={}

@@ -27,6 +27,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Update dependency resolver
+        working-directory: /tmp
+        run: |
+          npm install --global npm@11
+          node --version
+          npm --version
       - name: Resolve Worker dependencies within existing version ranges
         run: |
           rm package-lock.json
@@ -73,3 +79,12 @@ jobs:
           git commit -m 'fix(deps): update vulnerable tooling and synchronize package lockfiles'
           git -c http.extraheader="$AUTH" push origin HEAD:refs/heads/feat/security-compat-hardening
           printf 'Validated dependency commit: %s\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Dependency resolver diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          for log in $(ls -t "$HOME"/.npm/_logs/*debug*.log 2>/dev/null | head -3); do
+            echo "::group::$(basename "$log")"
+            tail -100 "$log"
+            echo '::endgroup::'
+          done

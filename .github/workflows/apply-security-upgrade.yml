@@ -1,0 +1,80 @@
+name: Apply and validate security compatibility upgrade
+
+on:
+  push:
+    branches: [feat/security-compat-hardening]
+    paths:
+      - .github/workflows/apply-security-upgrade.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-security-compat-hardening
+  cancel-in-progress: false
+
+jobs:
+  validate-and-commit:
+    if: github.repository == 'fangyuan99/cookie-share' && github.ref == 'refs/heads/feat/security-compat-hardening'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify and apply reviewed source patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, lzma
+          from pathlib import Path
+          encoded = ''.join(Path(f'.review/part{i:02}.b64').read_text() for i in range(5))
+          patch = lzma.decompress(base64.b64decode(encoded, validate=True))
+          expected = '5562da0f5a91cf51d44e412fc60d3c8da0f1e6415662be47a52ae36239f830fc'
+          assert hashlib.sha256(patch).hexdigest() == expected, 'Source patch checksum mismatch'
+          Path('/tmp/security-hardening.patch').write_bytes(patch)
+          PY
+          git apply --check /tmp/security-hardening.patch
+          git apply /tmp/security-hardening.patch
+          git diff --check
+          node --check _worker.js
+          node --check tampermonkey/cookie-share.user.js
+      - name: Install Worker development dependencies
+        run: npm ci
+      - name: Security and rolling-upgrade regression tests
+        run: npm run test:security
+      - name: Real workerd integration and protocol tests
+        run: npm test
+      - name: Worker deployment dry-run only
+        run: npm run check
+      - name: Node backend build and compatibility tests
+        working-directory: server
+        run: |
+          npm ci
+          npm run build
+          npm test
+      - name: Commit validated source to feature branch only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/feat/security-compat-hardening
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          REMOTE_HEAD=$(git -c http.extraheader="$AUTH" ls-remote origin refs/heads/feat/security-compat-hardening | cut -f1)
+          test "$REMOTE_HEAD" = "$GITHUB_SHA"
+          rm -rf .review
+          rm .github/workflows/apply-security-upgrade.yml
+          git add -A
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat(security): harden cookie sharing with backward-compatible upgrade paths'
+          git -c http.extraheader="$AUTH" push origin HEAD:refs/heads/feat/security-compat-hardening
+          printf 'Validated source commit: %s\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"

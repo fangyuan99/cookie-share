@@ -59,6 +59,19 @@ jobs:
           npm ci
           npm run build
           npm test
+      - name: Record dependency advisory details
+        shell: bash
+        run: |
+          npm audit --json > /tmp/root-audit.json || true
+          (cd server && npm audit --json) > /tmp/server-audit.json || true
+          python3 - <<'PY'
+          import json
+          for label in ('root', 'server'):
+              report = json.load(open('/tmp/' + label + '-audit.json'))
+              print(label, json.dumps(report.get('metadata', {})))
+              for name, detail in report.get('vulnerabilities', {}).items():
+                  print(json.dumps({'package':name,'severity':detail['severity'],'range':detail['range'],'fixAvailable':detail['fixAvailable'],'via':detail['via']}))
+          PY
       - name: Commit validated source to feature branch only
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,7 +83,9 @@ jobs:
           REMOTE_HEAD=$(git -c http.extraheader="$AUTH" ls-remote origin refs/heads/feat/security-compat-hardening | cut -f1)
           test "$REMOTE_HEAD" = "$GITHUB_SHA"
           rm -rf .review
-          rm .github/workflows/apply-security-upgrade.yml
+          # Publish source only with this token. Workflow edits/cleanup are
+          # committed separately through the authorized GitHub connection.
+          git restore --source=HEAD --staged --worktree .github/workflows
           git add -A
           git diff --cached --check
           git config user.name 'github-actions[bot]'

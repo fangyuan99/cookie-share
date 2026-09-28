@@ -212,6 +212,7 @@
       errorVerifyNotRemoved: "Cookie verification failed: a previous cookie could not be removed.",
       errorVerifyFailed: "Cookie verification failed; the browser did not preserve a cookie or its attributes.",
       errorNoRecoveryBackup: "No recovery backup exists for this host.",
+      errorRouteNotFound: "Not Found: check that the Base URL includes the correct PATH_SECRET",
       errorRecordOtherSite:
         "This record belongs to another site ({{host}}); nothing has been changed.",
       errorAllCookiesExpired:
@@ -394,6 +395,7 @@
       errorVerifyNotRemoved: "Cookie 校验失败：无法删除原有的 Cookie。",
       errorVerifyFailed: "Cookie 校验失败：浏览器未保留某个 Cookie 或其属性。",
       errorNoRecoveryBackup: "当前网站没有可用的恢复备份。",
+      errorRouteNotFound: "Not Found：请检查 Base URL 是否包含正确的 PATH_SECRET",
       errorRecordOtherSite: "该记录属于其他站点（{{host}}），未做任何更改。",
       errorAllCookiesExpired: "该记录中的 Cookie 均已过期，未做任何更改。",
       errorBackupPasswordShort: "备份密码至少需要 12 位。",
@@ -968,6 +970,8 @@
         "Data deleted successfully": t("notificationCloudDeleted"),
         "Import completed": t("notificationImportCompleted"),
         Unauthorized: t("notificationAdminPermission"),
+        // The Worker answers any path outside PATH_SECRET with a bare 404.
+        "Not Found": t("errorRouteNotFound"),
         "Invalid encrypted payload": t("notificationDecryptFailed"),
         "Transport secret mismatch or corrupted payload": t(
           "notificationInvalidTransportSecret",
@@ -2284,17 +2288,24 @@
           opacity: 0.55 !important;
           cursor: not-allowed !important;
         }
-        .cookie-share-error {
-          color: var(--cs-danger) !important;
-          padding: 12px !important;
+        .cookie-share-error,
+        .cookie-share-empty {
+          padding: 14px 16px !important;
+          margin-bottom: 6px !important;
           text-align: center !important;
           font-size: 13px !important;
+          line-height: 1.5 !important;
+          word-break: break-word !important;
+          background: var(--cs-surface-secondary) !important;
+          border: 1px dashed var(--cs-divider) !important;
+          border-radius: var(--cs-radius) !important;
         }
         .cookie-share-empty {
           color: var(--cs-text-muted) !important;
-          padding: 12px !important;
-          text-align: center !important;
-          font-size: 13px !important;
+        }
+        .cookie-share-error {
+          color: var(--cs-danger) !important;
+          border: 1px solid var(--cs-error-border, var(--cs-danger)) !important;
         }
         .cookie-share-loading {
           display: flex !important;
@@ -3593,7 +3604,7 @@
         );
       } catch (error) {
         console.error("Error initializing cookies list:", error);
-        cookiesList.textContent = t('notificationListInitFailed', { message: error.message });
+        listState(cookiesList, 'error', t('notificationListInitFailed', { message: error.message }));
       }
     },
 
@@ -3607,7 +3618,8 @@
       cookiesList.append(localRoot, cloudRoot);
       const currentHost = window.location.hostname;
       const active = () => !controller.signal.aborted && cookiesList.isConnected;
-      localRoot.textContent = t('loadingCookies');
+      listState(localRoot, 'loading', t('loadingCookies'));
+      let localCount = 0; let cloudCount = 0; let cloudLoaded = false;
       const localTask = (async () => {
         const records = [];
         const keys = (await GM_listValues()).filter((key) => key.startsWith('cookie_share_local_'));
@@ -3624,11 +3636,11 @@
         }
         if (!active()) return;
         this.renderCookieRows(localRoot, records);
-        if (!records.length) localRoot.textContent = t('listEmptyLocalOnly', { host: currentHost });
-      })().catch((error) => { if (active()) localRoot.textContent = t('notificationLoadLocalFailed', { message: error.message }); });
+        localCount = records.length;
+      })().catch((error) => { if (active()) listState(localRoot, 'error', t('notificationLoadLocalFailed', { message: error.message })); });
       const cloudTask = (async () => {
         if (loadOnlyLocal || !customUrl) return;
-        cloudRoot.textContent = t('loadingCookies');
+        listState(cloudRoot, 'loading', t('loadingCookies'));
         if (!transportSecret) throw new Error(t('notificationNeedTransportSecret'));
         const data = await api.requestEncryptedJson({ method: 'GET',
           url: utils.validateUrl(customUrl) + '/list-cookies-by-host/' + encodeURIComponent(currentHost),
@@ -3640,8 +3652,13 @@
           if (COOKIE_ID_PATTERN.test(cookie.id)) unique.set(cookie.id, { id: cookie.id, url: cookie.url, source: 'cloud' });
         }
         this.renderCookieRows(cloudRoot, [...unique.values()]);
-      })().catch((error) => { if (active()) cloudRoot.textContent = t('notificationLoadCloudFailed', { message: error.message }); });
+        cloudCount = unique.size; cloudLoaded = true;
+      })().catch((error) => { if (active()) listState(cloudRoot, 'error', t('notificationLoadCloudFailed', { message: error.message })); });
       await Promise.all([localTask, cloudTask]);
+      // One empty message for both sources, placed before any cloud error.
+      if (active() && !localCount && !cloudCount && !localRoot.querySelector('.cookie-share-error')) {
+        listState(localRoot, 'empty', t(cloudLoaded ? 'listEmpty' : 'listEmptyLocalOnly', { host: currentHost }));
+      }
     },
 
     renderCookieRows(cookiesList, records) {
@@ -3912,6 +3929,20 @@
     }
     const data = new Uint8Array(await crypto.subtle.encrypt(params, key, new TextEncoder().encode(JSON.stringify(body))));
     return { version: 2, salt: transportCrypto.base64UrlEncode(salt), iv: transportCrypto.base64UrlEncode(iv), payload: transportCrypto.base64UrlEncode(data) };
+  }
+
+  function listState(root, kind, message) {
+    const box = document.createElement('div');
+    box.className = kind === 'loading' ? 'cookie-share-loading' : kind === 'error' ? 'cookie-share-error' : 'cookie-share-empty';
+    if (kind === 'loading') {
+      const spinner = document.createElement('div');
+      spinner.className = 'cookie-share-spinner';
+      box.appendChild(spinner);
+    }
+    const text = document.createElement('span');
+    text.textContent = message;
+    box.appendChild(text);
+    root.replaceChildren(box);
   }
 
   function applyCookieFilter(container) {

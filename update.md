@@ -1,3 +1,13 @@
+## 0.7.1 — 0.7.0 follow-up fixes
+
+- Fix "Duplicate cookies in record" when receiving: a host-only cookie and a same-name domain cookie (`example.com` vs `.example.com`) are now distinct; repeated cookies in records saved by older versions are de-duplicated (last copy wins) instead of rejected.
+- Skip expired cookies in old records instead of failing the whole import; accept records saved on a sibling subdomain when their domain cookies cover the current host; tolerate unrelated cookies the site sets during a switch; fall back when the script manager rejects the `partitionKey` list filter.
+- Fix typing in the panel while a page input had focus: keyboard, text and focus events no longer bubble out of the panel to page shortcuts/focus traps, and opening the panel moves focus into it.
+- Replace browser-native `prompt`/`confirm` with in-panel dialogs (pages can override the native ones); receive/switch asks once and reloads after verification.
+- Tidy the main panel: server and secret rows use the field + icon button layout again, localized all 0.7.0 strings (EN/ZH).
+- 修复接收时报 "Duplicate cookies in record"：同名的 host-only 与域 Cookie 视为不同 Cookie，旧版本记录中的重复项自动去重；旧记录中的过期 Cookie 自动跳过；子域名保存的记录可在同域主站使用。
+- 修复页面输入框有焦点时面板无法输入的问题；原生弹窗改为面板内对话框；接收只确认一次并在校验后自动刷新；恢复主面板布局并补全中英文文案。
+
 ## 0.7.0 — security and compatibility hardening
 
 - Preserve legacy v1 endpoints, local storage keys and existing D1 records by default; add documented opt-in device tokens/v2 and D1 payload encryption.

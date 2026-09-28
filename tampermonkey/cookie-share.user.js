@@ -500,6 +500,13 @@
   // Events the panel dispatches itself (e.g. after inserting text a page
   // swallowed); the untrusted-event guard lets exactly these through.
   const internalEvents = new WeakSet();
+  // See ensureShadowDOM: the host is contenteditable only while a panel text
+  // field has focus.
+  function setHostEditable(on) {
+    if (!shadowHost) return;
+    if (on) shadowHost.setAttribute('contenteditable', 'true');
+    else if (shadowHost.hasAttribute('contenteditable')) { shadowHost.removeAttribute('contenteditable'); shadowHost.replaceChildren(); }
+  }
   let shadowWrapper = null;
   let shadowReady = false;
   let stylesInjected = false;
@@ -542,14 +549,35 @@
         let panelFocus = null;
         let restoringFocus = false;
         const panelOpen = () => Boolean(shadowWrapper.querySelector('.cookie-share-overlay.visible, .cookie-share-confirm-layer'));
-        // Registered before the focus-hiding listener below, which stops these
-        // events from propagating any further.
+        // Registered before the focus-hiding listener below, which stops focus
+        // entering the panel from propagating any further.
         window.addEventListener('focusin', (event) => {
-          if (event.target === shadowHost) { panelFocus = shadowRoot.activeElement || panelFocus; return; }
+          if (event.target === shadowHost) { trackPanelFocus(); return; }
+          setHostEditable(false);
           if (restoringFocus || !panelOpen() || !panelFocus?.isConnected) return;
           restoringFocus = true;
           try { panelFocus.focus({ preventScroll: true }); } finally { restoringFocus = false; }
         }, true);
+        // Better still, keep pages from wanting the keys at all: "type
+        // anywhere" handlers skip keys aimed at an editable activeElement, so
+        // mark the host contenteditable while a panel text field is focused.
+        // Shadow content never inherits it; the host is only editable itself
+        // (stray keys land in its empty light DOM), hence the narrow window.
+        const editableTarget = (node) => node && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') &&
+          !node.readOnly && !node.disabled && typeof node.setRangeText === 'function' ? node : null;
+        function trackPanelFocus() {
+          panelFocus = shadowRoot.activeElement || panelFocus;
+          setHostEditable(Boolean(editableTarget(shadowRoot.activeElement)));
+        }
+        // Focus entering the panel is stopped at the window (see below), and
+        // focus moving within it never leaves the shadow root: track both.
+        shadowRoot.addEventListener('focusin', trackPanelFocus);
+        shadowRoot.addEventListener('focusout', (event) => { if (!event.relatedTarget) setHostEditable(false); });
+        // Removing a focused field (closing a panel or dialog) fires no
+        // focusout in every browser.
+        new MutationObserver(() => {
+          if (!editableTarget(shadowRoot.activeElement)) setHostEditable(false);
+        }).observe(shadowRoot, { childList: true, subtree: true });
         // Pages that keep their own input focused (refocus on blur, focus
         // traps) would pull focus back out of the panel. Hide focus moving
         // into the panel from them; the focus change itself still happens.
@@ -562,13 +590,9 @@
             }
           }, true);
         }
-        // If a page listener cancels the key/paste instead (it saw a
-        // non-editable target), insert the text ourselves.
-        const editableField = (event) => {
-          const field = event.composedPath()[0];
-          return field && (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') &&
-            !field.readOnly && !field.disabled && typeof field.setRangeText === 'function' ? field : null;
-        };
+        // If a page listener still cancels the key/paste, insert the text
+        // ourselves so the panel field gets what the user typed.
+        const editableField = (event) => editableTarget(event.composedPath()[0]);
         const insertText = (field, text) => {
           if (!text) return;
           field.setRangeText(text, field.selectionStart ?? field.value.length, field.selectionEnd ?? field.value.length, 'end');

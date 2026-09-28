@@ -53,7 +53,6 @@
 
   const CLOSE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
   const EDIT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
-  const KEY_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8"/><path d="m17 6 3 3"/><path d="m14 9 2 2"/></svg>`;
 
   // ===================== i18n =====================
   const LANGUAGES = {
@@ -567,7 +566,9 @@
           !node.readOnly && !node.disabled && typeof node.setRangeText === 'function' ? node : null;
         function trackPanelFocus() {
           panelFocus = shadowRoot.activeElement || panelFocus;
-          setHostEditable(Boolean(editableTarget(shadowRoot.activeElement)));
+          // Read-only config fields too: Enter/Space on them opens their editor.
+          const node = shadowRoot.activeElement;
+          setHostEditable(Boolean(node && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') && !node.disabled));
         }
         // Focus entering the panel is stopped at the window (see below), and
         // focus moving within it never leaves the shadow root: track both.
@@ -576,7 +577,7 @@
         // Removing a focused field (closing a panel or dialog) fires no
         // focusout in every browser.
         new MutationObserver(() => {
-          if (!editableTarget(shadowRoot.activeElement)) setHostEditable(false);
+          if (!shadowRoot.activeElement) setHostEditable(false);
         }).observe(shadowRoot, { childList: true, subtree: true });
         // Pages that keep their own input focused (refocus on blur, focus
         // traps) would pull focus back out of the panel. Hide focus moving
@@ -1435,6 +1436,7 @@
     } finally {
       uiOperationBusy = false;
       buttons.forEach((b, i) => { b.disabled = previous[i]; });
+      if (!buttons.includes(button)) button.disabled = false;
     }
   }
 
@@ -2033,22 +2035,34 @@
         .cookie-share-container .generate-btn:hover {
           background: var(--cs-btn-secondary-hover) !important;
         }
-        .cookie-share-container .generate-btn.cs-icon-btn {
-          width: 40px !important;
-          min-width: 40px !important;
-          padding: 0 !important;
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-        }
-        .cookie-share-container .cs-icon-btn svg {
-          width: 16px !important;
-          height: 16px !important;
-          display: block !important;
+        .cookie-share-container .cs-config-wrap {
+          position: relative !important;
+          flex: 1 !important;
+          min-width: 0 !important;
+          display: flex !important;
         }
         .cookie-share-container input.cs-config-field {
           cursor: pointer !important;
           min-width: 0 !important;
+          padding-right: 36px !important;
+        }
+        .cookie-share-container input.cs-config-field:hover {
+          border-color: var(--cs-input-focus-border) !important;
+        }
+        .cookie-share-container .cs-config-icon {
+          position: absolute !important;
+          right: 12px !important;
+          top: 50% !important;
+          transform: translateY(-50%) !important;
+          display: flex !important;
+          color: var(--cs-text-muted) !important;
+          opacity: 0.7 !important;
+          pointer-events: none !important;
+        }
+        .cookie-share-container .cs-config-icon svg {
+          width: 14px !important;
+          height: 14px !important;
+          display: block !important;
         }
 
         .cookie-share-container .action-buttons {
@@ -3196,36 +3210,43 @@
 
       // Saved addresses and secrets are never written back into inputs: the
       // read-only fields only show whether a value is configured, and clicking
-      // them (or the gear button) opens an in-shadow dialog to replace it.
+      // them (or Enter/Space) opens an in-shadow dialog to replace it.
+      const configField = (input, labelKey, edit) => {
+        input.readOnly = true;
+        input.title = t(labelKey);
+        input.setAttribute('aria-label', t(labelKey));
+        input.onclick = edit;
+        input.onkeydown = (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          edit();
+        };
+        const wrap = document.createElement('div');
+        wrap.className = 'cs-config-wrap';
+        const icon = document.createElement('span');
+        icon.className = 'cs-config-icon';
+        icon.innerHTML = EDIT_ICON_SVG;
+        wrap.append(input, icon);
+        return wrap;
+      };
       const serverInput = document.createElement("input");
       serverInput.type = "text";
       serverInput.className = "cookie-id-input cs-config-field";
       serverInput.value = '';
-      serverInput.readOnly = true;
-      serverInput.tabIndex = -1;
       const updateServerPlaceholder = () => {
         serverInput.placeholder = getServerUrl() ? t('placeholderServerConfigured') : t('placeholderServerAddress');
       };
       updateServerPlaceholder();
-      const editServer = () => runWithButtonLoading(configureServerBtn, async () => {
+      const editServer = () => runWithButtonLoading(serverInput, async () => {
         if (await configureServer()) updateServerPlaceholder();
       });
-      serverInput.onclick = editServer;
-
-      const configureServerBtn = document.createElement('button');
-      configureServerBtn.className = 'generate-btn cs-icon-btn';
-      configureServerBtn.innerHTML = EDIT_ICON_SVG;
-      configureServerBtn.title = t('configureServerLabel');
-      configureServerBtn.setAttribute('aria-label', t('configureServerLabel'));
-      configureServerBtn.onclick = editServer;
 
       const showListBtn = document.createElement("button");
       showListBtn.className = "generate-btn";
       showListBtn.textContent = t("showListButton");
       showListBtn.onclick = () => ui.showCookieList();
 
-      serverContainer.appendChild(serverInput);
-      serverContainer.appendChild(configureServerBtn);
+      serverContainer.appendChild(configField(serverInput, 'configureServerLabel', editServer));
       serverContainer.appendChild(showListBtn);
 
       // Transport secret input
@@ -3240,26 +3261,15 @@
       transportInput.id = "cookieShareTransportSecret";
       transportInput.className = "cookie-id-input cs-config-field";
       transportInput.value = '';
-      transportInput.readOnly = true;
-      transportInput.tabIndex = -1;
       const updateSecretPlaceholder = () => {
         transportInput.placeholder = getTransportSecret() ? t('placeholderSecretConfigured') : t('placeholderTransportSecret');
       };
       updateSecretPlaceholder();
-      const editSecret = () => runWithButtonLoading(toggleTransportBtn, async () => {
+      const editSecret = () => runWithButtonLoading(transportInput, async () => {
         if (await configureSecret()) updateSecretPlaceholder();
       });
-      transportInput.onclick = editSecret;
 
-      const toggleTransportBtn = document.createElement("button");
-      toggleTransportBtn.className = "generate-btn cs-icon-btn";
-      toggleTransportBtn.innerHTML = KEY_ICON_SVG;
-      toggleTransportBtn.title = t('configureSecretLabel');
-      toggleTransportBtn.setAttribute('aria-label', t('configureSecretLabel'));
-      toggleTransportBtn.onclick = editSecret;
-
-      transportContainer.appendChild(transportInput);
-      transportContainer.appendChild(toggleTransportBtn);
+      transportContainer.appendChild(configField(transportInput, 'configureSecretLabel', editSecret));
 
       // Action buttons
       const actionButtons = document.createElement("div");

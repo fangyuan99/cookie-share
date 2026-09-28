@@ -312,9 +312,17 @@ test('panel keystrokes and dialogs stay inside the shadow root', () => {
   assert.ok(source.includes('shadowRoot.addEventListener(type, (event) => event.stopPropagation())'));
   // Focus a page moves onto its own input while the panel is open is handed back.
   assert.ok(source.includes('panelFocus.focus({ preventScroll: true })'));
-  assert.ok(source.includes("if (event.target === shadowHost) { panelFocus = shadowRoot.activeElement"));
+  assert.ok(source.includes("if (event.target === shadowHost) { trackPanelFocus(); return; }"));
+  // "Type anywhere" handlers must see an editable activeElement, but only while a panel text field has focus.
+  assert.ok(source.includes("shadowRoot.addEventListener('focusin', trackPanelFocus)"));
+  assert.ok(source.includes("shadowHost.setAttribute('contenteditable', 'true')"));
+  assert.ok(source.includes("}).observe(shadowRoot, { childList: true, subtree: true })"));
+  // The read-only config fields are the only way in: no duplicate icon buttons, and reachable by keyboard.
+  assert.ok(!source.includes('cs-icon-btn'));
+  assert.ok(!/(serverInput|transportInput)\.tabIndex = -1/.test(source));
+  assert.ok(source.includes("if (event.key !== 'Enter' && event.key !== ' ') return;"));
   assert.equal(/window\.(prompt|confirm)\(|nativePrompt|nativeConfirm/.test(source), false);
-  assert.match(source, /@version\s+0\.7\.1/);
+  assert.match(source, /@version\s+0\.7\.2/);
 });
 
 test('a credential with 100 record IDs stays within the D1 parameter limit', async () => {

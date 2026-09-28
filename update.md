@@ -1,3 +1,9 @@
+## 0.7.2 — panel input and layout follow-ups
+
+- Fix keystrokes typed in the panel also appearing in ChatGPT's composer: while a panel field has focus the script host is marked editable, so the page's "type anywhere" handler leaves the key alone. Focus moves inside the panel are tracked too, and the flag is cleared when the field or panel goes away.
+- Base URL and Transport Secret are edited by clicking their field (or Enter/Space); the duplicate icon buttons next to them are gone, and a pencil inside the field hints that it is editable.
+- 修复在面板中输入时 ChatGPT 输入框也同时出现同样内容的问题；Base URL 与 Transport Secret 改为直接点击输入框（或按 Enter/空格）编辑，移除重复的图标按钮。
+
 ## 0.7.1 — 0.7.0 follow-up fixes
 
 - Fix "Duplicate cookies in record" when receiving: a host-only cookie and a same-name domain cookie (`example.com` vs `.example.com`) are now distinct; repeated cookies in records saved by older versions are de-duplicated (last copy wins) instead of rejected.

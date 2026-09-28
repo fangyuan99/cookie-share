@@ -495,6 +495,9 @@
   // ===================== Shadow DOM =====================
   let shadowHost = null;
   let shadowRoot = null;
+  // Events the panel dispatches itself (e.g. after inserting text a page
+  // swallowed); the untrusted-event guard lets exactly these through.
+  const internalEvents = new WeakSet();
   let shadowWrapper = null;
   let shadowReady = false;
   let stylesInjected = false;
@@ -515,7 +518,7 @@
         // page events are rejected before any privileged handler runs.
         for (const type of ['click', 'input', 'change', 'submit', 'keydown', 'pointerdown', 'pointerup']) {
           shadowRoot.addEventListener(type, (event) => {
-            if (!event.isTrusted) { event.preventDefault(); event.stopImmediatePropagation(); }
+            if (!event.isTrusted && !internalEvents.has(event)) { event.preventDefault(); event.stopImmediatePropagation(); }
           }, { capture: true });
         }
         // A closed shadow root retargets events to the host <div>, so page-level
@@ -527,6 +530,24 @@
           'focusin', 'focusout']) {
           shadowRoot.addEventListener(type, (event) => event.stopPropagation());
         }
+        // document.activeElement is always the (non-editable) host, so chat
+        // apps and editors "helpfully" call focus() on their own input when a
+        // key or paste arrives, and the text lands on the page. While a panel
+        // is open its overlay covers the page, so such a focus change can only
+        // be programmatic: hand focus straight back to the panel field. This
+        // runs synchronously inside the page's focus() call, before the key's
+        // default action, so the character still reaches the panel.
+        let panelFocus = null;
+        let restoringFocus = false;
+        const panelOpen = () => Boolean(shadowWrapper.querySelector('.cookie-share-overlay.visible, .cookie-share-confirm-layer'));
+        // Registered before the focus-hiding listener below, which stops these
+        // events from propagating any further.
+        window.addEventListener('focusin', (event) => {
+          if (event.target === shadowHost) { panelFocus = shadowRoot.activeElement || panelFocus; return; }
+          if (restoringFocus || !panelOpen() || !panelFocus?.isConnected) return;
+          restoringFocus = true;
+          try { panelFocus.focus({ preventScroll: true }); } finally { restoringFocus = false; }
+        }, true);
         // Pages that keep their own input focused (refocus on blur, focus
         // traps) would pull focus back out of the panel. Hide focus moving
         // into the panel from them; the focus change itself still happens.
@@ -539,6 +560,33 @@
             }
           }, true);
         }
+        // If a page listener cancels the key/paste instead (it saw a
+        // non-editable target), insert the text ourselves.
+        const editableField = (event) => {
+          const field = event.composedPath()[0];
+          return field && (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') &&
+            !field.readOnly && !field.disabled && typeof field.setRangeText === 'function' ? field : null;
+        };
+        const insertText = (field, text) => {
+          if (!text) return;
+          field.setRangeText(text, field.selectionStart ?? field.value.length, field.selectionEnd ?? field.value.length, 'end');
+          const input = new Event('input', { bubbles: true, composed: true });
+          internalEvents.add(input);
+          field.dispatchEvent(input);
+        };
+        shadowRoot.addEventListener('keydown', (event) => {
+          if (!event.isTrusted || !event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey ||
+              event.key.length !== 1) return;
+          const field = editableField(event);
+          if (field) insertText(field, event.key);
+        });
+        shadowRoot.addEventListener('paste', (event) => {
+          if (!event.isTrusted || !event.defaultPrevented) return;
+          const field = editableField(event);
+          if (!field) return;
+          const text = event.clipboardData?.getData('text/plain') || '';
+          insertText(field, field.tagName === 'INPUT' ? text.replace(/[\r\n]+/g, ' ') : text);
+        });
       }
       if (!shadowHost.isConnected) {
         document.body.appendChild(shadowHost);

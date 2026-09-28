@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.7.0
+// @version      0.7.1
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -52,6 +52,8 @@
   };
 
   const CLOSE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+  const EDIT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+  const KEY_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8"/><path d="m17 6 3 3"/><path d="m14 9 2 2"/></svg>`;
 
   // ===================== i18n =====================
   const LANGUAGES = {
@@ -120,6 +122,7 @@
       settingsConfigTransferHint:
         "Normal exports exclude backend addresses, credentials and cookie records. Use encrypted backup to migrate credentials.",
       settingsExportConfigButton: "Export Config",
+      settingsEncryptedBackupButton: "Encrypted backup",
       settingsImportConfigButton: "Import Config",
       settingsTheme: "Theme",
       settingsLanguage: "Language",
@@ -198,6 +201,83 @@
       apiErrorTimeout: "Request timeout",
       apiErrorInvalidData: "Invalid data format",
       apiErrorNoImport: "No cookies were successfully imported",
+      errorCookieTimeout: "Cookie operation timed out; outcome uncertain. Recovery backup retained.",
+      errorCookieCount: "Expected 1–1000 cookies; nothing has been changed.",
+      errorCookieInvalid: "Invalid cookie data; nothing has been changed.",
+      errorCookieDomainMismatch: "Cookie domain does not match this site; nothing has been changed.",
+      errorSecureNeedsHttps: "Secure cookies require an HTTPS page.",
+      errorCookieBusy: "Another cookie operation is in progress.",
+      errorCookieBusyOtherTab: "Another tab is changing cookies for this origin.",
+      errorCookieMutationBusy: "Cookie mutation in progress; retry after it finishes.",
+      errorVerifyNotRemoved: "Cookie verification failed: a previous cookie could not be removed.",
+      errorVerifyFailed: "Cookie verification failed; the browser did not preserve a cookie or its attributes.",
+      errorNoRecoveryBackup: "No recovery backup exists for this host.",
+      errorRecordOtherSite:
+        "This record belongs to another site ({{host}}); nothing has been changed.",
+      errorAllCookiesExpired:
+        "All cookies in this record have expired; nothing has been changed.",
+      errorBackupPasswordShort:
+        "The backup password must be at least 12 characters.",
+      errorImportCancelled: "Import cancelled",
+      errorDeviceTokenFormat: "Expected a server-issued random device token.",
+      notificationBusy: "Another operation is in progress",
+      notificationOperationFailed: "Operation failed",
+      notificationCookiesVerified: "Cookies written and verified, reloading…",
+      notificationServerSaved: "Backend address saved",
+      notificationSecretSaved: "Transport secret saved",
+      notificationDeviceTokenSaved: "Device token saved",
+      notificationDeviceTokenRemoved: "Device token removed",
+      saveLocallyButton: "Save Locally",
+      restoreLocalButton: "Restore Local Account",
+      configureButton: "Configure",
+      configureServerLabel: "Configure backend address",
+      configureSecretLabel: "Configure transport secret",
+      placeholderServerConfigured: "Backend configured (hidden)",
+      placeholderSecretConfigured: "Transport secret configured (hidden)",
+      menuConfigureServer: "Configure backend",
+      menuConfigureSecret: "Configure transport secret",
+      menuConfigureDeviceToken: "Configure device token",
+      menuRestoreBackup: "Restore recovery backup",
+      saveButton: "Save",
+      continueButton: "Continue",
+      overwriteButton: "Overwrite",
+      switchAccountButton: "Switch",
+      restoreButton: "Restore",
+      dialogServerTitle: "Backend Address",
+      dialogServerMessage:
+        "Enter the backend URL including the secret path. The saved address is never shown; leave empty to keep it.",
+      dialogSecretTitle: "Transport Secret",
+      dialogSecretMessage:
+        "Enter the transport secret. The saved secret is never shown; leave empty to keep it.",
+      dialogDeviceTokenTitle: "Device Token",
+      dialogDeviceTokenMessage:
+        "Enter the device token issued by your backend. Leave empty to remove the saved token.",
+      dialogInsecureHttpTitle: "Insecure Connection",
+      dialogInsecureHttpMessage:
+        "HTTP exposes traffic and credentials. Continue only on a trusted private network?",
+      dialogBackupPasswordTitle: "Encrypted Backup",
+      dialogBackupPasswordNew:
+        "Choose a password for this backup (at least 12 characters). It is required to import the backup.",
+      dialogBackupPasswordEnter: "Enter the password of this encrypted backup.",
+      dialogImportSensitiveTitle: "Import Credentials",
+      dialogImportSensitiveMessage:
+        "This configuration changes your backend address or credentials. Import it only if you trust its source. Continue?",
+      dialogOverwriteTitle: "Overwrite Record",
+      dialogOverwriteCloudMessage:
+        "A cloud record with ID {{id}} already exists. Overwrite it?",
+      dialogOverwriteLocalMessage:
+        "A local record with ID {{id}} already exists. Overwrite it?",
+      dialogSameSiteTitle: "Old Backend",
+      dialogSameSiteMessage:
+        "This backend cannot keep an unspecified SameSite attribute. Save those cookies as SameSite=Lax? Upgrading the backend preserves them exactly.",
+      dialogReceiveTitle: "Switch Account",
+      dialogReceiveMessage:
+        "Replace this site's cookies with record {{id}}? A recovery backup is saved first, and the page reloads once the cookies are verified.",
+      dialogRestoreBackupTitle: "Restore Backup",
+      dialogRestoreBackupMessage:
+        "Restore the recovery backup for this site? The page reloads afterwards.",
+      errorPartitionedUnsupported:
+        "This backend cannot keep partitioned cookies; upgrade the backend first.",
     },
     zh: {
       cookieShareTitle: "Cookie Share",
@@ -233,6 +313,7 @@
       settingsConfigTransferHint:
         "普通导出不含后台地址、凭据和 Cookie 记录；迁移凭据请使用加密备份。",
       settingsExportConfigButton: "导出配置",
+      settingsEncryptedBackupButton: "加密备份凭据",
       settingsImportConfigButton: "导入配置",
       settingsTheme: "主题",
       settingsLanguage: "语言",
@@ -302,6 +383,68 @@
       apiErrorTimeout: "请求超时",
       apiErrorInvalidData: "无效的数据格式",
       apiErrorNoImport: "未能成功导入任何 Cookie",
+      errorCookieTimeout: "Cookie 操作超时，结果未知。已保留恢复备份。",
+      errorCookieCount: "记录需包含 1–1000 个 Cookie，未做任何修改。",
+      errorCookieInvalid: "Cookie 数据无效，未做任何修改。",
+      errorCookieDomainMismatch: "Cookie 域名与当前网站不匹配，未做任何修改。",
+      errorSecureNeedsHttps: "Secure Cookie 需要在 HTTPS 页面中导入。",
+      errorCookieBusy: "另一个 Cookie 操作正在进行中。",
+      errorCookieBusyOtherTab: "另一个标签页正在修改此站点的 Cookie。",
+      errorCookieMutationBusy: "Cookie 正在修改中，请稍后重试。",
+      errorVerifyNotRemoved: "Cookie 校验失败：无法删除原有的 Cookie。",
+      errorVerifyFailed: "Cookie 校验失败：浏览器未保留某个 Cookie 或其属性。",
+      errorNoRecoveryBackup: "当前网站没有可用的恢复备份。",
+      errorRecordOtherSite: "该记录属于其他站点（{{host}}），未做任何更改。",
+      errorAllCookiesExpired: "该记录中的 Cookie 均已过期，未做任何更改。",
+      errorBackupPasswordShort: "备份密码至少需要 12 位。",
+      errorImportCancelled: "已取消导入",
+      errorDeviceTokenFormat: "设备令牌格式不正确，请使用后台签发的随机令牌。",
+      notificationBusy: "正在执行其他操作",
+      notificationOperationFailed: "操作失败",
+      notificationCookiesVerified: "Cookie 已写入并核对，正在刷新…",
+      notificationServerSaved: "后台地址已保存",
+      notificationSecretSaved: "传输密钥已保存",
+      notificationDeviceTokenSaved: "设备令牌已保存",
+      notificationDeviceTokenRemoved: "设备令牌已移除",
+      saveLocallyButton: "保存到本地",
+      restoreLocalButton: "恢复本地账号",
+      configureButton: "设置",
+      configureServerLabel: "设置后台地址",
+      configureSecretLabel: "设置传输密钥",
+      placeholderServerConfigured: "后台已配置（已隐藏）",
+      placeholderSecretConfigured: "传输密钥已配置（已隐藏）",
+      menuConfigureServer: "设置后台",
+      menuConfigureSecret: "设置传输密钥",
+      menuConfigureDeviceToken: "设置设备令牌",
+      menuRestoreBackup: "恢复备份",
+      saveButton: "保存",
+      continueButton: "继续",
+      overwriteButton: "覆盖",
+      switchAccountButton: "切换",
+      restoreButton: "恢复",
+      dialogServerTitle: "后台地址",
+      dialogServerMessage: "请输入包含秘密路径的后台地址。已保存的地址不会显示；留空则保持不变。",
+      dialogSecretTitle: "传输密钥",
+      dialogSecretMessage: "请输入传输密钥。已保存的密钥不会显示；留空则保持不变。",
+      dialogDeviceTokenTitle: "设备令牌",
+      dialogDeviceTokenMessage: "请输入后台签发的设备令牌。留空将移除已保存的令牌。",
+      dialogInsecureHttpTitle: "不安全的连接",
+      dialogInsecureHttpMessage: "HTTP 会暴露通信内容和凭据，仅建议在可信内网使用。确定继续？",
+      dialogBackupPasswordTitle: "加密备份",
+      dialogBackupPasswordNew: "请为此备份设置密码（至少 12 位），导入时需要输入。",
+      dialogBackupPasswordEnter: "请输入此加密备份的密码。",
+      dialogImportSensitiveTitle: "导入凭据",
+      dialogImportSensitiveMessage: "此配置会更改后台地址或凭据，请确认来源可信。是否继续？",
+      dialogOverwriteTitle: "覆盖记录",
+      dialogOverwriteCloudMessage: "云端已存在 ID 为 {{id}} 的记录，是否覆盖？",
+      dialogOverwriteLocalMessage: "本地已存在 ID 为 {{id}} 的记录，是否覆盖？",
+      dialogSameSiteTitle: "旧版后台",
+      dialogSameSiteMessage: "当前后台无法保存未指定的 SameSite 属性，是否以 SameSite=Lax 保存？升级后台后可完整保留。",
+      dialogReceiveTitle: "切换账号",
+      dialogReceiveMessage: "使用记录 {{id}} 替换本站点的 Cookie？将先保存恢复备份，Cookie 核对无误后自动刷新页面。",
+      dialogRestoreBackupTitle: "恢复备份",
+      dialogRestoreBackupMessage: "恢复此站点的备份？完成后将刷新页面。",
+      errorPartitionedUnsupported: "当前后台无法保存分区 Cookie，请先升级后台。",
     },
   };
 
@@ -374,6 +517,27 @@
           shadowRoot.addEventListener(type, (event) => {
             if (!event.isTrusted) { event.preventDefault(); event.stopImmediatePropagation(); }
           }, { capture: true });
+        }
+        // A closed shadow root retargets events to the host <div>, so page-level
+        // "type anywhere" shortcuts and focus managers think the user is typing
+        // on a non-editable element and steal focus or swallow keys. Keep
+        // keyboard, text and focus events from bubbling out of the panel.
+        for (const type of ['keydown', 'keyup', 'keypress', 'beforeinput', 'input', 'change',
+          'compositionstart', 'compositionupdate', 'compositionend', 'paste', 'copy', 'cut',
+          'focusin', 'focusout']) {
+          shadowRoot.addEventListener(type, (event) => event.stopPropagation());
+        }
+        // Pages that keep their own input focused (refocus on blur, focus
+        // traps) would pull focus back out of the panel. Hide focus moving
+        // into the panel from them; the focus change itself still happens.
+        for (const type of ['focus', 'focusin', 'blur', 'focusout']) {
+          window.addEventListener(type, (event) => {
+            if (!event.isTrusted) return;
+            const entering = type === 'focus' || type === 'focusin';
+            if (entering ? event.target === shadowHost : event.relatedTarget === shadowHost) {
+              event.stopImmediatePropagation();
+            }
+          }, true);
         }
       }
       if (!shadowHost.isConnected) {
@@ -469,7 +633,7 @@
   function cookieCall(method, details) {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        const error = new Error('Cookie operation timed out; outcome uncertain. Recovery backup retained.');
+        const error = new Error(t('errorCookieTimeout'));
         error.uncertain = true;
         reject(error);
       }, COOKIE_OPERATION_TIMEOUT_MS);
@@ -485,10 +649,30 @@
     });
   }
 
+  // Browsers keep a host-only cookie and a same-name domain cookie side by side
+  // (e.g. `example.com` vs `.example.com`), so hostOnly is part of the identity.
+  function isHostOnlyCookie(cookie) {
+    return typeof cookie.hostOnly === 'boolean' ? cookie.hostOnly : !String(cookie.domain || '').startsWith('.');
+  }
+
   function cookieIdentity(cookie) {
+    const partitioned = Boolean(cookie.partitionKey?.topLevelSite);
     return JSON.stringify([cookie.name, cookie.domain.replace(/^\./, '').toLowerCase(),
-      cookie.path || '/', cookie.partitionKey?.topLevelSite || '',
-      cookie.partitionKey?.hasCrossSiteAncestor ?? null, cookie.firstPartyDomain || '']);
+      isHostOnlyCookie(cookie), cookie.path || '/', cookie.partitionKey?.topLevelSite || '',
+      partitioned ? Boolean(cookie.partitionKey.hasCrossSiteAncestor) : null, cookie.firstPartyDomain || '']);
+  }
+
+  // Older script managers reject the `partitionKey` list filter; retry without
+  // it so sending/receiving keeps working there (partitioned cookies are then
+  // simply not visible, as before).
+  async function listCookies(details) {
+    try {
+      return await cookieCall('list', details);
+    } catch (error) {
+      if (error.uncertain || !('partitionKey' in details)) throw error;
+      const { partitionKey, ...rest } = details;
+      return cookieCall('list', rest);
+    }
   }
 
   function cookieUrl(cookie) {
@@ -499,37 +683,35 @@
 
   function validateCookieImport(cookies, sourceUrl) {
     if (!Array.isArray(cookies) || !cookies.length || cookies.length > 1000) {
-      throw new Error('Expected 1–1000 cookies; nothing has been changed.');
+      throw new Error(t('errorCookieCount'));
     }
     const host = window.location.hostname.toLowerCase();
-    if (sourceUrl && new URL(sourceUrl).hostname.toLowerCase() !== host) {
-      throw new Error('This record belongs to another site; nothing has been changed.');
-    }
-    const seen = new Set();
+    const sourceHost = sourceUrl ? new URL(sourceUrl).hostname.toLowerCase() : '';
+    const seen = new Map();
     const now = Date.now() / 1000;
-    return cookies.map((input) => {
+    let expired = 0;
+    const validated = cookies.map((input) => {
       if (!input || typeof input.name !== 'string' || !input.name ||
           typeof input.value !== 'string' || typeof input.domain !== 'string' ||
           input.name.length > 1024 || input.value.length > 16384) {
-        throw new Error('Invalid cookie data; nothing has been changed.');
+        throw new Error(t('errorCookieInvalid'));
       }
       const domain = input.domain.replace(/^\./, '').toLowerCase();
       const hostOnly = typeof input.hostOnly === 'boolean' ? input.hostOnly : !input.domain.startsWith('.');
       if (!domain || (hostOnly ? host !== domain : host !== domain && !host.endsWith('.' + domain))) {
-        throw new Error('Cookie domain does not match this site; nothing has been changed.');
+        throw new Error(t('errorCookieDomainMismatch'));
       }
       const cookie = { ...input, domain, hostOnly, path: input.path || '/' };
       if (!cookie.path.startsWith('/') || /[\x00-\x1f\x7f;\r\n]/.test(cookie.path) ||
           /[\x00-\x20\x7f;=]/.test(cookie.name)) throw new Error('Invalid cookie name/path');
       const sameSite = utils.normalizeSameSiteFromBrowser(cookie.sameSite);
       cookie.sameSite = sameSite;
-      if (cookie.secure && window.location.protocol !== 'https:') throw new Error('Secure cookies require an HTTPS page.');
+      if (cookie.secure && window.location.protocol !== 'https:') throw new Error(t('errorSecureNeedsHttps'));
       if (sameSite === 'none' && !cookie.secure) throw new Error('SameSite=None requires Secure.');
       if (cookie.name.startsWith('__Secure-') && !cookie.secure) throw new Error('Invalid __Secure- cookie');
       if (cookie.name.startsWith('__Host-') && (!cookie.secure || !hostOnly || cookie.path !== '/')) throw new Error('Invalid __Host- cookie');
-      if (!cookie.session && cookie.expirationDate != null &&
-          (!Number.isFinite(cookie.expirationDate) || cookie.expirationDate <= now)) {
-        throw new Error('The record contains expired cookies. Review it before replacing this session.');
+      if (!cookie.session && cookie.expirationDate != null && !Number.isFinite(cookie.expirationDate)) {
+        throw new Error('Invalid cookie expiry; nothing has been changed.');
       }
       if (cookie.partitionKey != null) {
         if (typeof cookie.partitionKey !== 'object' || typeof cookie.partitionKey.topLevelSite !== 'string') throw new Error('Invalid partition key');
@@ -537,20 +719,36 @@
         if (!['https:', 'http:'].includes(site.protocol)) throw new Error('Invalid partition site');
         cookie.partitionKey = { ...cookie.partitionKey };
       }
-      const id = cookieIdentity(cookie);
-      if (seen.has(id)) throw new Error('Duplicate cookies in record');
-      seen.add(id);
       return cookie;
     });
+    // The source site only has to be covered by the cookies' own scope, so a
+    // record saved on www.example.com still applies on example.com when its
+    // cookies are set for .example.com (the pre-0.7 behaviour).
+    if (sourceHost && sourceHost !== host && !validated.some((cookie) => !cookie.hostOnly &&
+        (sourceHost === cookie.domain || sourceHost.endsWith('.' + cookie.domain)))) {
+      throw new Error(t('errorRecordOtherSite', { host: sourceHost }));
+    }
+    for (const cookie of validated) {
+      // Old records often carry a few expired cookies; skip them instead of
+      // refusing the whole record (the browser would drop them anyway).
+      if (!cookie.session && cookie.expirationDate != null && cookie.expirationDate <= now) { expired++; continue; }
+      // Records written by older versions may repeat a cookie; the last copy
+      // wins, matching what the browser would have kept.
+      seen.set(cookieIdentity(cookie), cookie);
+    }
+    if (!seen.size) throw new Error(t('errorAllCookiesExpired'));
+    const result = [...seen.values()];
+    result.skippedExpired = expired;
+    return result;
   }
 
   async function withCookieMutation(task) {
-    if (cookieMutationBusy) throw new Error('Another cookie operation is in progress.');
+    if (cookieMutationBusy) throw new Error(t('errorCookieBusy'));
     cookieMutationBusy = true;
     try {
       if (navigator.locks?.request) {
         return await navigator.locks.request('cookie-share-mutation', { ifAvailable: true }, (lock) => {
-          if (!lock) throw new Error('Another tab is changing cookies for this origin.');
+          if (!lock) throw new Error(t('errorCookieBusyOtherTab'));
           return task();
         });
       }
@@ -560,8 +758,8 @@
 
   const cookieManager = {
     async getAll(allowDuringMutation = false) {
-      if (cookieMutationBusy && !allowDuringMutation) throw new Error('Cookie mutation in progress; retry after it finishes.');
-      const cookies = await cookieCall('list', { url: window.location.href, partitionKey: {} });
+      if (cookieMutationBusy && !allowDuringMutation) throw new Error(t('errorCookieMutationBusy'));
+      const cookies = await listCookies({ url: window.location.href, partitionKey: {} });
       return cookies.map((cookie) => ({ ...cookie, path: cookie.path || '/',
         sameSite: utils.normalizeSameSiteFromBrowser(cookie.sameSite) }));
     },
@@ -571,7 +769,7 @@
         url: cookieUrl(cookie), name: cookie.name, value: cookie.value,
         path: cookie.path || '/', secure: Boolean(cookie.secure), httpOnly: Boolean(cookie.httpOnly),
       };
-      if (!cookie.hostOnly) details.domain = cookie.domain;
+      if (!isHostOnlyCookie(cookie)) details.domain = cookie.domain;
       const sameSite = utils.normalizeSameSiteForSet(cookie.sameSite);
       if (sameSite !== undefined) details.sameSite = sameSite;
       if (!cookie.session && cookie.expirationDate != null) details.expirationDate = cookie.expirationDate;
@@ -596,28 +794,35 @@
         queries.set(JSON.stringify(query), query);
       }
       for (const query of queries.values()) {
-        for (const c of await cookieCall('list', query)) {
+        for (const c of await listCookies(query)) {
           result.set(cookieIdentity(c), { ...c, sameSite: utils.normalizeSameSiteFromBrowser(c.sameSite) });
         }
       }
       return [...result.values()];
     },
 
-    async verify(expected, scope = expected) {
+    // Checks that every expected cookie is present with its attributes and every
+    // `removed` cookie is gone. Unrelated cookies the site sets meanwhile (for
+    // example analytics) are tolerated instead of failing the whole switch.
+    async verify(expected, scope = expected, removed = []) {
       const actual = await this.readScope(scope);
       const actualMap = new Map(actual.map((c) => [cookieIdentity(c), c]));
-      if (actual.length !== expected.length) throw new Error('Cookie verification failed: unexpected or missing cookies.');
+      const expectedIds = new Set(expected.map(cookieIdentity));
+      for (const cookie of removed) {
+        const id = cookieIdentity(cookie);
+        if (!expectedIds.has(id) && actualMap.has(id)) throw new Error(t('errorVerifyNotRemoved'));
+      }
       for (const cookie of expected) {
         const observed = actualMap.get(cookieIdentity(cookie));
         if (!observed || observed.value !== cookie.value ||
-            Boolean(observed.hostOnly) !== Boolean(cookie.hostOnly) ||
+            isHostOnlyCookie(observed) !== isHostOnlyCookie(cookie) ||
             Boolean(observed.secure) !== Boolean(cookie.secure) ||
             Boolean(observed.httpOnly) !== Boolean(cookie.httpOnly) ||
             utils.normalizeSameSiteFromBrowser(observed.sameSite) !== utils.normalizeSameSiteFromBrowser(cookie.sameSite) ||
             (cookie.session === true && observed.session !== true) ||
             (!cookie.session && cookie.expirationDate != null &&
              (!Number.isFinite(observed.expirationDate) || Math.abs(observed.expirationDate - cookie.expirationDate) > 2))) {
-          throw new Error('Cookie verification failed; the browser did not preserve a cookie or its attributes.');
+          throw new Error(t('errorVerifyFailed'));
         }
       }
     },
@@ -640,7 +845,7 @@
       try {
         for (const cookie of snapshot) await this.remove(cookie);
         for (const cookie of cookies) await this.set(cookie);
-        await this.verify(cookies, [...snapshot, ...cookies]);
+        await this.verify(cookies, [...snapshot, ...cookies], snapshot);
         if (!retainBackup) await GM_deleteValue(this.backupKey());
         return cookies.length;
       } catch (error) {
@@ -648,7 +853,7 @@
         try {
           for (const cookie of await this.readScope([...snapshot, ...cookies])) await this.remove(cookie);
           for (const cookie of snapshot) await this.set(cookie);
-          await this.verify(snapshot, [...snapshot, ...cookies]);
+          await this.verify(snapshot, [...snapshot, ...cookies], cookies);
         } catch (restoreError) {
           throw new Error(`${error.message}; RESTORE FAILED: ${restoreError.message}. Recovery backup retained.`);
         }
@@ -662,7 +867,7 @@
 
     async restoreBackup() {
       const raw = await GM_getValue(this.backupKey());
-      if (!raw) throw new Error('No recovery backup exists for this host.');
+      if (!raw) throw new Error(t('errorNoRecoveryBackup'));
       const backup = JSON.parse(raw);
       if (backup.url !== window.location.origin || !Array.isArray(backup.cookies)) throw new Error('Invalid backup origin/data');
       // Preserve the original backup if a manual recovery attempt fails.
@@ -825,9 +1030,10 @@
     },
 
     async exportSensitive() {
-      const password = nativePrompt('Choose a backup password (12+ characters) / 备份密码（至少12位）', '');
+      const password = await dialogs.prompt({ title: t('dialogBackupPasswordTitle'), message: t('dialogBackupPasswordNew'),
+        confirmText: t('confirmButton'), input: { type: 'password' } });
       if (password === null) return null;
-      if (password.length < 12) throw new Error('Backup password is too short.');
+      if (password.length < 12) throw new Error(t('errorBackupPasswordShort'));
       return utils.encodeBase64(JSON.stringify({ format: 'cookie-share-encrypted-config', version: 2,
         envelope: await transportCrypto.encrypt(password, this.collectConfig(true)) }));
     },
@@ -844,8 +1050,9 @@
         throw new Error(t("notificationConfigInvalid"));
       }
       if (parsedConfig?.format === 'cookie-share-encrypted-config') {
-        const password = nativePrompt('Backup password / 备份密码', '');
-        if (password === null) throw new Error('Import cancelled');
+        const password = await dialogs.prompt({ title: t('dialogBackupPasswordTitle'), message: t('dialogBackupPasswordEnter'),
+          confirmText: t('confirmButton'), input: { type: 'password' } });
+        if (password === null) throw new Error(t('errorImportCancelled'));
         parsedConfig = await transportCrypto.decrypt(password, parsedConfig.envelope);
       }
       if (!parsedConfig || typeof parsedConfig !== "object") {
@@ -856,7 +1063,8 @@
           ? parsedConfig.values
           : parsedConfig;
       if ((this.sensitiveKeys.some((key) => Object.hasOwn(values, key)) || Object.hasOwn(values, DEVICE_TOKEN_KEY)) &&
-          !nativeConfirm('This import can change your backend and credentials. Import only a trusted configuration. Continue? / 此配置会更改后台或凭据，确认来源可信后继续？')) throw new Error('Import cancelled');
+          !(await dialogs.confirm({ title: t('dialogImportSensitiveTitle'), message: t('dialogImportSensitiveMessage'),
+            confirmText: t('continueButton'), danger: true }))) throw new Error(t('errorImportCancelled'));
       if (values[STORAGE_KEYS.CUSTOM_URL]) utils.validateUrl(values[STORAGE_KEYS.CUSTOM_URL]);
       if (values[DEVICE_TOKEN_KEY] && !/^[A-Za-z0-9_-]{43,128}$/.test(values[DEVICE_TOKEN_KEY])) throw new Error('Invalid device token');
       let appliedCount = 0;
@@ -1036,9 +1244,11 @@
         try {
           existing = await this.requestEncryptedJson({ method: 'GET', url: `${formattedUrl}/receive-cookies/${cookieId}`, transportSecret });
         } catch (error) { if (error.status !== 404 && error.status !== 403) throw error; }
-        if (existing?.success && !nativeConfirm('A record with this ID already exists. Overwrite it? / 该 ID 已存在，是否覆盖？')) return { success: false, message: 'Cancelled / 已取消' };
-        if (!caps.cookieAttributes && cookies.some((c) => c.partitionKey || c.firstPartyDomain)) throw new Error('This backend cannot preserve partitioned cookies; upgrade the backend first.');
-        if (!caps.cookieAttributes && cookies.some((c) => c.sameSite === 'unspecified') && !nativeConfirm('This old backend cannot preserve unspecified SameSite. Save with Lax instead? Upgrade the backend for exact preservation. / 旧后台无法完整保存 SameSite，是否以 Lax 保存？建议先升级后台。')) return { success: false, message: 'Cancelled / 已取消' };
+        if (existing?.success && !(await dialogs.confirm({ title: t('dialogOverwriteTitle'),
+          message: t('dialogOverwriteCloudMessage', { id: cookieId }), confirmText: t('overwriteButton'), danger: true }))) return { success: false, cancelled: true };
+        if (!caps.cookieAttributes && cookies.some((c) => c.partitionKey || c.firstPartyDomain)) throw new Error(t('errorPartitionedUnsupported'));
+        if (!caps.cookieAttributes && cookies.some((c) => c.sameSite === 'unspecified') && !(await dialogs.confirm({ title: t('dialogSameSiteTitle'),
+          message: t('dialogSameSiteMessage'), confirmText: t('continueButton') }))) return { success: false, cancelled: true };
         const wireCookies = cookies.map((c) => ({ ...c,
           sameSite: !caps.cookieAttributes && c.sameSite === 'unspecified' ? 'lax' : c.sameSite,
           ...(c.sameSite === 'unspecified' ? { sameSiteUnspecified: true } : {}) }));
@@ -1067,9 +1277,9 @@
         if (!response?.success || !Array.isArray(response.cookies)) {
           throw new Error(t("apiErrorInvalidData"));
         }
-        if (!nativeConfirm('Replace this site’s cookies with this record? A recovery backup will be saved. / 确认切换账号？将先保存恢复备份。')) return { success: false, message: 'Cancelled / 已取消' };
+        if (!(await confirmSwitch(cookieId))) return { success: false, cancelled: true };
         await cookieManager.replaceAll(response.cookies, t("apiErrorNoImport"), response.url);
-        offerRefresh();
+        reloadAfterVerify();
         return { success: true, message: t("notificationReceivedSuccess") };
       } catch (error) {
         console.error("Error receiving cookies:", error);
@@ -1136,7 +1346,7 @@
   }
 
   async function runWithButtonLoading(button, task) {
-    if (button.disabled || uiOperationBusy) { notification.show('Another operation is in progress / 正在执行其他操作', 'error'); return; }
+    if (button.disabled || uiOperationBusy) { notification.show(t('notificationBusy'), 'error'); return; }
     uiOperationBusy = true;
     const buttons = [...(getShadowWrapper()?.querySelectorAll('button') || [])];
     const previous = buttons.map((b) => b.disabled);
@@ -1145,7 +1355,7 @@
     try {
       await task();
     } catch (error) {
-      notification.show(error.message || 'Operation failed', 'error');
+      notification.show(error.message || t('notificationOperationFailed'), 'error');
     } finally {
       uiOperationBusy = false;
       buttons.forEach((b, i) => { b.disabled = previous[i]; });
@@ -1262,6 +1472,93 @@
         dialog.offsetHeight;
         dialog.style.opacity = "1";
         dialog.style.transform = "scale(1)";
+      });
+    },
+
+    // Generic in-shadow confirm/prompt. Pages can replace window.prompt and
+    // window.confirm before the userscript runs, so secrets and consent never
+    // go through them. Resolves true/false, or the entered string / null.
+    dialog({ title = t("cookieShareTitle"), message = "", confirmText = t("confirmButton"), danger = false, input = null }) {
+      return new Promise((resolve) => {
+        const root = getShadowWrapper();
+        if (!root) { resolve(input ? null : false); return; }
+        const container = document.createElement("div");
+        container.className = "cookie-share-confirm-layer";
+        container.style.cssText = `
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: var(--cs-overlay); backdrop-filter: blur(4px);
+          z-index: 2147483647; pointer-events: auto;
+        `;
+        const dialog = document.createElement("div");
+        dialog.setAttribute("role", "dialog");
+        dialog.setAttribute("aria-modal", "true");
+        dialog.style.cssText = `
+          background: var(--cs-surface); padding: 24px;
+          border-radius: var(--cs-radius-lg); text-align: center;
+          width: min(420px, calc(100vw - 32px)); border: var(--cs-card-border);
+          box-shadow: var(--cs-shadow);
+          font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+          color: var(--cs-text);
+        `;
+        const heading = document.createElement("h3");
+        heading.style.cssText = "margin: 0 0 16px 0; color: var(--cs-heading); font-size: 18px; font-weight: 600;";
+        heading.textContent = title;
+        const text = document.createElement("p");
+        text.style.cssText = "margin: 0 0 20px 0; color: var(--cs-text-secondary); white-space: pre-line; word-break: break-word;";
+        text.textContent = message;
+        dialog.append(heading, text);
+        let field = null;
+        if (input) {
+          field = document.createElement("input");
+          field.className = "cs-input";
+          field.type = input.type || "text";
+          field.placeholder = input.placeholder || "";
+          field.value = input.value || "";
+          field.autocomplete = "off";
+          field.spellcheck = false;
+          field.style.cssText = "width: 100%; margin: 0 0 20px 0;";
+          dialog.appendChild(field);
+        }
+        const actions = document.createElement("div");
+        actions.style.cssText = "display: flex; gap: 12px; justify-content: center;";
+        const cancelBtn = document.createElement("button");
+        cancelBtn.id = "cancelBtn";
+        cancelBtn.className = "cs-btn cs-btn-secondary";
+        cancelBtn.style.cssText = "min-width: 100px; margin: 0 !important;";
+        cancelBtn.textContent = t("cancelButton");
+        const confirmBtn = document.createElement("button");
+        confirmBtn.id = "confirmBtn";
+        confirmBtn.className = `cs-btn ${danger ? "cs-btn-danger" : "cs-btn-primary"}`;
+        confirmBtn.style.cssText = "min-width: 100px; margin: 0 !important;";
+        confirmBtn.textContent = confirmText;
+        actions.append(cancelBtn, confirmBtn);
+        dialog.appendChild(actions);
+        container.appendChild(dialog);
+        root.appendChild(container);
+
+        let done = false;
+        const finish = (confirmed) => {
+          if (done) return;
+          done = true;
+          container.remove();
+          if (input) resolve(confirmed ? field.value : null);
+          else resolve(confirmed);
+        };
+        cancelBtn.onclick = () => finish(false);
+        confirmBtn.onclick = () => finish(true);
+        container.onclick = (e) => { if (e.target === container) finish(false); };
+        container.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(false); }
+          else if (e.key === "Enter" && e.target === field) { e.preventDefault(); finish(true); }
+          else if (e.key === "Tab") {
+            const focusable = [field, cancelBtn, confirmBtn].filter(Boolean);
+            const index = focusable.indexOf(shadowRoot.activeElement);
+            e.preventDefault();
+            focusable[(index + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus();
+          }
+        });
+        (field || confirmBtn).focus();
       });
     },
 
@@ -1566,6 +1863,23 @@
         .cookie-share-container input::placeholder {
           color: var(--cs-text-muted) !important;
         }
+        .cookie-share-confirm-layer .cs-input {
+          display: block !important;
+          width: 100% !important;
+          height: 40px !important;
+          padding: 0 12px !important;
+          border: 1px solid var(--cs-input-border) !important;
+          border-radius: var(--cs-radius) !important;
+          font-size: 14px !important;
+          background: var(--cs-input-bg) !important;
+          color: var(--cs-text) !important;
+          outline: none !important;
+          font-family: inherit !important;
+        }
+        .cookie-share-confirm-layer .cs-input:focus {
+          border-color: var(--cs-input-focus-border) !important;
+          box-shadow: var(--cs-input-focus-shadow) !important;
+        }
 
         /* ===== ID Input Row ===== */
         .cookie-share-container .id-input-container {
@@ -1642,6 +1956,23 @@
         }
         .cookie-share-container .generate-btn:hover {
           background: var(--cs-btn-secondary-hover) !important;
+        }
+        .cookie-share-container .generate-btn.cs-icon-btn {
+          width: 40px !important;
+          min-width: 40px !important;
+          padding: 0 !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        .cookie-share-container .cs-icon-btn svg {
+          width: 16px !important;
+          height: 16px !important;
+          display: block !important;
+        }
+        .cookie-share-container input.cs-config-field {
+          cursor: pointer !important;
+          min-width: 0 !important;
         }
 
         .cookie-share-container .action-buttons {
@@ -2553,7 +2884,7 @@
 
       const sensitiveBtn = document.createElement('button');
       sensitiveBtn.className = 'generate-btn';
-      sensitiveBtn.textContent = '加密备份凭据 / Encrypted backup';
+      sensitiveBtn.textContent = t('settingsEncryptedBackupButton');
       sensitiveBtn.onclick = async () => {
         try { const backup = await configManager.exportSensitive(); if (backup) { transferInput.value = backup; transferContainer.open = true; } }
         catch (error) { notification.show(error.message, 'error'); }
@@ -2702,8 +3033,8 @@
       const root = getShadowWrapper();
       const send = root?.querySelector('.send-btn');
       const receive = root?.querySelector('.receive-btn');
-      if (send) send.textContent = local ? (currentLanguage === LANGUAGES.ZH ? '保存到本地' : 'Save locally') : t('sendCookieButton');
-      if (receive) receive.textContent = local ? (currentLanguage === LANGUAGES.ZH ? '恢复本地账号' : 'Restore local account') : t('receiveCookieButton');
+      if (send) send.textContent = t(local ? 'saveLocallyButton' : 'sendCookieButton');
+      if (receive) receive.textContent = t(local ? 'restoreLocalButton' : 'receiveCookieButton');
     },
 
     createMainView(options = {}) {
@@ -2780,18 +3111,30 @@
       const serverContainer = document.createElement("div");
       serverContainer.className = "id-input-container";
 
+      // Saved addresses and secrets are never written back into inputs: the
+      // read-only fields only show whether a value is configured, and clicking
+      // them (or the gear button) opens an in-shadow dialog to replace it.
       const serverInput = document.createElement("input");
       serverInput.type = "text";
-      serverInput.className = "cookie-id-input";
-      serverInput.placeholder = t("placeholderServerAddress");
+      serverInput.className = "cookie-id-input cs-config-field";
       serverInput.value = '';
       serverInput.readOnly = true;
-      serverInput.placeholder = getServerUrl() ? 'Backend configured / 后台已配置' : t('placeholderServerAddress');
+      serverInput.tabIndex = -1;
+      const updateServerPlaceholder = () => {
+        serverInput.placeholder = getServerUrl() ? t('placeholderServerConfigured') : t('placeholderServerAddress');
+      };
+      updateServerPlaceholder();
+      const editServer = () => runWithButtonLoading(configureServerBtn, async () => {
+        if (await configureServer()) updateServerPlaceholder();
+      });
+      serverInput.onclick = editServer;
+
       const configureServerBtn = document.createElement('button');
-      configureServerBtn.className = 'generate-btn';
-      configureServerBtn.textContent = '设置地址 / Configure';
-      configureServerBtn.onclick = () => { try { configureServer(); serverInput.placeholder = 'Backend configured / 后台已配置'; } catch (error) { notification.show(error.message, 'error'); } };
-      serverContainer.appendChild(configureServerBtn);
+      configureServerBtn.className = 'generate-btn cs-icon-btn';
+      configureServerBtn.innerHTML = EDIT_ICON_SVG;
+      configureServerBtn.title = t('configureServerLabel');
+      configureServerBtn.setAttribute('aria-label', t('configureServerLabel'));
+      configureServerBtn.onclick = editServer;
 
       const showListBtn = document.createElement("button");
       showListBtn.className = "generate-btn";
@@ -2799,6 +3142,7 @@
       showListBtn.onclick = () => ui.showCookieList();
 
       serverContainer.appendChild(serverInput);
+      serverContainer.appendChild(configureServerBtn);
       serverContainer.appendChild(showListBtn);
 
       // Transport secret input
@@ -2811,20 +3155,25 @@
       const transportInput = document.createElement("input");
       transportInput.type = "password";
       transportInput.id = "cookieShareTransportSecret";
-      transportInput.className = "cookie-id-input";
-      transportInput.placeholder = t("placeholderTransportSecret");
+      transportInput.className = "cookie-id-input cs-config-field";
       transportInput.value = '';
       transportInput.readOnly = true;
-      transportInput.placeholder = getTransportSecret() ? 'Credential configured / 凭据已配置' : t('placeholderTransportSecret');
+      transportInput.tabIndex = -1;
+      const updateSecretPlaceholder = () => {
+        transportInput.placeholder = getTransportSecret() ? t('placeholderSecretConfigured') : t('placeholderTransportSecret');
+      };
+      updateSecretPlaceholder();
+      const editSecret = () => runWithButtonLoading(toggleTransportBtn, async () => {
+        if (await configureSecret()) updateSecretPlaceholder();
+      });
+      transportInput.onclick = editSecret;
 
       const toggleTransportBtn = document.createElement("button");
-      toggleTransportBtn.className = "generate-btn";
-      toggleTransportBtn.textContent = '设置密钥 / Configure';
-      toggleTransportBtn.setAttribute('aria-label', 'Configure transport secret');
-      toggleTransportBtn.onclick = () => {
-        try { configureSecret(); transportInput.placeholder = 'Credential configured / 凭据已配置'; }
-        catch (error) { notification.show(error.message, 'error'); }
-      };
+      toggleTransportBtn.className = "generate-btn cs-icon-btn";
+      toggleTransportBtn.innerHTML = KEY_ICON_SVG;
+      toggleTransportBtn.title = t('configureSecretLabel');
+      toggleTransportBtn.setAttribute('aria-label', t('configureSecretLabel'));
+      toggleTransportBtn.onclick = editSecret;
 
       transportContainer.appendChild(transportInput);
       transportContainer.appendChild(toggleTransportBtn);
@@ -2898,7 +3247,7 @@
             }
             const data = { id: cookieId, url: recordUrl(), cookies };
             const localKey = `cookie_share_local_${data.id}`;
-            if (await GM_getValue(localKey) && !nativeConfirm('Overwrite this local record? / 覆盖此本地记录？')) return;
+            if (await GM_getValue(localKey) && !(await confirmLocalOverwrite(cookieId))) return;
             await GM_setValue(localKey, JSON.stringify(data));
             notification.show(t("notificationSavedLocally"), "success");
           } else {
@@ -2915,6 +3264,7 @@
               serverUrl,
               transportSecret,
             );
+            if (result.cancelled) return;
             notification.show(
               result.success
                 ? t("notificationSentSuccess")
@@ -2954,9 +3304,10 @@
             const raw = await GM_getValue('cookie_share_local_' + idInput.value.trim());
             if (!raw) throw new Error(t('notificationLocalDataNotFound'));
             const record = JSON.parse(raw);
-            if (!nativeConfirm('Restore this local account? / 恢复此本地账号？')) return;
+            if (!Array.isArray(record?.cookies)) throw new Error(t('notificationLocalDataInvalid'));
+            if (!(await confirmSwitch(idInput.value.trim()))) return;
             await cookieManager.replaceAll(record.cookies, t('notificationLocalImportFailed'), record.url);
-            offerRefresh();
+            reloadAfterVerify();
             return;
           }
           if (!getServerUrl()) {
@@ -2968,9 +3319,7 @@
             notification.show(t("notificationNeedTransportSecret"), "error");
             return;
           }
-          const result = await api.receiveCookies(idInput.value.trim(), getServerUrl(), getTransportSecret());
-          if (!result.success) return;
-          notification.show(t("notificationReceivedSuccess"), "success");
+          await api.receiveCookies(idInput.value.trim(), getServerUrl(), getTransportSecret());
         } catch (error) {
           let errorMessage = error.message;
           if (error.message === "Request failed")
@@ -2983,7 +3332,7 @@
             errorMessage = t("apiErrorNoImport");
           notification.show(
             t("notificationReceiveFailed", {
-              source: t("sourceCloud"),
+              source: t(GM_getValue(STORAGE_KEYS.SAVE_LOCALLY, false) ? "sourceLocal" : "sourceCloud"),
               message: errorMessage,
             }),
             "error",
@@ -3012,7 +3361,7 @@
             }
             const data = { id: cookieId, url: recordUrl(), cookies };
             const localKey = `cookie_share_local_${data.id}`;
-            if (await GM_getValue(localKey) && !nativeConfirm('Overwrite this local record? / 覆盖此本地记录？')) return;
+            if (await GM_getValue(localKey) && !(await confirmLocalOverwrite(cookieId))) return;
             await GM_setValue(localKey, JSON.stringify(data));
           } else {
             if (!serverUrl) {
@@ -3024,6 +3373,7 @@
               return;
             }
             const result = await api.sendCookies(cookieId, serverUrl, transportSecret);
+            if (result.cancelled) return;
             if (!result.success) {
               notification.show(
                 utils.localizeServerMessage(result.message || ""),
@@ -3033,8 +3383,7 @@
             }
           }
           await cookieManager.clearAll();
-          notification.show(t("notificationClearedSuccess"), "success");
-          offerRefresh();
+          reloadAfterVerify(t("notificationClearedSuccess"));
         } catch (error) {
           let errorMessage = error.message;
           if (error.message.includes("No cookies to send")) {
@@ -3052,8 +3401,7 @@
         if (!ensureGmCookieSupport()) return;
         if (await this.confirmDelete()) {
           await cookieManager.clearAll();
-          notification.show(t("notificationClearedSuccess"), "success");
-          offerRefresh();
+          reloadAfterVerify(t("notificationClearedSuccess"));
         }
       });
 
@@ -3328,7 +3676,7 @@
 
           try {
             if (source === "local") {
-              if (!nativeConfirm('Replace this site’s cookies with this local record? / 使用本地记录切换此站点账号？')) return;
+              if (!(await confirmSwitch(cookieId))) return;
               const localKey = `cookie_share_local_${cookieId}`;
               const rawData = await GM_getValue(localKey);
               if (!rawData) throw new Error(t("notificationLocalDataNotFound"));
@@ -3340,12 +3688,8 @@
                 t("notificationLocalImportFailed"),
                 cookieData.url,
               );
-              notification.show(
-                t("notificationImportSuccess", { count: importedCount }),
-                "success",
-              );
-              offerRefresh();
               this.hideCookieList();
+              reloadAfterVerify(t("notificationImportSuccess", { count: importedCount }));
             } else {
               if (!customUrl) {
                 notification.show(t("notificationNeedServerAddress"), "error");
@@ -3360,7 +3704,6 @@
               }
               const result = await api.receiveCookies(cookieId, customUrl, transportSecret);
               if (!result.success) return;
-              notification.show(t("notificationReceivedSuccess"), "success");
               this.hideCookieList();
             }
           } catch (error) {
@@ -3434,8 +3777,20 @@
   };
 
   // Credentials stay in userscript storage/closures, not in the host document.
-  const nativePrompt = window.prompt.bind(window);
-  const nativeConfirm = window.confirm.bind(window);
+  // Dialogs render inside the closed shadow root: the page may have replaced
+  // window.prompt/confirm, so secrets and consent never go through them.
+  const dialogs = {
+    confirm(options) { return ui.dialog(options).then(Boolean); },
+    prompt(options) { return ui.dialog({ ...options, input: options.input || {} }); },
+  };
+  function confirmLocalOverwrite(id) {
+    return dialogs.confirm({ title: t('dialogOverwriteTitle'), message: t('dialogOverwriteLocalMessage', { id }),
+      confirmText: t('overwriteButton'), danger: true });
+  }
+  function confirmSwitch(id) {
+    return dialogs.confirm({ title: t('dialogReceiveTitle'), message: t('dialogReceiveMessage', { id }),
+      confirmText: t('switchAccountButton'), danger: true });
+  }
   const DEVICE_TOKEN_KEY = 'cookie_share_device_token';
   const capabilityCache = new Map();
   let uiOperationBusy = false;
@@ -3445,22 +3800,33 @@
   }
   function getServerUrl() { return GM_getValue(STORAGE_KEYS.CUSTOM_URL, ''); }
   function recordUrl() { return window.location.origin + window.location.pathname; }
-  function configureSecret(device = false) {
-    const value = nativePrompt(device ? 'Device token (blank removes it) / 设备令牌（留空移除）' : 'Transport secret / 传输密钥（不显示原值）', '');
-    if (value === null) return;
-    if (device && value && !/^[A-Za-z0-9_-]{43,128}$/.test(value)) throw new Error('Expected a server-issued random device token.');
-    GM_setValue(device ? DEVICE_TOKEN_KEY : STORAGE_KEYS.TRANSPORT_SECRET, value);
+  // Resolves true when a value was saved or removed, false when unchanged.
+  async function configureSecret(device = false) {
+    const value = await dialogs.prompt(device
+      ? { title: t('dialogDeviceTokenTitle'), message: t('dialogDeviceTokenMessage'), confirmText: t('saveButton'), input: { type: 'password' } }
+      : { title: t('dialogSecretTitle'), message: t('dialogSecretMessage'), confirmText: t('saveButton'), input: { type: 'password', placeholder: t('placeholderTransportSecret') } });
+    if (value === null) return false;
+    const trimmed = value.trim();
+    // An empty entry keeps the transport secret, so a stray Enter can't wipe it.
+    if (!device && !trimmed) return false;
+    if (device && trimmed && !/^[A-Za-z0-9_-]{43,128}$/.test(trimmed)) throw new Error(t('errorDeviceTokenFormat'));
+    GM_setValue(device ? DEVICE_TOKEN_KEY : STORAGE_KEYS.TRANSPORT_SECRET, device ? trimmed : value);
     capabilityCache.clear();
+    notification.show(t(device ? (trimmed ? 'notificationDeviceTokenSaved' : 'notificationDeviceTokenRemoved') : 'notificationSecretSaved'), 'success');
+    return true;
   }
-  function configureServer() {
-    const value = nativePrompt('Backend URL, including secret path / 后台地址（含秘密路径）', getServerUrl());
-    if (value === null) return;
-    const url = utils.validateUrl(value);
+  async function configureServer() {
+    const value = await dialogs.prompt({ title: t('dialogServerTitle'), message: t('dialogServerMessage'),
+      confirmText: t('saveButton'), input: { type: 'url', placeholder: t('placeholderServerAddress') } });
+    if (value === null || !value.trim()) return false;
+    const url = utils.validateUrl(value.trim());
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:' && !['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname) &&
-        !nativeConfirm('HTTP exposes traffic and credentials. Continue only on a trusted private network? / HTTP 会暴露通信，确定继续？')) return;
+        !(await dialogs.confirm({ title: t('dialogInsecureHttpTitle'), message: t('dialogInsecureHttpMessage'), confirmText: t('continueButton'), danger: true }))) return false;
     GM_setValue(STORAGE_KEYS.CUSTOM_URL, url);
     capabilityCache.clear();
+    notification.show(t('notificationServerSaved'), 'success');
+    return true;
   }
 
   async function capabilities(base) {
@@ -3514,7 +3880,13 @@
     modal.tabIndex = -1;
     const previous = shadowRoot?.activeElement || document.activeElement;
     overlay._restoreFocus = () => { if (previous?.isConnected) previous.focus(); };
-    queueMicrotask(() => { if (modal.isConnected) modal.focus(); });
+    // Move focus into the panel right away so a previously focused page input
+    // stops receiving keystrokes; prefer the first field the user can type in.
+    queueMicrotask(() => {
+      if (!modal.isConnected) return;
+      const field = [...modal.querySelectorAll('input:not([readonly]):not([disabled])')].find((n) => n.getClientRects().length);
+      (field || modal).focus();
+    });
     modal.addEventListener('keydown', (event) => {
       if (!event.isTrusted || event.key !== 'Tab') return;
       const nodes = [...modal.querySelectorAll('button, input, textarea, select, [tabindex="0"]')].filter((n) => !n.disabled && n.getClientRects().length);
@@ -3525,9 +3897,11 @@
     });
   }
 
-  function offerRefresh() {
-    notification.show('Cookie 已写入并核对 / Cookies written and verified.', 'success');
-    if (nativeConfirm('Cookie 已核对。现在刷新页面？ / Cookies verified. Reload now?')) window.location.reload();
+  // Every caller has already asked for consent (the confirm text says the page
+  // reloads), so only a single dialog is ever shown per switch.
+  function reloadAfterVerify(message = t('notificationCookiesVerified')) {
+    notification.show(message, 'success');
+    setTimeout(() => window.location.reload(), 800);
   }
 
   // ===================== Initialize =====================
@@ -3672,11 +4046,12 @@
       GM_registerMenuCommand(t("menuShowShare"), () => ui.showModal()),
       GM_registerMenuCommand(t("menuShowList"), () => ui.showCookieList()),
       GM_registerMenuCommand(t("menuSwitchLanguage"), switchLanguage),
-      GM_registerMenuCommand('Configure backend / 设置后台', () => { try { configureServer(); } catch (error) { notification.show(error.message, 'error'); } }),
-      GM_registerMenuCommand('Configure device token / 设置设备令牌', () => { try { configureSecret(true); } catch (error) { notification.show(error.message, 'error'); } }),
-      GM_registerMenuCommand('Restore recovery backup / 恢复备份', async () => {
-        if (!nativeConfirm('Restore the recovery backup for this site? / 恢复此站点备份？')) return;
-        try { await cookieManager.restoreBackup(); offerRefresh(); } catch (error) { notification.show(error.message, 'error'); }
+      GM_registerMenuCommand(t("menuConfigureServer"), () => configureServer().catch((error) => notification.show(error.message, 'error'))),
+      GM_registerMenuCommand(t("menuConfigureSecret"), () => configureSecret().catch((error) => notification.show(error.message, 'error'))),
+      GM_registerMenuCommand(t("menuConfigureDeviceToken"), () => configureSecret(true).catch((error) => notification.show(error.message, 'error'))),
+      GM_registerMenuCommand(t("menuRestoreBackup"), async () => {
+        if (!(await dialogs.confirm({ title: t('dialogRestoreBackupTitle'), message: t('dialogRestoreBackupMessage'), confirmText: t('restoreButton'), danger: true }))) return;
+        try { await cookieManager.restoreBackup(); reloadAfterVerify(); } catch (error) { notification.show(error.message, 'error'); }
       }),
     ];
   }

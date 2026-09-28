@@ -44,18 +44,26 @@ export async function decode(response, secret, options = {}) {
 export const sample = (overrides = {}) => ({ name: 'session', value: 'secret-cookie', domain: 'example.com',
   path: '/', hostOnly: true, secure: true, httpOnly: true, sameSite: 'lax', session: true, ...overrides });
 
-export function userscript({ initial = [], failSet, failDelete, failList, gmRequest, nativeConfirm = () => true } = {}) {
+export function userscript({ initial = [], failSet, failDelete, failList, gmRequest, nativeConfirm = () => true, prompt = () => null } = {}) {
   const saved = new Map();
   let jar = structuredClone(initial);
   const calls = [];
   const location = new URL('https://example.com/');
   location.reload = () => calls.push(['reload']);
-  const window = { location, prompt: () => null, confirm: nativeConfirm };
+  const window = { location, prompt, confirm: nativeConfirm };
+  const dialogCalls = [];
   window.top = window; window.self = window;
   const normalizeDomain = (domain) => domain.replace(/^\./, '');
-  const cookieId = (cookie) => JSON.stringify([cookie.name, normalizeDomain(cookie.domain), cookie.path || '/', cookie.partitionKey || null]);
+  // Browsers keep a host-only and a domain cookie with the same name side by side.
+  const addCookie = (cookie) => { jar = jar.filter((c) => cookieId(c) !== cookieId(cookie)); jar.push(structuredClone(cookie)); };
+  const cookieId = (cookie) => JSON.stringify([cookie.name, normalizeDomain(cookie.domain), cookie.path || '/', Boolean(cookie.hostOnly), cookie.partitionKey || null]);
   const context = vm.createContext({
-    window, URL, TextEncoder, TextDecoder, Uint8Array, crypto: webcrypto, console, queueMicrotask,
+    window, URL,
+    // The userscript renders its own dialogs in a shadow root; tests answer them here.
+    __testDialogs: {
+      async confirm(options) { dialogCalls.push(['confirm', options]); return Boolean(nativeConfirm(options)); },
+      async prompt(options) { dialogCalls.push(['prompt', options]); return prompt(options); },
+    }, TextEncoder, TextDecoder, Uint8Array, crypto: webcrypto, console, queueMicrotask,
     setTimeout, clearTimeout, btoa, atob, AbortController,
     navigator: { platform: 'Linux', language: 'en' }, document: {},
     GM_getValue: (key, fallback) => saved.has(key) ? saved.get(key) : fallback,
@@ -66,7 +74,7 @@ export function userscript({ initial = [], failSet, failDelete, failList, gmRequ
       list(details, callback) {
         calls.push(['list', details]);
         queueMicrotask(() => {
-          if (failList) return callback(null, 'list denied');
+          if (typeof failList === 'function' ? failList(details) : failList) return callback(null, 'list denied');
           const url = new URL(details.url || location.href);
           const result = jar.filter((c) => (url.hostname === normalizeDomain(c.domain) || (!c.hostOnly && url.hostname.endsWith('.' + normalizeDomain(c.domain)))) && url.pathname.startsWith(c.path || '/'));
           callback(structuredClone(result), null);
@@ -75,7 +83,7 @@ export function userscript({ initial = [], failSet, failDelete, failList, gmRequ
       set(details, callback) {
         calls.push(['set', details]);
         queueMicrotask(() => {
-          if (failSet?.(details, calls)) return callback('set denied');
+          if (failSet?.(details, calls, addCookie)) return callback('set denied');
           const cookie = { ...details, domain: details.domain || new URL(details.url).hostname,
             hostOnly: !details.domain, sameSite: details.sameSite || 'unspecified', session: details.expirationDate === undefined };
           jar = jar.filter((c) => cookieId(c) !== cookieId(cookie));
@@ -98,7 +106,8 @@ export function userscript({ initial = [], failSet, failDelete, failList, gmRequ
     },
   });
   let source = readFileSync(new URL('../tampermonkey/cookie-share.user.js', import.meta.url), 'utf8');
-  source = source.replace('  init();\n})();', `  globalThis.subject = { cookieManager, validateCookieImport, utils, transportCrypto, configManager, deviceCipher, api, capabilities, getTransportSecret, getServerUrl, configureSecret };\n})();`);
+  source = source.replace('  const dialogs = {', '  const dialogs = __testDialogs;\n  const __uiDialogs = {');
+  source = source.replace('  init();\n})();', `  globalThis.subject = { cookieManager, validateCookieImport, utils, transportCrypto, configManager, deviceCipher, api, capabilities, getTransportSecret, getServerUrl, configureSecret, configureServer };\n})();`);
   vm.runInContext(source, context);
-  return { subject: context.subject, saved, calls, context, cookies: () => structuredClone(jar) };
+  return { subject: context.subject, saved, calls, dialogCalls, context, cookies: () => structuredClone(jar), addCookie };
 }

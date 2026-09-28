@@ -258,6 +258,55 @@ test('a cancelled receive does not mutate cookies or claim success', async () =>
   assert.equal(subject.calls.some((c) => c[0] === 'delete'), false);
 });
 
+test('host-only and same-name domain cookies coexist without a duplicate error', async () => {
+  const subject = userscript();
+  const cookies = [sample({ value: 'host' }), sample({ domain: '.example.com', hostOnly: false, value: 'domain' })];
+  assert.equal(await subject.subject.cookieManager.replaceAll(cookies), 2);
+  assert.deepEqual(subject.cookies().map((c) => [c.hostOnly, c.value]).sort(), [[false, 'domain'], [true, 'host']]);
+  // Sending and receiving the same jar again must round-trip.
+  const sent = await subject.subject.cookieManager.getAll();
+  assert.equal(await subject.subject.cookieManager.replaceAll(sent), 2);
+});
+test('legacy records with repeated or expired cookies still import', async () => {
+  const subject = userscript({ initial: [sample({ name: 'old' })] });
+  const record = [sample({ value: 'first' }), sample({ name: 'gone', expirationDate: 1, session: false }), sample({ value: 'last' })];
+  assert.equal(await subject.subject.cookieManager.replaceAll(record), 1);
+  assert.deepEqual(subject.cookies().map((c) => [c.name, c.value]), [['session', 'last']]);
+});
+test('records saved on a sibling subdomain apply when their cookies cover this host', async () => {
+  const subject = userscript();
+  assert.equal(await subject.subject.cookieManager.replaceAll([sample({ domain: '.example.com', hostOnly: false })], '', 'https://www.example.com/login'), 1);
+  await assert.rejects(subject.subject.cookieManager.replaceAll([sample()], '', 'https://www.example.com/login'), /another site/);
+});
+test('cookies the site sets during a switch do not fail verification', async () => {
+  const subject = userscript({ initial: [sample({ value: 'before' })], failSet: (details, calls, addCookie) => {
+    if (details.name === 'session') addCookie(sample({ name: '_analytics', value: 'x', httpOnly: false }));
+    return false;
+  } });
+  assert.equal(await subject.subject.cookieManager.replaceAll([sample({ value: 'after' })]), 1);
+  assert.equal(subject.cookies().find((c) => c.name === 'session').value, 'after');
+});
+test('script managers without the partitionKey list filter can still read cookies', async () => {
+  const subject = userscript({ initial: [sample()], failList: (details) => 'partitionKey' in details });
+  assert.equal((await subject.subject.cookieManager.getAll()).length, 1);
+});
+test('credential dialogs never prefill stored secrets and an empty entry keeps them', async () => {
+  const answers = ['', 'new-secret'];
+  const subject = userscript({ prompt: () => answers.shift() });
+  subject.saved.set('cookie_share_transport_secret', 'stored-secret');
+  assert.equal(await subject.subject.configureSecret(), false);
+  assert.equal(subject.saved.get('cookie_share_transport_secret'), 'stored-secret');
+  assert.equal(await subject.subject.configureSecret(), true);
+  assert.equal(subject.saved.get('cookie_share_transport_secret'), 'new-secret');
+  for (const [, options] of subject.dialogCalls) assert.equal(options.input?.value, undefined);
+  assert.equal(JSON.stringify(subject.dialogCalls).includes('stored-secret'), false);
+});
+test('panel keystrokes and dialogs stay inside the shadow root', () => {
+  const source = readFileSync(new URL('../tampermonkey/cookie-share.user.js', import.meta.url), 'utf8');
+  assert.ok(source.includes('shadowRoot.addEventListener(type, (event) => event.stopPropagation())'));
+  assert.equal(/window\.(prompt|confirm)\(|nativePrompt|nativeConfirm/.test(source), false);
+  assert.match(source, /@version\s+0\.7\.1/);
+});
 
 test('a credential with 100 record IDs stays within the D1 parameter limit', async () => {
   const records = Array.from({ length: 100 }, (_, index) => 'record' + index);

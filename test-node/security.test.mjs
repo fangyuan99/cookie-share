@@ -301,9 +301,18 @@ test('credential dialogs never prefill stored secrets and an empty entry keeps t
   for (const [, options] of subject.dialogCalls) assert.equal(options.input?.value, undefined);
   assert.equal(JSON.stringify(subject.dialogCalls).includes('stored-secret'), false);
 });
+test('a bare route 404 points at the Base URL and list states are styled', () => {
+  const subject = userscript();
+  assert.match(subject.subject.utils.localizeServerMessage('Not Found'), /Base URL.*PATH_SECRET/);
+  const source = readFileSync(new URL('../tampermonkey/cookie-share.user.js', import.meta.url), 'utf8');
+  assert.equal(/(localRoot|cloudRoot|cookiesList)\.textContent\s*=/.test(source), false);
+});
 test('panel keystrokes and dialogs stay inside the shadow root', () => {
   const source = readFileSync(new URL('../tampermonkey/cookie-share.user.js', import.meta.url), 'utf8');
   assert.ok(source.includes('shadowRoot.addEventListener(type, (event) => event.stopPropagation())'));
+  // Focus a page moves onto its own input while the panel is open is handed back.
+  assert.ok(source.includes('panelFocus.focus({ preventScroll: true })'));
+  assert.ok(source.includes("if (event.target === shadowHost) { panelFocus = shadowRoot.activeElement"));
   assert.equal(/window\.(prompt|confirm)\(|nativePrompt|nativeConfirm/.test(source), false);
   assert.match(source, /@version\s+0\.7\.1/);
 });

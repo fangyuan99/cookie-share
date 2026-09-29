@@ -756,6 +756,15 @@
     return url.href;
   }
 
+  // SameSite=None without Secure is never a real cookie in Chromium: versions
+  // before 0.7 sent "unspecified" as "none", and Firefox reports cookies without
+  // a SameSite attribute as "no_restriction". Treat it as unspecified, i.e. set
+  // it without the attribute and let the browser apply its default.
+  function effectiveSameSite(cookie) {
+    const sameSite = utils.normalizeSameSiteFromBrowser(cookie.sameSite);
+    return sameSite === 'none' && !cookie.secure ? 'unspecified' : sameSite;
+  }
+
   function validateCookieImport(cookies, sourceUrl) {
     if (!Array.isArray(cookies) || !cookies.length || cookies.length > 1000) {
       throw new Error(t('errorCookieCount'));
@@ -779,10 +788,8 @@
       const cookie = { ...input, domain, hostOnly, path: input.path || '/' };
       if (!cookie.path.startsWith('/') || /[\x00-\x1f\x7f;\r\n]/.test(cookie.path) ||
           /[\x00-\x20\x7f;=]/.test(cookie.name)) throw new Error('Invalid cookie name/path');
-      const sameSite = utils.normalizeSameSiteFromBrowser(cookie.sameSite);
-      cookie.sameSite = sameSite;
+      cookie.sameSite = effectiveSameSite(cookie);
       if (cookie.secure && window.location.protocol !== 'https:') throw new Error(t('errorSecureNeedsHttps'));
-      if (sameSite === 'none' && !cookie.secure) throw new Error('SameSite=None requires Secure.');
       if (cookie.name.startsWith('__Secure-') && !cookie.secure) throw new Error('Invalid __Secure- cookie');
       if (cookie.name.startsWith('__Host-') && (!cookie.secure || !hostOnly || cookie.path !== '/')) throw new Error('Invalid __Host- cookie');
       if (!cookie.session && cookie.expirationDate != null && !Number.isFinite(cookie.expirationDate)) {
@@ -845,7 +852,7 @@
         path: cookie.path || '/', secure: Boolean(cookie.secure), httpOnly: Boolean(cookie.httpOnly),
       };
       if (!isHostOnlyCookie(cookie)) details.domain = cookie.domain;
-      const sameSite = utils.normalizeSameSiteForSet(cookie.sameSite);
+      const sameSite = utils.normalizeSameSiteForSet(effectiveSameSite(cookie));
       if (sameSite !== undefined) details.sameSite = sameSite;
       if (!cookie.session && cookie.expirationDate != null) details.expirationDate = cookie.expirationDate;
       if (cookie.partitionKey) details.partitionKey = { ...cookie.partitionKey };
@@ -893,7 +900,9 @@
             isHostOnlyCookie(observed) !== isHostOnlyCookie(cookie) ||
             Boolean(observed.secure) !== Boolean(cookie.secure) ||
             Boolean(observed.httpOnly) !== Boolean(cookie.httpOnly) ||
-            utils.normalizeSameSiteFromBrowser(observed.sameSite) !== utils.normalizeSameSiteFromBrowser(cookie.sameSite) ||
+            // Browsers report an unspecified SameSite differently (unspecified,
+            // lax or no_restriction), so only an explicit one is compared.
+            (effectiveSameSite(cookie) !== 'unspecified' && effectiveSameSite(observed) !== effectiveSameSite(cookie)) ||
             (cookie.session === true && observed.session !== true) ||
             (!cookie.session && cookie.expirationDate != null &&
              (!Number.isFinite(observed.expirationDate) || Math.abs(observed.expirationDate - cookie.expirationDate) > 2))) {

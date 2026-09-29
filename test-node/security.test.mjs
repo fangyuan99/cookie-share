@@ -160,7 +160,7 @@ test('userscript detects partial write and failed rollback instead of falsely re
 test('userscript list errors and domain/prefix validation occur before any deletion', async () => {
   const failed = userscript({ failList: true });
   await assert.rejects(failed.subject.cookieManager.getAll(), /list denied/);
-  for (const cookies of [[sample({ domain: 'other.test' })], [sample({ name: '__Host-session', hostOnly: false })], [sample({ sameSite: 'none', secure: false })], [sample({ expirationDate: 1, session: false })]]) {
+  for (const cookies of [[sample({ domain: 'other.test' })], [sample({ name: '__Host-session', hostOnly: false })], [sample({ expirationDate: 1, session: false })]]) {
     const subject = userscript({ initial: [sample()] });
     await assert.rejects(subject.subject.cookieManager.replaceAll(cookies));
     assert.equal(subject.calls.filter((c) => c[0] === 'delete').length, 0);
@@ -258,6 +258,83 @@ test('a cancelled receive does not mutate cookies or claim success', async () =>
   assert.equal(subject.calls.some((c) => c[0] === 'delete'), false);
 });
 
+test('host-only and same-name domain cookies coexist without a duplicate error', async () => {
+  const subject = userscript();
+  const cookies = [sample({ value: 'host' }), sample({ domain: '.example.com', hostOnly: false, value: 'domain' })];
+  assert.equal(await subject.subject.cookieManager.replaceAll(cookies), 2);
+  assert.deepEqual(subject.cookies().map((c) => [c.hostOnly, c.value]).sort(), [[false, 'domain'], [true, 'host']]);
+  // Sending and receiving the same jar again must round-trip.
+  const sent = await subject.subject.cookieManager.getAll();
+  assert.equal(await subject.subject.cookieManager.replaceAll(sent), 2);
+});
+test('legacy records with repeated or expired cookies still import', async () => {
+  const subject = userscript({ initial: [sample({ name: 'old' })] });
+  const record = [sample({ value: 'first' }), sample({ name: 'gone', expirationDate: 1, session: false }), sample({ value: 'last' })];
+  assert.equal(await subject.subject.cookieManager.replaceAll(record), 1);
+  assert.deepEqual(subject.cookies().map((c) => [c.name, c.value]), [['session', 'last']]);
+});
+test('legacy SameSite=None records without Secure import as unspecified', async () => {
+  // Pre-0.7 clients sent "unspecified" as "none"; Firefox reports it as no_restriction.
+  for (const defaultSameSite of ['unspecified', 'no_restriction']) {
+    const subject = userscript({ initial: [sample({ name: 'old' })], defaultSameSite });
+    const record = [sample({ sameSite: 'none', secure: false }), sample({ name: 'cross', sameSite: 'no_restriction', secure: true })];
+    assert.equal(await subject.subject.cookieManager.replaceAll(record), 2);
+    const sets = subject.calls.filter(([type]) => type === 'set').map(([, d]) => d);
+    assert.equal('sameSite' in sets.find((d) => d.name === 'session'), false);
+    assert.equal(sets.find((d) => d.name === 'cross').sameSite, 'no_restriction');
+  }
+});
+test('records saved on a sibling subdomain apply when their cookies cover this host', async () => {
+  const subject = userscript();
+  assert.equal(await subject.subject.cookieManager.replaceAll([sample({ domain: '.example.com', hostOnly: false })], '', 'https://www.example.com/login'), 1);
+  await assert.rejects(subject.subject.cookieManager.replaceAll([sample()], '', 'https://www.example.com/login'), /another site/);
+});
+test('cookies the site sets during a switch do not fail verification', async () => {
+  const subject = userscript({ initial: [sample({ value: 'before' })], failSet: (details, calls, addCookie) => {
+    if (details.name === 'session') addCookie(sample({ name: '_analytics', value: 'x', httpOnly: false }));
+    return false;
+  } });
+  assert.equal(await subject.subject.cookieManager.replaceAll([sample({ value: 'after' })]), 1);
+  assert.equal(subject.cookies().find((c) => c.name === 'session').value, 'after');
+});
+test('script managers without the partitionKey list filter can still read cookies', async () => {
+  const subject = userscript({ initial: [sample()], failList: (details) => 'partitionKey' in details });
+  assert.equal((await subject.subject.cookieManager.getAll()).length, 1);
+});
+test('credential dialogs never prefill stored secrets and an empty entry keeps them', async () => {
+  const answers = ['', 'new-secret'];
+  const subject = userscript({ prompt: () => answers.shift() });
+  subject.saved.set('cookie_share_transport_secret', 'stored-secret');
+  assert.equal(await subject.subject.configureSecret(), false);
+  assert.equal(subject.saved.get('cookie_share_transport_secret'), 'stored-secret');
+  assert.equal(await subject.subject.configureSecret(), true);
+  assert.equal(subject.saved.get('cookie_share_transport_secret'), 'new-secret');
+  for (const [, options] of subject.dialogCalls) assert.equal(options.input?.value, undefined);
+  assert.equal(JSON.stringify(subject.dialogCalls).includes('stored-secret'), false);
+});
+test('a bare route 404 points at the Base URL and list states are styled', () => {
+  const subject = userscript();
+  assert.match(subject.subject.utils.localizeServerMessage('Not Found'), /Base URL.*PATH_SECRET/);
+  const source = readFileSync(new URL('../tampermonkey/cookie-share.user.js', import.meta.url), 'utf8');
+  assert.equal(/(localRoot|cloudRoot|cookiesList)\.textContent\s*=/.test(source), false);
+});
+test('panel keystrokes and dialogs stay inside the shadow root', () => {
+  const source = readFileSync(new URL('../tampermonkey/cookie-share.user.js', import.meta.url), 'utf8');
+  assert.ok(source.includes('shadowRoot.addEventListener(type, (event) => event.stopPropagation())'));
+  // Focus a page moves onto its own input while the panel is open is handed back.
+  assert.ok(source.includes('panelFocus.focus({ preventScroll: true })'));
+  assert.ok(source.includes("if (event.target === shadowHost) { trackPanelFocus(); return; }"));
+  // "Type anywhere" handlers must see an editable activeElement, but only while a panel text field has focus.
+  assert.ok(source.includes("shadowRoot.addEventListener('focusin', trackPanelFocus)"));
+  assert.ok(source.includes("shadowHost.setAttribute('contenteditable', 'true')"));
+  assert.ok(source.includes("}).observe(shadowRoot, { childList: true, subtree: true })"));
+  // The read-only config fields are the only way in: no duplicate icon buttons, and reachable by keyboard.
+  assert.ok(!source.includes('cs-icon-btn'));
+  assert.ok(!/(serverInput|transportInput)\.tabIndex = -1/.test(source));
+  assert.ok(source.includes("if (event.key !== 'Enter' && event.key !== ' ') return;"));
+  assert.equal(/window\.(prompt|confirm)\(|nativePrompt|nativeConfirm/.test(source), false);
+  assert.match(source, /@version\s+0\.7\.2/);
+});
 
 test('a credential with 100 record IDs stays within the D1 parameter limit', async () => {
   const records = Array.from({ length: 100 }, (_, index) => 'record' + index);

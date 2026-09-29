@@ -16,5 +16,8 @@
     "vitest": "^4.1.11",
     "wrangler": "^4.75.0",
     "@cloudflare/vitest-plugin": "^1.0.0"
+  },
+  "overrides": {
+    "undici": "7.29.1"
   }
 }

@@ -2,6 +2,8 @@
 
 - Fix keystrokes typed in the panel also appearing in ChatGPT's composer: while a panel field has focus the script host is marked editable, so the page's "type anywhere" handler leaves the key alone. Focus moves inside the panel are tracked too, and the flag is cleared when the field or panel goes away.
 - Base URL and Transport Secret are edited by clicking their field (or Enter/Space); the duplicate icon buttons next to them are gone, and a pencil inside the field hints that it is editable.
+- Fix receiving records saved by pre-0.7 versions (or sent from Firefox) failing with "SameSite=None requires Secure.": those versions stored cookies without a SameSite attribute as `none`; such non-Secure cookies are now restored without the attribute (browser default) instead of rejecting the whole record. Re-sending with 0.7.2 is not required.
+- 修复接收旧版本（或 Firefox 发送）的云端记录时报 "SameSite=None requires Secure." 的问题：旧版把未设置 SameSite 的 Cookie 存为 `none`，现在按未设置处理，不再拒绝整条记录。
 - 修复在面板中输入时 ChatGPT 输入框也同时出现同样内容的问题；Base URL 与 Transport Secret 改为直接点击输入框（或按 Enter/空格）编辑，移除重复的图标按钮。
 
 ## 0.7.1 — 0.7.0 follow-up fixes

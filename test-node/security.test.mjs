@@ -160,7 +160,7 @@ test('userscript detects partial write and failed rollback instead of falsely re
 test('userscript list errors and domain/prefix validation occur before any deletion', async () => {
   const failed = userscript({ failList: true });
   await assert.rejects(failed.subject.cookieManager.getAll(), /list denied/);
-  for (const cookies of [[sample({ domain: 'other.test' })], [sample({ name: '__Host-session', hostOnly: false })], [sample({ sameSite: 'none', secure: false })], [sample({ expirationDate: 1, session: false })]]) {
+  for (const cookies of [[sample({ domain: 'other.test' })], [sample({ name: '__Host-session', hostOnly: false })], [sample({ expirationDate: 1, session: false })]]) {
     const subject = userscript({ initial: [sample()] });
     await assert.rejects(subject.subject.cookieManager.replaceAll(cookies));
     assert.equal(subject.calls.filter((c) => c[0] === 'delete').length, 0);
@@ -272,6 +272,17 @@ test('legacy records with repeated or expired cookies still import', async () =>
   const record = [sample({ value: 'first' }), sample({ name: 'gone', expirationDate: 1, session: false }), sample({ value: 'last' })];
   assert.equal(await subject.subject.cookieManager.replaceAll(record), 1);
   assert.deepEqual(subject.cookies().map((c) => [c.name, c.value]), [['session', 'last']]);
+});
+test('legacy SameSite=None records without Secure import as unspecified', async () => {
+  // Pre-0.7 clients sent "unspecified" as "none"; Firefox reports it as no_restriction.
+  for (const defaultSameSite of ['unspecified', 'no_restriction']) {
+    const subject = userscript({ initial: [sample({ name: 'old' })], defaultSameSite });
+    const record = [sample({ sameSite: 'none', secure: false }), sample({ name: 'cross', sameSite: 'no_restriction', secure: true })];
+    assert.equal(await subject.subject.cookieManager.replaceAll(record), 2);
+    const sets = subject.calls.filter(([type]) => type === 'set').map(([, d]) => d);
+    assert.equal('sameSite' in sets.find((d) => d.name === 'session'), false);
+    assert.equal(sets.find((d) => d.name === 'cross').sameSite, 'no_restriction');
+  }
 });
 test('records saved on a sibling subdomain apply when their cookies cover this host', async () => {
   const subject = userscript();

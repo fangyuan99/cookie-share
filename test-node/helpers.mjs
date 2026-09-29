@@ -44,7 +44,9 @@ export async function decode(response, secret, options = {}) {
 export const sample = (overrides = {}) => ({ name: 'session', value: 'secret-cookie', domain: 'example.com',
   path: '/', hostOnly: true, secure: true, httpOnly: true, sameSite: 'lax', session: true, ...overrides });
 
-export function userscript({ initial = [], failSet, failDelete, failList, gmRequest, nativeConfirm = () => true, prompt = () => null } = {}) {
+export function userscript({ initial = [], failSet, failDelete, failList, gmRequest, nativeConfirm = () => true, prompt = () => null,
+  // How the browser reports a cookie set without SameSite (Firefox: 'no_restriction').
+  defaultSameSite = 'unspecified' } = {}) {
   const saved = new Map();
   let jar = structuredClone(initial);
   const calls = [];
@@ -85,7 +87,7 @@ export function userscript({ initial = [], failSet, failDelete, failList, gmRequ
         queueMicrotask(() => {
           if (failSet?.(details, calls, addCookie)) return callback('set denied');
           const cookie = { ...details, domain: details.domain || new URL(details.url).hostname,
-            hostOnly: !details.domain, sameSite: details.sameSite || 'unspecified', session: details.expirationDate === undefined };
+            hostOnly: !details.domain, sameSite: details.sameSite || defaultSameSite, session: details.expirationDate === undefined };
           jar = jar.filter((c) => cookieId(c) !== cookieId(cookie));
           jar.push(cookie); callback();
         });

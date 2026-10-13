@@ -13,6 +13,21 @@ Cookie-share enables cross-device cookie sharing via a Tampermonkey userscript a
 - `server/` — Alternative Node.js backend (TypeScript, Express, `node:sqlite`). Mirrors the Worker's API surface.
 - `contract/vectors.json` — shared protocol fixtures consumed by both backends' test suites (see Testing below).
 
+## Documentation Index
+
+Put each kind of content in its own file. Do not put changelog or upgrade notices into the READMEs.
+
+| Content | File |
+| --- | --- |
+| Release notes, per-version changes, upgrade/compatibility notices for a release | `update.md` (newest entry first, under the `# Changelog` heading) |
+| Security model, upgrade procedure, optional security features (device tokens, `REQUIRE_CLIENT_AUTH`, storage encryption), browser acceptance checklist | `docs/SECURITY_UPGRADE.md` |
+| Node.js server setup and config | `server/README.md` |
+| Userscript install and script-manager notes | `tampermonkey/README.md` |
+| Project introduction, features, deployment and usage guide | `README.md` (EN) / `README_CN.md` (ZH) — **requires user confirmation, see below** |
+| Agent / contributor guidance | `CLAUDE.md` (`AGENTS.md` is a symlink to it — edit `CLAUDE.md` only) |
+
+**README changes need explicit user confirmation.** Do not edit `README.md` or `README_CN.md` on your own initiative — not for release announcements, version banners, security notices or changelog-style summaries (those go in `update.md` or `docs/`). If a change seems to need a README update (e.g. a new deployment step or config variable), propose the exact wording and ask the user first; only edit after they approve, and keep EN and ZH in sync.
+
 ## Commands
 
 ### Cloudflare Worker (root directory)
@@ -121,6 +136,6 @@ Two suites, both gated in CI on every PR:
 - All three secrets (`ADMIN_PASSWORD`, `PATH_SECRET`, `TRANSPORT_SECRET`) serve different purposes and must be distinct values.
 - The encryption protocol (PBKDF2 iterations, AES-GCM params) must stay in sync across `_worker.js`, `server/src/crypto.ts`, and the userscript. Any intentional protocol change also requires regenerating `contract/vectors.json` (see Testing).
 - When modifying the userscript (`tampermonkey/cookie-share.user.js`), always bump the `@version` in the UserScript header. The CI auto-creates a GitHub Release when a new version is pushed to main.
-- Versioning: `update.md` tracks one project-wide version line in semver order. Backend-only changes still get a new version number (marked "backend only, no userscript release") but no git tag — tags/Releases exist only for userscript versions. Never number a new entry below an already-shipped version. Current line: userscript is at 0.6.1, changelog at 0.6.2, so the next release is 0.6.3+.
-- For major changes, update both `README.md` (English) and `README_CN.md` (Chinese), and add an entry to `update.md`.
+- Versioning: `update.md` tracks one project-wide version line in semver order. Backend-only changes still get a new version number (marked "backend only, no userscript release") but no git tag — tags/Releases exist only for userscript versions. Never number a new entry below an already-shipped version. Current line: userscript and changelog are at 0.7.2, so the next release is 0.7.3+.
+- For every release-worthy change, add an entry to `update.md`. Do not touch `README.md` / `README_CN.md` without user confirmation (see Documentation Index).
 - Unless specifically asked, do not modify files under `server/` — the primary backend is `_worker.js`. Exception: when a protocol change requires it, keep `server/` in sync and prove it via the contract tests (`server/test/contract.test.ts`).

@@ -1,3 +1,23 @@
+## 0.7.2 — panel input and layout follow-ups
+
+- Fix keystrokes typed in the panel also appearing in ChatGPT's composer: while a panel field has focus the script host is marked editable, so the page's "type anywhere" handler leaves the key alone. Focus moves inside the panel are tracked too, and the flag is cleared when the field or panel goes away.
+- Base URL and Transport Secret are edited by clicking their field (or Enter/Space); the duplicate icon buttons next to them are gone, and a pencil inside the field hints that it is editable.
+- Fix receiving records saved by pre-0.7 versions (or sent from Firefox) failing with "SameSite=None requires Secure.": those versions stored cookies without a SameSite attribute as `none`; such non-Secure cookies are now restored without the attribute (browser default) instead of rejecting the whole record. Re-sending with 0.7.2 is not required.
+- 修复接收旧版本（或 Firefox 发送）的云端记录时报 "SameSite=None requires Secure." 的问题：旧版把未设置 SameSite 的 Cookie 存为 `none`，现在按未设置处理，不再拒绝整条记录。
+- 修复在面板中输入时 ChatGPT 输入框也同时出现同样内容的问题；Base URL 与 Transport Secret 改为直接点击输入框（或按 Enter/空格）编辑，移除重复的图标按钮。
+
+## 0.7.1 — 0.7.0 follow-up fixes
+
+- Fix "Duplicate cookies in record" when receiving: a host-only cookie and a same-name domain cookie (`example.com` vs `.example.com`) are now distinct; repeated cookies in records saved by older versions are de-duplicated (last copy wins) instead of rejected.
+- Skip expired cookies in old records instead of failing the whole import; accept records saved on a sibling subdomain when their domain cookies cover the current host; tolerate unrelated cookies the site sets during a switch; fall back when the script manager rejects the `partitionKey` list filter.
+- Fix typing/pasting going to the page's own input (e.g. ChatGPT's composer): keyboard, text and focus events no longer bubble out of the panel; while a panel is open, focus the page moves onto its own input is handed straight back; if a page cancels the key or paste, the panel inserts the text itself.
+- Replace browser-native `prompt`/`confirm` with in-panel dialogs (pages can override the native ones); receive/switch asks once and reloads after verification.
+- Tidy the main panel: server and secret rows use the field + icon button layout again, localized all 0.7.0 strings (EN/ZH).
+- Cookie List empty/loading/error states use the styled blocks again instead of bare text; a bare `Not Found` now says to check that the Base URL includes PATH_SECRET.
+- Use the English terms Base URL, Transport Secret, Device Token and Backend in both languages.
+- 修复接收时报 "Duplicate cookies in record"：同名的 host-only 与域 Cookie 视为不同 Cookie，旧版本记录中的重复项自动去重；旧记录中的过期 Cookie 自动跳过；子域名保存的记录可在同域主站使用。
+- 修复面板内输入/粘贴跑到页面输入框（如 ChatGPT）的问题；Cookie List 空状态/错误改回卡片样式；Base URL、Transport Secret 等专有名词统一使用英文；原生弹窗改为面板内对话框；接收只确认一次并在校验后自动刷新；恢复主面板布局并补全中英文文案。
+
 ## 0.7.0 — security and compatibility hardening
 
 - Preserve legacy v1 endpoints, local storage keys and existing D1 records by default; add documented opt-in device tokens/v2 and D1 payload encryption.

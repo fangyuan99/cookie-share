@@ -1,3 +1,12 @@
+# Changelog
+
+All notable changes to Cookie-share will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
 ## 0.7.2 — panel input and layout follow-ups
 
 - Fix keystrokes typed in the panel also appearing in ChatGPT's composer: while a panel field has focus the script host is marked editable, so the page's "type anywhere" handler leaves the key alone. Focus moves inside the panel are tracked too, and the flag is cleared when the field or panel goes away.
@@ -20,6 +29,10 @@
 
 ## 0.7.0 — security and compatibility hardening
 
+> Existing v1 clients, D1 records and userscript storage are retained by default. Read [the compatibility and security guide](docs/SECURITY_UPGRADE.md) before enabling device-only authentication or storage encryption. Shared transport secrets still grant instance-wide access in compatibility mode. The userscript is not a browser security boundary.
+>
+> 默认保留现有 v1 客户端、D1 数据和油猴存储。请先阅读[安全升级与兼容说明](docs/SECURITY_UPGRADE.md)，再选择开启设备令牌强制认证或存储加密；兼容模式的共享传输密钥仍有实例级数据权限。油猴不是独立的浏览器安全边界。
+
 - Preserve legacy v1 endpoints, local storage keys and existing D1 records by default; add documented opt-in device tokens/v2 and D1 payload encryption.
 - Remove credential autofill into page DOM, reject synthetic privileged events and introduce safer normal/encrypted configuration export.
 - Reject Cookie API errors, validate before mutation, persist recovery snapshots, verify writes and report rollback failures honestly. Preserve empty values, host-only, unspecified SameSite and partition metadata on updated backends.
@@ -27,15 +40,6 @@
 - Bound expensive input processing, reject unknown paths without PBKDF2, reduce URL metadata/log exposure and add a composite query index.
 - Render local/cloud lists independently, cancel stale list requests and clarify local/cloud mode, overwrite and refresh interactions.
 - Add native-JS/SQLite/GM fault-injection and workerd regression tests; see docs/SECURITY_UPGRADE.md for compatibility limits, optional-feature rollback and browser acceptance requirements.
-
-# Changelog
-
-All notable changes to Cookie-share will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
----
 
 ## [0.6.3] - 2026-08-13
 

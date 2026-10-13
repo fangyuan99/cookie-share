@@ -1,4 +1,4 @@
-export type SameSiteValue = "lax" | "strict" | "none";
+export type SameSiteValue = "lax" | "strict" | "none" | "unspecified";
 
 export interface RuntimeConfig {
   host: string;
@@ -13,6 +13,8 @@ export interface RuntimeConfig {
 
 export interface NormalizedCookie {
   domain: string;
+  partitionKey?: { topLevelSite: string; hasCrossSiteAncestor?: boolean };
+  firstPartyDomain?: string;
   expirationDate?: number;
   hostOnly: boolean;
   httpOnly: boolean;

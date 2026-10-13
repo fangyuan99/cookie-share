@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   worker:
     name: Worker tests + deploy dry-run
@@ -17,6 +20,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Audit locked dependencies
+        run: npm audit --audit-level=moderate
+      - name: Run compatibility and userscript regression tests
+        run: npm run test:security
       - name: Run Worker integration + contract tests
         run: npm test
       - name: Validate Worker deploy (dry-run)
@@ -36,6 +43,8 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
       - run: npm ci
+      - name: Audit locked dependencies
+        run: npm audit --audit-level=moderate
       - name: Build TypeScript
         run: npm run build
       - name: Run server + contract tests

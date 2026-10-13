@@ -5,6 +5,10 @@ export const CORS_METHODS = "GET, POST, PUT, DELETE, OPTIONS";
 export const CORS_HEADERS = "Content-Type, X-Admin-Password";
 
 export function applyCorsHeaders(response: Response): void {
+  response.setHeader('Cache-Control', 'no-store');
+  response.setHeader('Referrer-Policy', 'no-referrer');
+  response.setHeader('X-Content-Type-Options', 'nosniff');
+  response.setHeader('X-Frame-Options', 'DENY');
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", CORS_METHODS);
   response.setHeader("Access-Control-Allow-Headers", CORS_HEADERS);

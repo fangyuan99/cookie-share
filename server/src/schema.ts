@@ -8,5 +8,6 @@ export const SCHEMA_STATEMENTS: string[] = [
     updated_at TEXT NOT NULL
   )`,
   "CREATE INDEX IF NOT EXISTS idx_cookie_records_host ON cookie_records(host)",
+  "CREATE INDEX IF NOT EXISTS idx_cookie_records_host_updated ON cookie_records(host, updated_at DESC, id ASC)",
   "CREATE INDEX IF NOT EXISTS idx_cookie_records_updated_at ON cookie_records(updated_at DESC)",
 ];

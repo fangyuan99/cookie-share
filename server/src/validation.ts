@@ -8,7 +8,7 @@ import type {
 } from "./types";
 
 const ID_PATTERN = /^[A-Za-z0-9]{1,64}$/;
-const SAME_SITE_VALUES = new Set<SameSiteValue>(["lax", "strict", "none"]);
+const SAME_SITE_VALUES = new Set<SameSiteValue>(["lax", "strict", "none", "unspecified"]);
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -30,7 +30,7 @@ export function validateId(value: unknown, message: string): string {
 }
 
 export function normalizeUrl(value: unknown): string {
-  if (typeof value !== "string" || !value.trim()) {
+  if (typeof value !== "string" || !value.trim() || value.length > 8192) {
     throw new HttpError(400, "Invalid URL", { success: false, message: "Invalid URL" });
   }
 
@@ -40,7 +40,10 @@ export function normalizeUrl(value: unknown): string {
     : `https://${trimmedValue}`;
 
   try {
-    return new URL(candidate).toString();
+    const url = new URL(candidate);
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Unsupported URL protocol');
+    url.username = ''; url.password = ''; url.search = ''; url.hash = '';
+    return url.toString();
   } catch {
     throw new HttpError(400, "Invalid URL", { success: false, message: "Invalid URL" });
   }
@@ -112,7 +115,7 @@ function normalizeCookie(cookie: unknown): NormalizedCookie {
     throw invalidCookieError();
   }
 
-  const sameSite = normalizeSameSite(record.sameSite);
+  const sameSite = record.sameSiteUnspecified === true ? 'unspecified' : normalizeSameSite(record.sameSite);
   const hasLeadingDot = record.domain.trim().startsWith(".");
   const expirationDate = record.expirationDate;
   const normalizedExpirationDate = expirationDate === undefined || expirationDate === null
@@ -140,6 +143,20 @@ function normalizeCookie(cookie: unknown): NormalizedCookie {
     normalizedCookie.expirationDate = normalizedExpirationDate;
   }
 
+  if (record.partitionKey !== undefined) {
+    const partition = record.partitionKey as { topLevelSite?: unknown; hasCrossSiteAncestor?: unknown };
+    if (!partition || typeof partition !== 'object' || typeof partition.topLevelSite !== 'string') throw invalidCookieError();
+    try {
+      const site = new URL(partition.topLevelSite);
+      if (!['http:', 'https:'].includes(site.protocol)) throw new Error('Invalid site');
+      normalizedCookie.partitionKey = { topLevelSite: site.origin };
+      if (typeof partition.hasCrossSiteAncestor === 'boolean') normalizedCookie.partitionKey.hasCrossSiteAncestor = partition.hasCrossSiteAncestor;
+    } catch { throw invalidCookieError(); }
+  }
+  if (record.firstPartyDomain !== undefined) {
+    if (typeof record.firstPartyDomain !== 'string' || record.firstPartyDomain.length > 253) throw invalidCookieError();
+    normalizedCookie.firstPartyDomain = record.firstPartyDomain;
+  }
   return normalizedCookie;
 }
 

@@ -3,6 +3,7 @@
 	"name": "cookie-share",
 	"main": "_worker.js",
 	"compatibility_date": "2026-03-15",
+	"preview_urls": false,
 	"observability": {
 		"enabled": true,
 		"logs": {

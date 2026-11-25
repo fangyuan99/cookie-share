@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.7.3 — receive no longer fails on cookies the page rewrites
+
+- Fix receiving/switching failing with "Cookie verification failed; the browser did not preserve a cookie or its attributes." on sites whose scripts keep rewriting a cookie (e.g. ChatGPT's Datadog `_dd_s_v2`): the page could overwrite the cookie between writing and verification, which rolled back the whole switch. A non-HttpOnly cookie that is present but already carries a newer value/expiry is now treated as rewritten by the page; HttpOnly cookies (sessions, auth) are still verified strictly. Verification errors now name the cookie.
+- 修复在页面脚本会不断改写 Cookie 的网站（如 ChatGPT 的 Datadog `_dd_s_v2`）上接收失败并回滚的问题：写入后、校验前页面已改写该 Cookie，被误判为浏览器未保留。现在非 HttpOnly 的 Cookie 若存在但值/到期时间已被页面更新，视为页面改写；HttpOnly Cookie（登录会话等）仍严格校验。校验失败提示中会带上 Cookie 名称。
+
 ## 0.7.2 — panel input and layout follow-ups
 
 - Fix keystrokes typed in the panel also appearing in ChatGPT's composer: while a panel field has focus the script host is marked editable, so the page's "type anywhere" handler leaves the key alone. Focus moves inside the panel are tracked too, and the flag is cleared when the field or panel goes away.

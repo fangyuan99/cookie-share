@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cookie Share
 // @namespace    https://github.com/fangyuan99/cookie-share
-// @version      0.7.2
+// @version      0.7.3
 // @description  Sends and receives cookies with your friends
 // @author       fangyuan99,aBER
 // @match        *://*/*
@@ -886,27 +886,42 @@
     // Checks that every expected cookie is present with its attributes and every
     // `removed` cookie is gone. Unrelated cookies the site sets meanwhile (for
     // example analytics) are tolerated instead of failing the whole switch.
+    // Page scripts keep rewriting some non-HttpOnly cookies (e.g. Datadog's
+    // `_dd_s`, which carries a timestamp), so such a cookie may already hold a
+    // newer value by the time it is read back. The browser itself never changes
+    // a value it accepted, so a non-HttpOnly cookie that is present with a
+    // different value or expiry is treated as rewritten by the page, not as a
+    // failed write. HttpOnly cookies cannot be touched by page scripts and stay
+    // strictly checked.
     async verify(expected, scope = expected, removed = []) {
       const actual = await this.readScope(scope);
       const actualMap = new Map(actual.map((c) => [cookieIdentity(c), c]));
       const expectedIds = new Set(expected.map(cookieIdentity));
+      const expiryMatches = (observed, cookie) => cookie.session || cookie.expirationDate == null ||
+        (Number.isFinite(observed.expirationDate) && Math.abs(observed.expirationDate - cookie.expirationDate) <= 2);
       for (const cookie of removed) {
         const id = cookieIdentity(cookie);
-        if (!expectedIds.has(id) && actualMap.has(id)) throw new Error(t('errorVerifyNotRemoved'));
+        const observed = actualMap.get(id);
+        if (expectedIds.has(id) || !observed) continue;
+        // A page script re-created it after removal (only possible without HttpOnly).
+        if (!observed.httpOnly && observed.value !== cookie.value) continue;
+        throw new Error(`${t('errorVerifyNotRemoved')} (${cookie.name})`);
       }
       for (const cookie of expected) {
         const observed = actualMap.get(cookieIdentity(cookie));
-        if (!observed || observed.value !== cookie.value ||
+        if (!observed || Boolean(observed.httpOnly) !== Boolean(cookie.httpOnly)) {
+          throw new Error(`${t('errorVerifyFailed')} (${cookie.name})`);
+        }
+        if (!cookie.httpOnly && (observed.value !== cookie.value || !expiryMatches(observed, cookie))) continue;
+        if (observed.value !== cookie.value ||
             isHostOnlyCookie(observed) !== isHostOnlyCookie(cookie) ||
             Boolean(observed.secure) !== Boolean(cookie.secure) ||
-            Boolean(observed.httpOnly) !== Boolean(cookie.httpOnly) ||
             // Browsers report an unspecified SameSite differently (unspecified,
             // lax or no_restriction), so only an explicit one is compared.
             (effectiveSameSite(cookie) !== 'unspecified' && effectiveSameSite(observed) !== effectiveSameSite(cookie)) ||
             (cookie.session === true && observed.session !== true) ||
-            (!cookie.session && cookie.expirationDate != null &&
-             (!Number.isFinite(observed.expirationDate) || Math.abs(observed.expirationDate - cookie.expirationDate) > 2))) {
-          throw new Error(t('errorVerifyFailed'));
+            !expiryMatches(observed, cookie)) {
+          throw new Error(`${t('errorVerifyFailed')} (${cookie.name})`);
         }
       }
     },

@@ -297,6 +297,22 @@ test('cookies the site sets during a switch do not fail verification', async () 
   assert.equal(await subject.subject.cookieManager.replaceAll([sample({ value: 'after' })]), 1);
   assert.equal(subject.cookies().find((c) => c.name === 'session').value, 'after');
 });
+test('a non-HttpOnly cookie the page rewrites right after it is set does not fail verification', async () => {
+  // e.g. Datadog's _dd_s_v2: the page script replaces value and expiry before read-back.
+  const future = Date.now() / 1000 + 86400;
+  const rewrite = (name, httpOnly) => { let done = false; return (details, calls, addCookie) => {
+    if (details.name === name && !done && (done = true)) queueMicrotask(() => addCookie(sample({ name, value: 'page', httpOnly,
+      sameSite: 'strict', session: false, expirationDate: future + 1e6 })));
+    return false;
+  }; };
+  const record = [sample(), sample({ name: '_dd_s_v2', value: 'record', httpOnly: false, sameSite: 'strict', session: false, expirationDate: future })];
+  const ok = userscript({ initial: [sample({ value: 'before' })], failSet: rewrite('_dd_s_v2', false) });
+  assert.equal(await ok.subject.cookieManager.replaceAll(record), 2);
+  assert.equal(ok.cookies().find((c) => c.name === 'session').value, 'secret-cookie');
+  // HttpOnly cookies cannot be rewritten by page scripts, so a mismatch there still fails and rolls back.
+  const strict = userscript({ initial: [sample({ value: 'before' })], failSet: rewrite('session', true) });
+  await assert.rejects(strict.subject.cookieManager.replaceAll(record), /verification failed.*\(session\).*restored/);
+});
 test('script managers without the partitionKey list filter can still read cookies', async () => {
   const subject = userscript({ initial: [sample()], failList: (details) => 'partitionKey' in details });
   assert.equal((await subject.subject.cookieManager.getAll()).length, 1);
@@ -333,7 +349,7 @@ test('panel keystrokes and dialogs stay inside the shadow root', () => {
   assert.ok(!/(serverInput|transportInput)\.tabIndex = -1/.test(source));
   assert.ok(source.includes("if (event.key !== 'Enter' && event.key !== ' ') return;"));
   assert.equal(/window\.(prompt|confirm)\(|nativePrompt|nativeConfirm/.test(source), false);
-  assert.match(source, /@version\s+0\.7\.2/);
+  assert.match(source, /@version\s+0\.7\.3/);
 });
 
 test('a credential with 100 record IDs stays within the D1 parameter limit', async () => {
